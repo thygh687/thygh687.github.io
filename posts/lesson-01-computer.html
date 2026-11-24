@@ -22,19 +22,58 @@
     <article>
       <h1>第 1 课：计算机是怎么工作的</h1>
       <div class="meta"><span class="tag">基础</span>2026-11-24 · 阶段一</div>
-      <p>学安全之前，先弄明白手里这台电脑是怎么工作的。只需要记住四个角色。</p>
+      <p>学安全之前，先弄明白手里这台电脑是怎么工作的。只需要记住四个角色——后面整个课程，都是在这四个角色上展开的。</p>
+      <h2>为什么先学这个</h2>
+      <p>学安全，本质上就是在这四个角色身上找弱点、堵漏洞：CPU 有设计上的漏洞，内存里躺着没加密的密码，硬盘里删掉的文件还能恢复，操作系统管着权限——病毒想干坏事，得先过它这一关。先把四个角色认清楚，后面每一课都知道自己在讲谁。</p>
+      <h2>四个角色一张图</h2>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 290" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="电脑四个角色关系图">
+          <defs>
+            <marker id="arr6" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="180" y="20" width="180" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="270" y="42" text-anchor="middle" font-size="16" fill="#1a1a2e">硬盘：仓库</text>
+          <text x="270" y="62" text-anchor="middle" font-size="12" fill="#666">长期保存，断电不丢</text>
+          <rect x="180" y="112" width="180" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="270" y="134" text-anchor="middle" font-size="16" fill="#1a1a2e">内存：工作台</text>
+          <text x="270" y="154" text-anchor="middle" font-size="12" fill="#666">正在用的东西，断电清空</text>
+          <rect x="180" y="204" width="180" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="270" y="226" text-anchor="middle" font-size="16" fill="#1a1a2e">CPU：大脑</text>
+          <text x="270" y="246" text-anchor="middle" font-size="12" fill="#666">一条条执行指令</text>
+          <line x1="270" y1="72" x2="270" y2="110" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr6)"/>
+          <text x="285" y="96" font-size="12" fill="#1a1a2e">读到工作台</text>
+          <line x1="270" y1="164" x2="270" y2="202" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr6)"/>
+          <text x="285" y="188" font-size="12" fill="#1a1a2e">CPU 一条条执行</text>
+          <rect x="400" y="112" width="140" height="52" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="470" y="134" text-anchor="middle" font-size="15" fill="#1a1a2e">操作系统</text>
+          <text x="470" y="154" text-anchor="middle" font-size="12" fill="#666">大管家，管着全场</text>
+          <line x1="400" y1="138" x2="362" y2="138" stroke="#1a1a2e" stroke-width="1.5" stroke-dasharray="5,4"/>
+          <text x="270" y="278" text-anchor="middle" font-size="12" fill="#666">保存时，数据再从内存原路写回硬盘</text>
+        </svg>
+        <figcaption>图：数据从仓库搬到工作台，大脑一条条执行；大管家在旁边管着全场</figcaption>
+      </figure>
       <h2>CPU：大脑</h2>
-      <p>负责计算和执行指令，速度最快，但断电就忘。它一次只能干一件事，干得极快，看起来像同时在干很多事。</p>
+      <p>负责计算和执行指令，速度最快。它一次只能干一件事，但干得极快，一秒几十亿次，看起来就像同时在干很多事。多核就是好几个大脑一起干活。安全上也跟它有关：CPU 的设计漏洞（比如“幽灵”和“熔断”）能让程序偷看到不该看的内存——<a href="m1c8-locality.html">模块一第 8 章</a>会讲。</p>
       <h2>内存：工作台</h2>
-      <p>正在用的东西放在这里。工作台越大，能同时摊开的东西越多，电脑就越不容易卡。</p>
+      <p>正在用的东西放在这里：打开的程序、正在编辑的文档、浏览器里开着的几十个标签页。工作台越大，能同时摊开的东西越多，电脑就越不容易卡。你的电脑是 64GB 内存，工作台很大，同时开几十个程序也不容易满。关键一点：断电就清空——没保存的东西，断电就没了。</p>
       <h2>硬盘：仓库</h2>
-      <p>长期保存文件的地方，断电也不丢。东西不用的时候都存在仓库里，用的时候才搬到工作台上。</p>
+      <p>长期保存文件的地方，断电也不丢。东西不用的时候都存在仓库里，用的时候才搬到工作台上。现在的仓库分两种：机械硬盘（HDD，便宜、容量大、慢）和固态硬盘（SSD，贵一点、快得多）。安全上要知道：删掉的文件不是真没了，只是仓库把位置腾出来标记为空，数据还在——这就是取证能恢复“已删除”文件的原因。</p>
       <h2>操作系统：大管家</h2>
-      <p>Windows 就是大管家，负责管理硬件、分配资源，还给你窗口和鼠标，让你不用直接跟硬件打交道。</p>
+      <p>Windows 就是大管家，负责管理硬件、分配资源，还给你窗口和鼠标，让你不用直接跟硬件打交道。更重要的是，它定规矩：哪个程序能读哪个文件、谁能装软件、谁能改系统设置，都是它说了算。学安全有一半是在学大管家的规矩——权限设错了，病毒就长驱直入。</p>
       <h2>程序是怎么跑起来的</h2>
-      <p>你双击一个程序，操作系统把它从硬盘（仓库）读到内存（工作台），CPU 再一条一条执行它的指令。电脑卡，往往就是工作台满了，或者大脑同时接了太多活。</p>
+      <p>你双击一个程序，背后是四步：</p>
+      <ol>
+        <li>大管家（操作系统）把它从仓库（硬盘）读到工作台（内存）上；</li>
+        <li>大脑（CPU）从内存里一条一条拿指令来执行；</li>
+        <li>算出来的结果先放回内存；</li>
+        <li>你点“保存”，结果再从内存写回硬盘。</li>
+      </ol>
+      <p>电脑卡，往往就是工作台满了，或者大脑同时接了太多活——打开任务管理器，一眼就能看出来是哪个。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>修电脑先看四个角色哪个出问题：卡顿先看内存和 CPU 的占用；黑屏蓝屏先查内存条和硬盘；程序打不开，先看是不是权限被大管家拦住了。先定位到角色，再动手，少走一半弯路。</div>
+      <p><strong>避坑：</strong>内存和硬盘别混了——断电丢不丢，是区分它俩的唯一标准。还有，内存大不等于电脑一定快：CPU 慢、硬盘是机械盘，照样卡。</p>
       <h2>动手做</h2>
-      <p>按 <code>Ctrl + Shift + Esc</code> 打开任务管理器，看一眼 CPU 和内存的占用。再打开一个程序，看内存的数字往上涨。</p>
+      <p>按 <code>Ctrl + Shift + Esc</code> 打开任务管理器，看一眼 CPU 和内存的占用，再打开一个程序，看内存的数字往上涨。然后打开“此电脑”，看一眼 C 盘用了多少、还剩多少。把四个数字记下来：CPU 占用、内存占用、硬盘已用、硬盘剩余——下次电脑卡，先看这四个数字，哪个不对劲就是哪个角色的问题。</p>
+      <p>这四个角色，模块一会一个一个讲透（<a href="m1c2-cpu.html">CPU 怎么执行指令</a>、<a href="m1c3-memory.html">内存怎么分层</a>、<a href="m1c12-hardware-lab.html">给电脑做一次硬件体检</a>），模块二再讲<a href="m2c1-os-intro.html">大管家是怎么管理这一切的</a>。下一课，先看大管家手里的两样东西：文件和进程。</p>
       <div class="lesson-nav">
         <a href="../course.html">← 课程目录</a>
         <a href="lesson-02-files-processes.html">下一课：第 2 课：文件、进程与权限 →</a>
