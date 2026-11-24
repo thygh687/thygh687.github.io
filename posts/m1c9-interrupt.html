@@ -22,17 +22,68 @@
     <article>
       <h1>模块一第 9 章：中断与 DMA</h1>
       <div class="meta"><span class="tag">组成原理</span>2026-11-24 · 模块一</div>
-      <p>第 5 章讲了中断和 DMA 的概念，这一章把全过程展开：中断发生时 CPU 到底经历了什么，DMA 是怎么把 CPU 解放出来的。</p>
+      <p><a href="m1c5-io.html">第 5 章</a>讲了中断和 DMA 的概念，这一章把全过程展开：中断发生时 CPU 到底经历了什么，DMA 是怎么把 CPU 解放出来的，以及这两样东西一旦出问题或被利用，会变成什么样。</p>
+      <h2>中断分几种：不是所有打断都一样</h2>
+      <p>中断按来源分三类。硬件中断是设备发来的：键盘敲了一下、网卡收到一个包、硬盘读完了，都是硬件中断；其中绝大多数是可屏蔽的，操作系统可以在关键时刻暂时关掉它们，还有一种不可屏蔽中断（NMI），连操作系统都关不掉，专门用来报告内存出错这类“天要塌了”的事。软件中断是程序自己主动触发的，比如程序想请操作系统帮忙，就会发一个软件中断——这就是系统调用的底层实现，<a href="m2c10-syscall.html">模块二第 10 章</a>会细讲。异常是 CPU 执行指令时自己发现的：除以零、访问了不该访问的内存、缺页，都会变成异常打断当前程序——蓝屏和程序崩溃，很多就是从一次异常开始的。</p>
+      <p>三种打断的共同点是：CPU 都得停下手里的活，先处理这个更急的事。但“急”的程度不一样：NMI 最急，谁都不能拦；普通硬件中断可以排队、可以暂时屏蔽；异常则必须马上处理，因为出错的指令根本没法继续执行。</p>
       <h2>中断的全过程</h2>
       <p>设备发来中断信号，CPU 在当前指令执行完后停下来，先把现场保存好（程序计数器和寄存器的值压进栈里），然后去查中断向量表，找到对应的中断处理程序去执行。处理完，再把现场恢复，回到原来被打断的地方继续执行。整个过程对原来的程序是透明的，它不知道自己被打断过。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="中断处理全过程图">
+          <defs>
+            <marker id="arr9" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="10" y="30" width="96" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="58" y="52" text-anchor="middle" font-size="13" fill="#1a1a2e">1 正常执行</text>
+          <text x="58" y="70" text-anchor="middle" font-size="11" fill="#666">程序跑着</text>
+          <rect x="118" y="30" width="96" height="52" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="166" y="52" text-anchor="middle" font-size="13" fill="#1a1a2e">2 收到中断</text>
+          <text x="166" y="70" text-anchor="middle" font-size="11" fill="#666">设备：有事！</text>
+          <rect x="226" y="30" width="96" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="274" y="52" text-anchor="middle" font-size="13" fill="#1a1a2e">3 保存现场</text>
+          <text x="274" y="70" text-anchor="middle" font-size="11" fill="#666">寄存器压进栈</text>
+          <rect x="334" y="30" width="96" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="382" y="52" text-anchor="middle" font-size="13" fill="#1a1a2e">4 查向量表</text>
+          <text x="382" y="70" text-anchor="middle" font-size="11" fill="#666">找到处理程序</text>
+          <rect x="442" y="30" width="106" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="495" y="52" text-anchor="middle" font-size="13" fill="#1a1a2e">5 执行处理</text>
+          <text x="495" y="70" text-anchor="middle" font-size="11" fill="#666">比如读走按键</text>
+          <line x1="106" y1="56" x2="116" y2="56" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr9)"/>
+          <line x1="214" y1="56" x2="224" y2="56" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr9)"/>
+          <line x1="322" y1="56" x2="332" y2="56" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr9)"/>
+          <line x1="430" y1="56" x2="440" y2="56" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr9)"/>
+          <rect x="180" y="120" width="200" height="52" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="143" text-anchor="middle" font-size="13" fill="#1a1a2e">6 恢复现场，回去继续</text>
+          <text x="280" y="161" text-anchor="middle" font-size="11" fill="#666">从栈里弹回寄存器，接着跑</text>
+          <path d="M 495 82 L 495 146 L 382 146" fill="none" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr9)"/>
+          <text x="280" y="200" text-anchor="middle" font-size="13" fill="#666">关键：现场保存在栈里，所以回来时能分毫不差地接着跑</text>
+          <text x="280" y="222" text-anchor="middle" font-size="13" fill="#666">中断处理程序要短：它跑着的时候，别的设备只能等着</text>
+        </svg>
+        <figcaption>图：中断六步——停下、保存现场、查表、处理、恢复、回去继续，原程序完全察觉不到</figcaption>
+      </figure>
+      <p>有几个细节值得展开。第一，CPU 不是随时停下的：它要等当前指令执行完才响应中断，不然一条指令执行到一半被打断，现场就没法完整保存。第二，中断也有优先级和嵌套：处理一个中断的时候来了个更急的中断，CPU 会先去处理更急的那个；同级或更低的就排队等着。第三，处理完中断程序要给中断控制器发一个“处理完了”的确认（EOI），不然控制器以为这事还没完，会一直拦着不让下一个同级中断进来。第四，现场为什么能“分毫不差”地恢复：因为保存现场用的栈，和<a href="m1c4-assembly.html">第 4 章</a>讲的函数调用是同一块栈——先压进去的后弹出来，顺序不会乱。</p>
       <h2>三种方式对比</h2>
       <p>轮询：CPU 不停地问设备“有事吗”，简单但浪费时间，适合很少用的设备。中断：设备有事自己说，CPU 平时干别的，适合键盘、鼠标这种不定时来事的设备。DMA：大块数据搬运交给 DMA 控制器，CPU 只下命令和收结果，适合硬盘、网卡这种一次传很多数据的设备。</p>
+      <p>选错方式的代价很实在：给键盘用轮询，CPU 每秒要问几千次“有事吗”，全是空问；给硬盘用中断一点一点搬，每个字节都打断 CPU 一次，CPU 什么都干不了；给网卡用轮询，包来了没人及时收，网卡自己的小缓存一满就开始丢包。所以这三种方式不是谁比谁高级，而是各管一摊：不定时的小事用中断，定时的大块搬运用 DMA，实在简单到不值得中断的才用轮询。</p>
+      <p>还有一种真实故障叫中断风暴：某个设备坏了或者驱动写错了，每秒发出几万次中断，CPU 光处理中断就占满了，鼠标能动、程序全卡住——看起来像死机，其实是 CPU 被中断淹没了。远程修电脑时遇到“突然卡死、风扇狂转”，先看中断多不多，是一个很实用的排查方向。</p>
       <h2>DMA 的全过程</h2>
       <p>CPU 告诉 DMA：从硬盘的哪个位置开始，搬多少数据，到内存的哪个地址。DMA 接管总线，一块一块地搬，CPU 同时去干别的。搬完 DMA 发一个中断告诉 CPU：“搬完了。”CPU 检查一下，继续干活。</p>
+      <p>展开说，DMA 是总线上的“临时主人”：平时总线归 CPU 管，DMA 要搬数据时先向 CPU 申请接管，CPU 同意后 DMA 直接和内存、硬盘打交道，一次搬一块，搬的过程中 CPU 还能继续算自己的东西——只有 DMA 需要用总线的那个瞬间，CPU 才稍微让一让，这叫周期挪用。现代网卡、硬盘用的都是 DMA 的升级版：总线主控 DMA，设备自己就能发起传输，不用 CPU 一次次下命令。</p>
+      <p>DMA 也有阴暗面，而且和安全直接相关：DMA 控制器能直接读写内存，不经过 CPU 的检查。一个恶意的外部设备（比如插在接口上的坏 U 盘或改装过的扩展坞）理论上可以直接读走内存里的东西——这就是 DMA 攻击，锁屏状态下也能得手，因为锁屏只锁了屏幕，没锁内存。缓解办法是 IOMMU（给 DMA 加一道门，只允许设备访问指定的内存区域）、用完外部设备及时拔掉，以及重要电脑不用完就睡眠、而是关机。理解了 DMA，就理解了为什么“别乱插来路不明的 U 盘”不只是一句口号。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>远程修电脑时，客户说“插上某个 U 盘就蓝屏”或“接上某台打印机就卡死”，先别急着重装系统——八成是这个设备的中断或 DMA 出了问题：驱动写错了、中断处理程序有 bug、或者设备本身就是坏的。先拔掉它，看问题还在不在，再决定下一步。另外记住一条安全底线：来路不明的 U 盘和扩展坞别往重要电脑上插——DMA 能绕过锁屏直接读内存，锁屏防君子不防这种硬件层面的偷读；重要电脑用完关机，比睡眠安全得多。</div>
       <h2>动手做</h2>
       <p>1. 按几下键盘，同时看任务管理器 CPU 占用率的微小波动——每一次按键都是一次中断。<br>2. 复制一个大文件，看 CPU 占用率并不高：搬运的主力是 DMA，不是 CPU。<br>3. 想一想：为什么键盘用中断而不用轮询？为什么硬盘用 DMA 而不用中断一点一点搬？</p>
       <h2>避坑</h2>
-      <p>中断处理程序要短，别在里面干重活，否则会拖住整个系统；DMA 不是万能的，搬的数据很小的时候，直接让 CPU 搬更快；中断、轮询、DMA 三者的适用场景要分清，这是常考的概念。</p>
+      <p>中断处理程序要短，别在里面干重活，否则会拖住整个系统；DMA 不是万能的，搬的数据很小的时候，直接让 CPU 搬更快；中断、轮询、DMA 三者的适用场景要分清，这是常考的概念。还有一个容易错的点：中断发生时 CPU 不是“立刻”停下，而是等当前指令执行完；“透明”指的是被打断的程序察觉不到，不是说中断没有成本——每一次中断都要保存和恢复现场，太频繁了一样拖慢系统。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>中断分三类：硬件中断（设备发来，分可屏蔽和不可屏蔽）、软件中断（程序主动请操作系统帮忙）、异常（CPU 执行指令时自己发现的错）。</li>
+          <li>中断六步：等当前指令执行完 → 保存现场到栈 → 查中断向量表 → 执行处理程序 → 发处理完确认 → 恢复现场回去继续，原程序察觉不到。</li>
+          <li>轮询、中断、DMA 各管一摊：不定时的小事用中断，大块搬运用 DMA，简单到不值得打断的才用轮询；选错方式要么浪费 CPU，要么丢数据。</li>
+          <li>DMA 直接读写内存、不经过 CPU 检查，所以恶意外部设备能绕过锁屏读内存；缓解靠 IOMMU、及时拔设备、重要电脑用完关机。</li>
+          <li>中断是操作系统工作的地基：<a href="m2c1-os-intro.html">模块二第 1 章</a>会讲操作系统怎么靠中断接管整台电脑；软件中断就是<a href="m2c10-syscall.html">系统调用</a>的底层实现。</li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="m1c8-locality.html">← 上一章：第 8 章：存储层次与局部性原理</a>
         <a href="../course.html">课程目录</a>

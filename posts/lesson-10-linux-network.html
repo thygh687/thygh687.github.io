@@ -22,17 +22,80 @@
     <article>
       <h1>第 10 课：Linux 下的网络命令</h1>
       <div class="meta"><span class="tag">Linux</span>2026-11-24 · 阶段二</div>
-      <p>Windows 下的 ping、ipconfig 到了 Linux 里，名字换了，干的活一样。记住这四个。</p>
+      <p>Windows 下的 ping、ipconfig 到了 Linux 里，名字换了，干的活一样。记住这四个。它们和<a href="lesson-06-commands.html">第 6 课</a>的三条命令是一套排错思路，只是换了个系统再练一遍——练到在哪个系统都能顺手查，才算真会了。</p>
       <h2>ping：通不通</h2>
-      <p><code>ping example.org</code>，跟 Windows 里一样。注意 Linux 的 ping 默认一直发，按 <code>Ctrl + C</code> 停下来。</p>
+      <p><code>ping example.org</code>，跟 Windows 里一样。注意 Linux 的 ping 默认一直发，按 <code>Ctrl + C</code> 停下来。想只发 4 个就停，用 <code>ping -c 4 example.org</code>，和 Windows 的默认行为一样。</p>
+      <p>输出要会读：<code>64 bytes from … time=20ms</code> 是通了，time 是来回花的时间；<code>Destination Host Unreachable</code> 是连第一跳都没出去，往往是本机没连上网或网关不对；<code>ping: example.org: Name or service not known</code> 是名字没解析出来——这是 DNS 的问题，不是路的问题，<a href="dns-basics.html">第 4 课</a>讲过，名字变地址靠 DNS。按 <code>Ctrl + C</code> 停下后还会有一行统计：发了几个、收到几个、丢了几个——丢包率一高，网络就不稳，<code>time</code> 再小也没用。</p>
+      <p>和 Windows 一样：<strong>ping 不通不等于服务器挂了</strong>，很多服务器为了安全直接禁掉 ping，网站照常能打开。ping 是用来缩小范围的，不是用来下结论的。</p>
       <h2>ip a：看本机网络配置</h2>
-      <p><code>ip a</code> 相当于 Windows 的 <code>ipconfig</code>，看自己的 IP 地址和网卡。</p>
+      <p><code>ip a</code> 相当于 Windows 的 <code>ipconfig</code>，看自己的 IP 地址和网卡。输出比 ipconfig 啰嗦，重点只看三行：网卡名（比如 <code>enp0s3</code>）、<code>inet</code> 后面的 IP 地址、<code>state UP</code> 还是 <code>DOWN</code>。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ip a 输出图解">
+          <rect x="10" y="10" width="540" height="120" rx="8" fill="#1a1a2e"/>
+          <text x="30" y="42" font-family="Consolas, monospace" font-size="13" fill="#d7e3f4">2: enp0s3: &lt;BROADCAST,MULTICAST,UP&gt;</text>
+          <text x="330" y="42" font-size="13" fill="#fbbf24">← 网卡名，UP 是开着的</text>
+          <text x="30" y="77" font-family="Consolas, monospace" font-size="13" fill="#d7e3f4">inet 10.0.2.15/24 scope global</text>
+          <text x="330" y="77" font-size="13" fill="#fbbf24">← 你的 IP 地址</text>
+          <text x="30" y="112" font-family="Consolas, monospace" font-size="13" fill="#d7e3f4">inet6 fe80::/64 scope link</text>
+          <text x="330" y="112" font-size="13" fill="#fbbf24">← IPv6 地址，先不用管</text>
+          <text x="280" y="162" text-anchor="middle" font-size="13" fill="#1a1a2e">10.0.2.15 是 NAT 模式的地址：虚拟机通过真机上网</text>
+          <text x="280" y="186" text-anchor="middle" font-size="12" fill="#666">如果 inet 这一行不见了，先看网卡是不是 DOWN，再看是不是没拿到地址</text>
+        </svg>
+        <figcaption>图：ip a 输出里最要紧的三行；10.0.2.15 就是第 7 课说的 NAT 地址</figcaption>
+      </figure>
+      <p><strong>什么时候用 ip a？</strong>刚开机没网时先跑它；换了网络模式之后，确认地址变了没有；排错的第一步永远是它——先确认自己没问题，再去怪别人。地址如果变成 <code>169.254.x.x</code> 开头，说明没拿到地址，和 Windows 里是一样的意思。网关用 <code>ip route</code> 看，输出里 <code>default via 10.0.2.2</code> 那一行就是出门的大门——NAT 模式下它通常是 <code>10.0.2.2</code>。</p>
+      <p>顺带认一个老命令：<code>ifconfig</code> 是 <code>ip a</code> 的前辈，很多老教程还在用它。新系统默认可能没装它，看到教程里写 <code>ifconfig</code>，知道它就是 <code>ip a</code> 的旧名字就行，不用特意去装。</p>
       <h2>curl：发个请求看返回</h2>
-      <p><code>curl example.org</code> 会把那个网页的 HTML 直接打出来。加 <code>-I</code> 只看响应头，包括状态码。</p>
+      <p><code>curl example.org</code> 会把那个网页的 HTML 直接打出来。加 <code>-I</code> 只看响应头，包括状态码。<code>curl -I example.org</code> 返回 <code>HTTP/1.1 200 OK</code>，说明网站正常；返回 <code>404</code> 是页面不存在，<code>301/302</code> 是跳转，<code>500</code> 是服务器那边出错了。</p>
+      <p><strong>什么时候用 curl？</strong>浏览器打不开网站时，先用 curl 试一次：curl 能拿到内容、浏览器打不开，问题在浏览器或本机设置；curl 也拿不到，再往网络和 DNS 上查。它和 ping 是搭档：ping 只问“路通不通”，curl 问的是“网站能不能正常回答”。路通了、网站没回答，和路根本不通，是两回事。</p>
+      <p>还有一个安全上的用途：curl 只发请求、不执行网页里的任何东西。浏览器打开一个可疑页面可能会跑脚本、弹窗口，curl 只是把原始内容打出来给你看。所以检查一个不确定的链接时，先 curl 看一眼，比直接用浏览器打开要稳妥得多——当然，只在虚拟机里做，而且只看 example.org 这类无害的地址练手。</p>
       <h2>ss：谁在监听端口</h2>
       <p><code>ss -tlnp</code> 列出本机正在监听的端口和对应的程序。这是以后查“这台机器开了什么服务”的基本功。</p>
+      <p>四个字母各管一件事：<code>-t</code> 只看 TCP，<code>-l</code> 只看正在监听的，<code>-n</code> 显示数字端口不翻译成名字，<code>-p</code> 显示是哪个程序在监听。输出里重点看两列：<code>Local Address:Port</code>（监听在哪个地址和端口，比如 <code>0.0.0.0:22</code> 就是所有地址的 22 端口）和最后一列的程序名。看到不认识的端口先别慌，记下来，再去查它是谁开的、该不该开。</p>
+      <p><strong>一个权限细节：</strong><code>-p</code> 要看别人的程序，需要管理员权限。直接跑 <code>ss -tlnp</code>，别人的程序那一列可能是空的；加 <code>sudo ss -tlnp</code> 才能看全。这正是<a href="lesson-09-linux-permissions.html">第 9 课</a>讲的道理——输出少了一块，不一定是没东西，很可能是权限不够。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Linux 排错链条图">
+          <defs>
+            <marker id="arr10" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="6" y="28" width="100" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="56" y="47" text-anchor="middle" font-size="12" fill="#1a1a2e">1 ip a</text>
+          <text x="56" y="65" text-anchor="middle" font-size="11" fill="#666">自己有地址吗</text>
+          <rect x="114" y="28" width="100" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="164" y="47" text-anchor="middle" font-size="12" fill="#1a1a2e">2 ping 网关</text>
+          <text x="164" y="65" text-anchor="middle" font-size="11" fill="#666">家里通吗</text>
+          <rect x="222" y="28" width="100" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="272" y="47" text-anchor="middle" font-size="12" fill="#1a1a2e">3 ping 8.8.8.8</text>
+          <text x="272" y="65" text-anchor="middle" font-size="11" fill="#666">能上外网吗</text>
+          <rect x="330" y="28" width="100" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="380" y="47" text-anchor="middle" font-size="12" fill="#1a1a2e">4 ping 域名</text>
+          <text x="380" y="65" text-anchor="middle" font-size="11" fill="#666">名字能解析吗</text>
+          <rect x="438" y="28" width="100" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="488" y="47" text-anchor="middle" font-size="12" fill="#1a1a2e">5 curl -I</text>
+          <text x="488" y="65" text-anchor="middle" font-size="11" fill="#666">网站能回答吗</text>
+          <line x1="106" y1="52" x2="112" y2="52" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr10)"/>
+          <line x1="214" y1="52" x2="220" y2="52" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr10)"/>
+          <line x1="322" y1="52" x2="328" y2="52" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr10)"/>
+          <line x1="430" y1="52" x2="436" y2="52" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr10)"/>
+          <text x="280" y="100" text-anchor="middle" font-size="12" fill="#666">和第 6 课同一条链：哪一步断了，问题就在哪一段</text>
+          <text x="280" y="122" text-anchor="middle" font-size="12" fill="#666">多了一步 curl：路通了，网站也要能回答才算真通</text>
+        </svg>
+        <figcaption>图：Linux 下的排错链，和第 6 课是同一条思路，最后多了一步 curl</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>查一台机器“开了什么服务”，先 <code>ss -tlnp</code> 再看别的——多一个监听端口，就多一个入口。很多安全检查的第一步就是这条命令：把输出截下来，一个一个问“这个端口是谁、该不该开、能不能关”。刚装好的 Ubuntu 默认几乎不监听什么端口，这是好事；装的软件越多，开的端口越多，清单就要越勤快地对。还有一条：ss 看到端口，不等于从外面能连上——中间还有防火墙那一关，<a href="lesson-15-firewall.html">第 15 课</a>会讲防火墙；现在先把“本机开了什么”这张清单练熟。</div>
+      <p><strong>避坑：</strong>一是 Linux 的 ping 默认不停，忘记按 <code>Ctrl + C</code> 会一直刷屏，养成用 <code>ping -c 4</code> 的习惯；二是 <code>ss</code> 不加 <code>-p</code> 看不到程序名，不加 <code>sudo</code> 看不全，别把“看不到”当成“没有”；三是别拿 curl 去碰来路不明的链接练手，课程里只用 example.org 这类无害地址，所有实验都在虚拟机里做。</p>
       <h2>动手做</h2>
-      <p>在虚拟机里跑一遍：<code>curl example.org</code> 看返回；<code>ss -tlnp</code> 看本机开了哪些端口，记下来。</p>
+      <p>在虚拟机里跑一遍：<code>curl example.org</code> 看返回；<code>ss -tlnp</code> 看本机开了哪些端口，记下来。再按排错链走一遍：<code>ip a</code> 看地址、<code>ping -c 4 8.8.8.8</code> 看外网通不通、<code>ping -c 4 example.org</code> 看名字能不能解析、<code>curl -I example.org</code> 看网站能不能回答。把每一步的结果记下来——这就是你在 Linux 下的第一份网络体检报告，下一阶段（<a href="lesson-11-passwords.html">第 11 课</a>起）查账号和服务安全时，还会回到这张清单上。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>ping 问路通不通：Linux 默认一直发，用 -c 4 只发 4 个；不通时先看报错，名字问题和路的问题要分开。</li>
+          <li>ip a 是 Linux 的 ipconfig：看网卡名、IP 地址和 UP/DOWN；网关用 ip route 看；NAT 下的地址通常是 10.0.2.15。</li>
+          <li>curl 发请求看返回：-I 只看响应头，200 是正常，404 是页面不存在；它只取内容、不执行网页，适合先看一眼再决定。</li>
+          <li>ss -tlnp 查本机监听的端口和程序：想看全要加 sudo；多一个端口就多一个入口，清单要勤对。</li>
+          <li>排错是一条链：ip a → ping 网关 → ping 外网 → ping 域名 → curl，哪一步断了，问题就在哪一段。</li>
+          <li><a href="summary-stage2.html">看阶段二小结 →</a></li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="lesson-09-linux-permissions.html">← 上一课：第 9 课：文件权限与用户管理</a>
         <a href="../course.html">课程目录</a>

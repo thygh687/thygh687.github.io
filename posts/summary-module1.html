@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一小结：从 0 和 1 到一台能跑的电脑 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一小结：从 0 和 1 到一台能跑的电脑</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · 模块一第 1–12 章</div>
+      <p>十二章讲的其实是一件事：电脑最底层的样子。从只有 0 和 1 开始，一层一层搭上去，最后搭出一台能开机、能跑程序的电脑。每一层都在回答上一层留下的问题。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="模块一十二章知识串联图">
+          <defs>
+            <marker id="arrm1" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="130" y="10" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">数据怎么表示：0 和 1</text>
+          <rect x="130" y="70" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">指令怎么执行：CPU 与汇编</text>
+          <rect x="130" y="130" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">东西存在哪：存储金字塔</text>
+          <rect x="130" y="190" width="300" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">整台电脑怎么配合跑起来</text>
+          <line x1="280" y1="50" x2="280" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm1)"/>
+          <line x1="280" y1="110" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm1)"/>
+          <line x1="280" y1="170" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm1)"/>
+        </svg>
+        <figcaption>图：十二章讲的其实是一件事——从 0 和 1 到一台能跑的电脑</figcaption>
+      </figure>
+      <h2>这十二章是怎么连起来的</h2>
+      <p>先解决“数据怎么表示”。<a href="m1c1-binary.html">第 1 章</a>说电脑里只有 0 和 1：一位叫 bit，8 位叫一个 byte，数字、文字、图片、声音最后都是 0 和 1 的排列；负数用补码存，小数和文字各有各的编码办法。有了数据，就要有人处理它。<a href="m1c2-cpu.html">第 2 章</a>的 CPU 不停地重复四个步骤：取指、译码、执行、写回，你打开的每个程序、点的每次鼠标，最后都是这个循环在干活。</p>
+      <p>指令从哪来、怎么说，是接下来的两章。<a href="m1c6-logic.html">第 6 章</a>回到底层：逻辑门由晶体管组成，门搭成加法器，加法器搭成 ALU——电脑就是这样一层一层搭起来的。<a href="m1c4-assembly.html">第 4 章</a>的汇编是离机器最近的语言，一条汇编指令基本对应一条机器指令，看懂汇编就等于能直接读懂 CPU 在干什么，以后学漏洞和逆向都要看它。<a href="m1c7-isa.html">第 7 章</a>的指令系统是 CPU 能听懂的所有指令的集合，你的电脑和手机用的指令集不一样，这就是为什么电脑上的程序不能直接拿到手机上跑。</p>
+      <p>数据和指令都要有地方放。<a href="m1c3-memory.html">第 3 章</a>的存储器是个金字塔：越靠近 CPU 越快、越小、越贵，越远离越慢、越大、越便宜。<a href="m1c8-locality.html">第 8 章</a>解释这个金字塔为什么能成立：程序访问数据不是随机的，而是有规律的，这个规律叫局部性原理，整个缓存体系都建立在它上面。局部性也和安全有关——第 8 章提到了 Spectre 和 Meltdown。</p>
+      <p>最后是“整台电脑怎么配合跑起来”。<a href="m1c5-io.html">第 5 章</a>的总线是电脑里的路，CPU、内存、硬盘、显卡之间传数据都走它；<a href="m1c9-interrupt.html">第 9 章</a>把中断和 DMA 的全过程展开：设备有事再叫 CPU，大块搬运不用 CPU 盯着。<a href="m1c10-performance.html">第 10 章</a>说“这台电脑快不快”看三个因素：主频、核心数和每周期能执行多少条指令，只看其中一个都会看走眼。<a href="m1c11-boot.html">第 11 章</a>从按下电源键讲到看见桌面，弄清楚这个过程，开不了机就知道该从哪一步开始查。<a href="m1c12-hardware-lab.html">第 12 章</a>是综合动手：不用拆机箱，用系统自带工具给自己的电脑做一份硬件体检报告，前面 11 章的概念就都落到实处了。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>用计算器在十进制和二进制之间切换，算出一个汉字在文件里占 3 个字节是为什么。</li>
+        <li>在任务管理器里看 CPU 型号、主频、核心数和逻辑处理器数，看出超线程开了没有。</li>
+        <li>纸上单步执行一段汇编，写出每一步之后寄存器的值，验证求 1 到 5 的和是 15。</li>
+        <li>说出 AND、OR、NOT 的真值表，用异或算出 1 + 1 = 10。</li>
+        <li>对照三条指令，说出每条的操作码、操作数和寻址方式，说出自己的电脑是 x86 还是 ARM。</li>
+        <li>解释为什么复制 1000 个小文件比复制一个同样大小的大文件慢得多。</li>
+        <li>按一下键盘想一想中断，复制一个大文件想一想 DMA——搬运的主力不是 CPU。</li>
+        <li>看 BIOS 模式是 UEFI 还是传统，写出一份自己的硬件体检报告，说出电脑的瓶颈在哪一级。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>模块二，计算机操作系统。模块一把硬件讲透了，模块二讲管硬件的那个人：操作系统这个大管家怎么管进程、管线程、管内存、管文件。很多安全机制——权限、隔离、审计——背后都是操作系统在执行，所以模块二的每一章，都和以后的安全工作直接相关。</p>
+      <div class="lesson-nav">
+        <a href="m1c12-hardware-lab.html">← 模块一第 12 章：动手：拆解一台电脑的硬件信息</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m2c1-os-intro.html">下一站：模块二第 1 章：操作系统是干什么的 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

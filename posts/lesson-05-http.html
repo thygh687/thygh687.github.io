@@ -24,17 +24,81 @@
       <div class="meta"><span class="tag">网络</span>2026-11-24 · 阶段一</div>
       <p>在浏览器里输入一个网址、按回车，背后发生了四步：</p>
       <h2>1. DNS 查地址</h2>
-      <p>先把网址翻译成 IP 地址（第 4 课讲过）。</p>
+      <p>先把网址翻译成 IP 地址（<a href="dns-basics.html">第 4 课</a>讲过）。这一步出问题，浏览器报的往往是“找不到网站”“无法解析主机名”——意思是名字都没翻译出来，后面的路根本没开始走。</p>
       <h2>2. 浏览器发请求</h2>
-      <p>浏览器向那个 IP 发一个 HTTP 请求，大意是：“把这个页面给我。”</p>
+      <p>浏览器向那个 IP 发一个 HTTP 请求，大意是：“把这个页面给我。”请求里不只一句话，还带着几样东西：你要的是哪个页面（路径）、你用的什么浏览器、你之前在这网站留下的凭证（Cookie）。发请求之前，浏览器要先和服务器把“路”接通：先建立连接（TCP），如果是 HTTPS，还要再做一次加密握手——双方对一下暗号，商量好接下来用什么钥匙加密，然后才开始传真正的请求。也就是说，HTTPS 的页面在发请求之前，就多了一道“先加密、再说话”的手续。</p>
       <h2>3. 服务器回响应</h2>
-      <p>服务器收到请求，把页面的内容发回来，同时带一个状态码：200 是成功，404 是找不到，500 是服务器自己出错了。</p>
+      <p>服务器收到请求，把页面的内容发回来，同时带一个状态码：200 是成功，404 是找不到，500 是服务器自己出错了。状态码的第一位数字就说明了是哪一类事：</p>
+      <ul>
+        <li><strong>2xx（成功）</strong>：200 是最常见的“好的，给你”。</li>
+        <li><strong>3xx（换地方了）</strong>：301、302 是“这个页面搬家了，去新地址找”——浏览器会自动跟过去，所以你常常感觉不到它发生过。</li>
+        <li><strong>4xx（你的问题）</strong>：404 是“这个页面不存在”，可能是地址打错了，也可能是页面被删了；403 是“这个页面存在，但不让你看”，多半是权限问题——登录了才让看，或者你的 IP 被拦了。</li>
+        <li><strong>5xx（服务器的问题）</strong>：500 是服务器自己出错了，502、503 是服务器后面的服务没接上、或者忙不过来了。这种时候刷新也没用，等一会儿再试。</li>
+      </ul>
+      <p><strong>状态码通与不通各意味着什么？</strong>200 但页面是空白的：路和服务器都没问题，问题在页面本身——比如它要加载的脚本、样式没回来，浏览器画不出来。404：先看地址有没有打错一个字母，再看是不是收藏夹里的旧链接失效了。403：别反复刷，先确认自己登录了没有、账号有没有权限。500、502、503：不是你的错，是对方服务器的事，换个时间再试；但如果每个网站都 5xx，先查自己的网（回第 3 课的三段定位）。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="打开网站四步流程图">
+          <defs>
+            <marker id="arr5" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="20" width="130" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="85" y="42" text-anchor="middle" font-size="15" fill="#1a1a2e">浏览器</text>
+          <text x="85" y="62" text-anchor="middle" font-size="12" fill="#666">你的电脑</text>
+          <rect x="410" y="20" width="130" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="475" y="42" text-anchor="middle" font-size="15" fill="#1a1a2e">服务器</text>
+          <text x="475" y="62" text-anchor="middle" font-size="12" fill="#666">example.org</text>
+          <line x1="150" y1="36" x2="408" y2="36" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr5)"/>
+          <text x="280" y="24" text-anchor="middle" font-size="12" fill="#1a1a2e">1 DNS 查地址 → 2 发请求</text>
+          <line x1="410" y1="58" x2="152" y2="58" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr5)"/>
+          <text x="280" y="86" text-anchor="middle" font-size="12" fill="#1a1a2e">3 回响应：状态码 + 页面内容</text>
+          <rect x="20" y="120" width="520" height="52" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="144" text-anchor="middle" font-size="15" fill="#1a1a2e">4 浏览器画页面：HTML 搭架子，样式上色，脚本让它动起来</text>
+          <text x="280" y="164" text-anchor="middle" font-size="12" fill="#666">一个页面常常要再发几十个请求，去拿图片、样式和脚本</text>
+          <rect x="20" y="200" width="250" height="56" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="224" text-anchor="middle" font-size="14" fill="#1a1a2e">200 成功 · 301/302 搬家了</text>
+          <text x="145" y="244" text-anchor="middle" font-size="12" fill="#666">按第一位数字分：2 成功，3 换地方</text>
+          <rect x="290" y="200" width="250" height="56" rx="8" fill="#fef2f2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="224" text-anchor="middle" font-size="14" fill="#1a1a2e">404 找不到 · 403 不让看</text>
+          <text x="415" y="244" text-anchor="middle" font-size="12" fill="#666">4 是你的问题，5 是服务器的问题</text>
+        </svg>
+        <figcaption>图：打开一个网站是四步——查地址、发请求、回响应、画页面；状态码第一位数字就说明是哪一类事</figcaption>
+      </figure>
       <h2>4. 浏览器画页面</h2>
-      <p>浏览器拿到 HTML、图片、样式，一点一点画成你看到的页面。</p>
+      <p>浏览器拿到 HTML、图片、样式，一点一点画成你看到的页面。注意：一个页面不是一次请求就拿完的。HTML 只是架子，里面的图片、样式、脚本，浏览器要再发几十个请求一个一个去拿——所以你在 F12 的“网络”里看到一堆请求，是正常的。一个页面打不开，不一定是主页面出了问题，可能是它引用的某个脚本没加载回来，页面就卡在半截上。</p>
       <h2>HTTPS 是什么</h2>
-      <p>HTTPS 就是 HTTP 加了一层加密。地址栏有小锁标志，传输的内容别人偷看不到、也改不了。现在的网站基本都是 HTTPS。</p>
+      <p>HTTPS 就是 HTTP 加了一层加密。地址栏有小锁标志，传输的内容别人偷看不到、也改不了。现在的网站基本都是 HTTPS。但加密到底加密了什么、不加密什么，要分清楚：</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="HTTP 与 HTTPS 对比图">
+          <rect x="10" y="20" width="260" height="130" rx="8" fill="#fef2f2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="46" text-anchor="middle" font-size="15" fill="#1a1a2e">HTTP：明文传送</text>
+          <text x="140" y="74" text-anchor="middle" font-size="12" fill="#666">请求和内容，谁截到谁都能看</text>
+          <text x="140" y="96" text-anchor="middle" font-size="12" fill="#666">路过的人还能顺手改掉内容</text>
+          <text x="140" y="118" text-anchor="middle" font-size="12" fill="#666">地址栏：没有小锁</text>
+          <rect x="290" y="20" width="260" height="130" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="46" text-anchor="middle" font-size="15" fill="#1a1a2e">HTTPS：加密传送</text>
+          <text x="420" y="74" text-anchor="middle" font-size="12" fill="#666">内容加密了，截到也看不懂</text>
+          <text x="420" y="96" text-anchor="middle" font-size="12" fill="#666">改过的内容会被发现，对不上号</text>
+          <text x="420" y="118" text-anchor="middle" font-size="12" fill="#666">地址栏：有小锁，但域名仍可见</text>
+          <text x="280" y="176" text-anchor="middle" font-size="12" fill="#666">HTTPS 加密的是“说什么”，不是“跟谁说”——你访问了哪个域名，路过的人还是能看到</text>
+        </svg>
+        <figcaption>图：HTTP 是明信片，谁都能看；HTTPS 是封好的信，内容看不懂、改了会被发现——但信封上的收件人（域名）还是看得见的</figcaption>
+      </figure>
+      <p><strong>两个最常见的误区：</strong>第一，“有小锁就是安全的网站”——不对。小锁只说明这条路加密了，不说明对方是谁；钓鱼网站也可以有小锁，证书是谁都能申请的。判断网站真不真，看域名本身对不对（<a href="dns-basics.html">第 4 课</a>），不是看有没有锁。第二，“HTTPS 了就什么都藏住了”——不对。你访问了哪个域名、连了哪个 IP，网络上还是能看到；加密的是你和网站之间说的内容，比如你输入的密码、填的表单。加密的原理（<a href="lesson-14-encryption.html">第 14 课</a>）和钓鱼的识别（<a href="lesson-12-phishing.html">第 12 课</a>）后面会细讲。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>网站打不开，F12 的“网络”标签页就是第一现场，别急着重启浏览器。先看主请求的颜色：红色、状态码 404，先核对地址有没有打错；403，先确认登录和权限；500、502、503，不是你的错，等一会儿再试。还有一种最容易误判的情况：状态码全是 200，页面却是空白的——这时候往下翻，看是哪个脚本或样式请求失败了，页面是被它拖垮的。最后一条是安全红线：浏览器弹出“证书有问题”“连接不是私密连接”，千万别点“继续前往”——证书警告的意思是“对方身份对不上”，这时候输密码，等于把密码递给了一个身份不明的人；真有急事，先换个网络、换个时间再试，或者直接联系网站方核实。</div>
+      <p><strong>避坑：</strong>不要在没有小锁的 HTTP 网站上输入密码、输手机号——明文传送，同一个 Wi-Fi 下的人都能看到。不要点邮件、聊天记录里“账号异常、点此验证”的链接去登录——真网站自己输网址进，不要走别人给的链接。抓包、改请求之类的实验，只在自己的虚拟机里对自己搭的网站做，绝不在真实网站上练手。</p>
       <h2>动手做</h2>
-      <p>打开 example.org，按 <code>F12</code> → 点“网络”，再刷新页面。看一堆请求冒出来，点其中一个，看它的状态码是不是 200。</p>
+      <p>打开 example.org，按 <code>F12</code> → 点“网络”，再刷新页面。看一堆请求冒出来，点其中一个，看它的状态码是不是 200。再点一个图片请求，看它的状态码和大小——一个页面背后原来是几十个请求拼起来的。最后看一眼地址栏的小锁，点开它，看浏览器说这个连接是怎么加密的。</p>
+      <p>四步走完，一个网站就打开了。下一课把前五课串起来，用三个命令亲手验证一遍：<a href="lesson-06-commands.html">第 6 课：动手：ping、ipconfig、nslookup</a>。前面打下的底子——第 3 课的地址和端口、<a href="dns-basics.html">第 4 课</a>的 DNS——都是那一课要对上号的东西。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>打开网站是四步：DNS 查地址、浏览器发请求、服务器回响应、浏览器画页面；一个页面背后常常是几十个请求。</li>
+          <li>状态码看第一位：2 成功、3 搬家、4 你的问题（404 找不到、403 不让看）、5 服务器的问题。</li>
+          <li>HTTPS 是 HTTP 加加密：内容别人看不懂、改了会被发现；但域名和 IP 仍然可见。</li>
+          <li>小锁不等于网站可信：钓鱼网站也可以有小锁，真假看域名本身。</li>
+          <li>证书警告别点“继续”：那是对方身份对不上，输密码等于递给陌生人。</li>
+          <li>下一课：<a href="lesson-06-commands.html">动手：ping、ipconfig、nslookup</a>。</li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="dns-basics.html">← 上一课：第 4 课：DNS 是怎么回事</a>
         <a href="../course.html">课程目录</a>

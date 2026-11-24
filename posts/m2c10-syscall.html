@@ -23,17 +23,54 @@
       <h1>模块二第 10 章：系统调用</h1>
       <div class="meta"><span class="tag">操作系统</span>2026-11-24 · 模块二</div>
       <p>普通程序在用户态，碰不到硬件。想读写文件、联网、创建进程，必须请内核帮忙。程序请内核帮忙的唯一正规途径，就是系统调用。这是用户态和内核态之间唯一的一座桥。</p>
+      <h2>为什么要有用户态和内核态</h2>
+      <p>CPU 分两种工作模式：用户态和内核态。内核态什么都能干——读写任意内存、操作硬件、改页表；用户态处处受限——碰内核的内存会直接触发异常，碰硬件会被挡下来。普通程序只能跑在用户态，这不是为了为难程序员，而是为了保护：一个程序写错了地址，最多把自己弄崩，伤不到内核和其他程序；恶意程序想偷数据、想常驻系统，也得先想办法越过这条线。</p>
+      <p>这条线就是安全攻防的主战场之一。漏洞利用的目标常常是“提权”：从用户态想办法拿到内核态的执行权，一旦得手，杀毒软件、防火墙、权限检查全都可以绕过去。反过来，安全机制（比如后面模块会讲到的沙箱、容器）也是在这条线上做文章：把不可信的程序关在更小的笼子里，能调的系统调用越少，能干的坏事就越少。</p>
       <h2>一次系统调用经历了什么</h2>
       <p>程序把要干的事和参数放进寄存器，执行一条特殊的指令（x86 上是 syscall），CPU 从用户态切换到内核态，内核查表找到对应的处理函数，执行完把结果放回寄存器，再切回用户态，程序继续跑。一次系统调用要切换两次模式，是有代价的，所以程序不会没事就调它。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="系统调用穿越用户态与内核态的示意图">
+          <defs>
+            <marker id="arr10" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="60" y="20" width="440" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="43" text-anchor="middle" font-size="14" fill="#1a1a2e">用户态：你的程序</text>
+          <text x="280" y="62" text-anchor="middle" font-size="12" fill="#666">把调用号和参数放进寄存器，执行 syscall 指令</text>
+          <rect x="60" y="106" width="440" height="84" rx="8" fill="#1a1a2e"/>
+          <text x="280" y="130" text-anchor="middle" font-size="14" fill="#fff">内核态：内核</text>
+          <text x="280" y="154" text-anchor="middle" font-size="12" fill="#ccc">查系统调用表 → 检查参数合不合法、权限够不够</text>
+          <text x="280" y="174" text-anchor="middle" font-size="12" fill="#ccc">执行 → 把结果放回寄存器</text>
+          <line x1="200" y1="72" x2="200" y2="104" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr10)"/>
+          <text x="215" y="94" font-size="12" fill="#1a1a2e">进内核</text>
+          <line x1="360" y1="190" x2="360" y2="222" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr10)"/>
+          <text x="375" y="212" font-size="12" fill="#1a1a2e">回用户态</text>
+          <rect x="60" y="222" width="440" height="20" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="280" y="237" text-anchor="middle" font-size="12" fill="#1a1a2e">程序继续跑，拿到结果或错误码</text>
+        </svg>
+        <figcaption>图：一次系统调用要两次穿越用户态和内核态的边界，中间那道检查就是安全的关口</figcaption>
+      </figure>
+      <h2>出错了怎么知道：返回值和错误码</h2>
+      <p>系统调用成功，返回结果（比如读到了多少字节）；失败，返回 -1，同时把失败原因写进一个叫 errno 的地方。常见的几个要认得：<code>ENOENT</code>（文件不存在）、<code>EACCES</code>（权限不够——<a href="m2c9-filesystem.html">第 9 章</a>的权限就是在这里被检查的）、<code>EPERM</code>（操作不被允许）。程序员看到“Permission denied”，第一反应应该是去查文件权限和运行身份，而不是先怀疑代码写错了。strace 的输出里，失败的调用后面就跟着这些错误码，排错时直接读它就行。</p>
+      <p>内核检查参数这一步很关键：程序传进来的指针，内核要先确认它指向的是这个进程自己的合法内存，才敢去读——不检查，恶意程序传一个内核地址进来，就能骗内核替它读写不该碰的地方。历史上不少提权漏洞，就是这道检查没做好。</p>
       <h2>最常用的系统调用</h2>
       <p>open/read/write/close：打开、读写、关闭文件。fork/execve：创建新进程、换成别的程序。socket/connect/send/recv：网络通信。mmap：申请内存。程序员平时调的库函数（比如 C 语言的 fopen），底层最后都是调这些系统调用。</p>
       <h2>为什么安全要盯着系统调用</h2>
       <p>一个程序想干什么，最后都要落实到系统调用上：读了哪个文件、连了哪个地址、创建了什么进程，全都能从系统调用里看出来。所以很多安全监控就是在系统调用层盯着：程序调了不该调的调用，或者参数不对劲，就报警、就拦截。杀毒软件和 EDR 的核心能力之一，就是这个。</p>
+      <p>防守方也有主动收紧的办法：Linux 的 seccomp 可以给进程列一张白名单——只允许调某几个系统调用，别的直接拒绝。一个只负责算数的服务，本来就不需要联网，把 socket 一禁，它就算被攻破了也连不出去。容器和沙箱的隔离，很大一部分就是靠这张白名单撑着的。</p>
+      <p>攻击方也在想办法绕过监控：常规的监控钩子常常挂在用户态的库函数上（比如挂住 C 库的 open），恶意软件就跳过库函数，直接发 syscall 指令进内核——这叫直接系统调用。钩子看不见它，内核照常执行。所以只盯用户态是不够的，EDR 才要把探针往内核里放。这一攻一防，争的就是“谁离内核更近”。Windows 上也一样：程序平时调的是 Win32 API，底下还有一层 NT API（NtCreateFile 这一类），恶意软件绕过 Win32 直接调 NT API，是同一种思路。</p>
       <div class="teacher-note">老师经验：做应急响应的时候，我经常用 strace 跟踪可疑程序的系统调用。一个程序声称自己是记事本，却在调 socket 连外网、在读浏览器保存密码的文件——系统调用不会说谎。恶意软件可以伪装名字、伪装窗口，但它要干坏事，就必须调系统调用。所以看系统调用，是看穿伪装最直接的办法。</div>
       <h2>动手做</h2>
       <p>1. 在虚拟机的 Linux 里输入 <code>strace -e trace=openat ls</code>，看 ls 这个命令打开了哪些文件。<br>2. 再输入 <code>strace -c ls</code>，看这次运行总共调了多少次系统调用。<br>3. 对比一下：同样是 ls，加了 -e 和不加 -e，输出有什么不同。</p>
       <h2>避坑</h2>
       <p>系统调用是用户态进内核态的唯一正规途径，这句话要记住；库函数和系统调用不是一回事，库函数是包装，系统调用是底层；strace 只在 Linux 上有，Windows 上对应的工具叫 Process Monitor。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>系统调用是用户态请内核帮忙的唯一正规途径，一次调用要两次穿越用户态和内核态的边界。</li>
+          <li>失败的调用返回 -1，原因写在 errno 里：ENOENT 是文件不存在，EACCES 是权限不够，EPERM 是操作不被允许。</li>
+          <li>库函数是包装，系统调用是底层；程序想干什么，最后都落在系统调用上，所以监控盯着这里。</li>
+          <li>seccomp 能给进程列白名单，收紧它能调的调用；恶意软件会用直接系统调用绕过用户态钩子，下一章亲手跟踪一次看看。</li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="m2c9-filesystem.html">← 上一章：第 9 章：文件系统与权限</a>
         <a href="../course.html">课程目录</a>

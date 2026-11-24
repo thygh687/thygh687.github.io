@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块二小结：大管家是怎么管这台电脑的 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块二小结：大管家是怎么管这台电脑的</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · 模块二第 1–12 章</div>
+      <p>十二章讲的其实是一件事：操作系统这个大管家是怎么管这台电脑的。程序想用 CPU、内存、硬盘、网卡，都不能直接伸手拿，必须通过操作系统。这一个规矩，是整个计算机安全的根基。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="模块二十二章知识串联图">
+          <defs>
+            <marker id="arrm2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="130" y="10" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">大管家管什么</text>
+          <rect x="130" y="70" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">进程和线程怎么干活</text>
+          <rect x="130" y="130" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">内存和文件怎么分</text>
+          <rect x="130" y="190" width="300" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">动手验证，对比两个系统</text>
+          <line x1="280" y1="50" x2="280" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm2)"/>
+          <line x1="280" y1="110" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm2)"/>
+          <line x1="280" y1="170" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm2)"/>
+        </svg>
+        <figcaption>图：十二章讲的其实是一件事——大管家是怎么管这台电脑的</figcaption>
+      </figure>
+      <h2>这十二章是怎么连起来的</h2>
+      <p>先认清大管家。<a href="m2c1-os-intro.html">第 1 章</a>说操作系统夹在硬件和程序之间，管硬件、管进程、给程序提供服务；内核和用户态是分开的，普通程序碰不到硬件。权限、隔离、审计这些词，背后都是操作系统在执行。</p>
+      <p>管的第一样东西是“谁在干活”。<a href="m2c2-process.html">第 2 章</a>的进程是程序跑起来的样子，是操作系统分配资源的基本单位；<a href="m2c3-thread.html">第 3 章</a>的线程是同一进程里并行干活的执行单位，记住一句话：进程分资源，线程干活。进程之间默认是隔离的，<a href="m2c4-ipc.html">第 4 章</a>的进程间通信就是让它们在操作系统的安排下说话——很多真实的提权漏洞就出在 IPC 上，低权限的程序通过 IPC 通道让高权限的服务替它执行命令。多个线程同时碰同一块数据会出问题，<a href="m2c5-concurrency.html">第 5 章</a>讲临界区和锁、死锁、竞态条件，竞态条件是真实存在的漏洞类别，TOCTOU 漏洞就靠“先检查、后使用”中间的时间差。最后 <a href="m2c6-scheduling.html">第 6 章</a>的调度器决定谁先跑、跑多久，挖矿木马最明显的特征就是 CPU 占用率长期居高不下——调度器就是战场。</p>
+      <p>管的第二样东西是“东西放哪”。<a href="m2c7-virtual-memory.html">第 7 章</a>的虚拟内存给每个进程画了一张“假地图”，程序按图索骥，操作系统在背后把虚拟地址翻译成真正的物理地址；页表就是进程隔离的第一道墙，Meltdown 和 Spectre 轰动的原因，就是它们打破了这道墙。<a href="m2c8-paging.html">第 8 章</a>讲程序要访问的页不在内存里怎么办：触发缺页中断，操作系统去硬盘上把那页找回来；内存不够了，系统会陷入疯狂换页，整个机器都响应不了——内存耗尽是最常见的拒绝服务手段之一。<a href="m2c9-filesystem.html">第 9 章</a>讲文件怎么存、谁能动：一个管“找得到”，一个管“动不得”；Linux 提权十次里有九次是从权限配置错误开始的。<a href="m2c10-syscall.html">第 10 章</a>的系统调用是程序请内核帮忙的唯一正规途径，也是用户态和内核态之间唯一的一座桥——恶意软件可以伪装名字、伪装窗口，但它要干坏事就必须调系统调用，所以看系统调用是看穿伪装最直接的办法。</p>
+      <p>最后动手验证。<a href="m2c11-lab.html">第 11 章</a>是综合动手：把进程、线程、系统调用用系统自带的工具亲眼看一遍。安全分析的第一步永远是建立基线：先学会看正常进程长什么样，才能认出异常的。<a href="m2c12-kernels.html">第 12 章</a>收尾，对比 Windows 与 Linux 内核：概念相通，设计各有不同；服务器端基本是 Linux 的天下，终端和办公环境是 Windows 的天下，做安全，两边都要能上手。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>打开任务管理器，看进程的 PID、状态、用户名，右键打开文件所在位置，看它的真实路径；查进程不只看名字，要看路径、父进程、启动参数这三样。</li>
+        <li>在任务管理器里把“线程”列加出来，看每个进程有多少线程；在虚拟机的 Linux 里用 ps -eLf 看进程和它的线程。</li>
+        <li>在虚拟机的 Linux 里用 strace 跟踪一次 ls，看它调了哪些系统调用、调了多少次。</li>
+        <li>在任务管理器里看内存的“可用”和“缓存”，理解为什么内存占用率高不一定是坏事；在虚拟机的 Linux 里用 free -h、vmstat 1 看内存和换页情况。</li>
+        <li>在虚拟机的 Linux 里用 find / -perm -4000 找系统里的 SUID 程序；在 Windows 上看一个文件的访问控制列表。</li>
+        <li>说出 Windows 和 Linux 在内核结构、文件组织、安全机制上的主要不同。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>模块三，计算机网络。从网线到网页，数据是怎么跨过半个地球找到你的：分层、IP 与路由、TCP 与 UDP、DNS 与 TLS，还有 Wireshark 抓包和局域网实验。模块二讲的是“电脑内部怎么管”，模块三讲的是“电脑之间怎么连”——预备课第 3–6 课的网络概念，到了模块三会讲得更深、更系统。</p>
+      <div class="lesson-nav">
+        <a href="m2c12-kernels.html">← 模块二第 12 章：Windows 与 Linux 内核有什么不一样</a>
+        <a href="../course.html">课程目录</a>
+        <a href="../course.html#m3">下一站：模块三：计算机网络 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

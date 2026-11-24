@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阶段三小结：先把自己守住 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>阶段三小结：先把自己守住</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · 预备课第 11–15 课</div>
+      <p>五课讲的其实是一件事：先把自己守住。学攻击之前，先学会不被攻击——你的账号、你的电脑、你的数据，就是最先要守住的东西。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="五课知识串联图">
+          <defs>
+            <marker id="arr3" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="130" y="10" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">密码：第一道锁</text>
+          <rect x="130" y="70" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">钓鱼：骗开锁的人</text>
+          <rect x="130" y="130" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">恶意软件：翻进来的贼</text>
+          <rect x="130" y="190" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">加密：锁住信件</text>
+          <rect x="130" y="250" width="300" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="275" text-anchor="middle" font-size="14" fill="#1a1a2e">防火墙：门口的门卫</text>
+          <line x1="280" y1="50" x2="280" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <line x1="280" y1="110" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <line x1="280" y1="170" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <line x1="280" y1="230" x2="280" y2="248" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr3)"/>
+        </svg>
+        <figcaption>图：五课讲的其实是一件事——先把自己守住</figcaption>
+      </figure>
+      <h2>这五课是怎么连起来的</h2>
+      <p><a href="lesson-11-passwords.html">第 11 课</a>是第一道锁：好密码要够长（12 位以上）、每个网站都不一样，长度比花样重要；人记不住几十个不同的密码，交给密码管理器，只记一个主密码；再给重要账号加上双因素认证，就算密码泄露了，没有第二道锁对方也进不来。</p>
+      <p>锁再结实，也怕有人骗你自己开门。<a href="lesson-12-phishing.html">第 12 课</a>的钓鱼不攻击电脑，攻击的是人：催你马上办、发件人看着怪、链接里的域名不对、附件来历不明，四个特征，拿不准就别点，先核对。万一真点了，马上改密码、开双因素、查账号有没有异常。</p>
+      <p>骗不开门，贼就想办法翻进来。<a href="lesson-13-malware.html">第 13 课</a>讲了常见的恶意软件：病毒会自我复制，木马假装正常软件偷偷开后门，勒索软件把文件加密再要钱，广告软件弹广告还可能偷信息。它们多半是从不明来历的附件、盗版软件、假下载站、来历不明的 U 盘进来的。防护就四件事：系统和软件及时更新、杀毒软件正常运行、重要文件有备份、不乱点。</p>
+      <p><a href="lesson-14-encryption.html">第 14 课</a>的加密是锁住信件本身：对称加密一把钥匙，速度快，难在钥匙怎么安全地交到对方手里；非对称加密两把钥匙，公钥加密、私钥解密，实际使用中两种经常配合着用。HTTPS 就是 HTTP 加上 TLS 加密，地址栏的小锁点开能看到证书。哈希是数据的指纹，改一个字指纹就完全变了，下载软件对一下官方给的哈希值，就知道文件有没有被人动过。</p>
+      <p>最后 <a href="lesson-15-firewall.html">第 15 课</a>是门口的门卫：防火墙按规则决定哪些流量能进、哪些能出，Windows 自带防火墙默认开着，别乱关。端口是电脑上某个服务的入口，开着的端口就是开着的门——只开需要的，剩下的关掉。在 cmd 里跑 netstat -ano，就能看到本机正在监听的端口和对应的进程号。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>检查自己的重要账号（邮箱、GitHub）有没有开双因素，没开的现在就开；有没有在多个地方用同一个密码，有的话换掉。</li>
+        <li>翻收件箱找一封看着可疑的邮件，对着钓鱼的四个特征逐条核对。</li>
+        <li>检查 Windows 更新是不是最新的，杀毒软件是不是正常运行，重要文件有没有备份。</li>
+        <li>打开一个 HTTPS 网站，点地址栏的小锁，看证书是谁发的、发给谁、什么时候到期。</li>
+        <li>跑一遍 netstat -ano，记下监听的端口，再去任务管理器里对一下进程号，知道是哪个程序在监听。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>第 16 课是预备课的最后一课：基础打牢后，四个方向怎么选。前面 15 课是所有方向共用的基础，选方向之前，先把这五课的防护习惯落到实处——一个连自己账号都守不住的人，守不住别人的系统。</p>
+      <div class="lesson-nav">
+        <a href="lesson-15-firewall.html">← 第 15 课：防火墙与端口</a>
+        <a href="../course.html">课程目录</a>
+        <a href="lesson-16-directions.html">下一课：第 16 课：基础打牢后，四个方向怎么选 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

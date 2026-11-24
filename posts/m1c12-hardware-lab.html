@@ -22,17 +22,61 @@
     <article>
       <h1>模块一第 12 章：动手：拆解一台电脑的硬件信息</h1>
       <div class="meta"><span class="tag">组成原理</span>2026-11-24 · 模块一</div>
-      <p>这一章是模块一的综合动手：不用拆机箱，用系统自带工具给自己的电脑做一份“硬件体检报告”。做完这份报告，前面 11 章的概念就都落到实处了。</p>
+      <p>这一章是模块一的综合动手：不用拆机箱，用系统自带工具给自己的电脑做一份“硬件体检报告”。做完这份报告，前面 11 章的概念就都落到实处了——<a href="m1c2-cpu.html">第 2 章</a>的 CPU、<a href="m1c3-memory.html">第 3 章</a>的存储金字塔、<a href="m1c10-performance.html">第 10 章</a>的主频和核心、<a href="m1c11-boot.html">第 11 章</a>的启动模式，都能在报告里找到对应的数字。</p>
       <h2>四件工具</h2>
       <p>任务管理器：看 CPU、内存、磁盘、GPU 的实时状态。msinfo32（系统信息）：看系统型号、处理器、内存、BIOS 模式。dxdiag（DirectX 诊断工具）：看显卡、声卡的详细信息。设备管理器：看所有硬件设备和驱动状态，有问题的设备会带黄色感叹号。</p>
+      <p>每件工具要看的重点不一样。任务管理器看的是“现在”：哪个进程在吃 CPU、内存用了多少、磁盘是不是 100% 占用——卡顿发生的那一刻，答案就在这里。msinfo32 看的是“底子”：CPU 型号、内存总量、BIOS 是 UEFI 还是传统（<a href="m1c11-boot.html">第 11 章</a>讲过为什么这很重要）。dxdiag 看的是显卡和声卡的型号与驱动版本，玩游戏或外接显示器出问题先查它。设备管理器看的是“有没有认不出来的东西”：黄色感叹号是驱动没装好或设备有问题；完全陌生的未知设备，先别急着装驱动，查清楚它是什么再动手——来路不明的设备，可能是别人插进来的东西。</p>
       <h2>写出你的体检报告</h2>
       <p>按下面这张表，把自己电脑的信息填进去：CPU 型号、核心数、逻辑处理器数、主频；内存大小、已用多少、速度；硬盘类型（SSD 还是 HDD）、容量、剩余空间；显卡型号；BIOS 模式（UEFI 还是传统）；网络适配器型号。</p>
+      <p>填的时候注意几个数字的含义，别只抄个型号就完事。主频要看两个数：基准主频和当前主频，当前主频长期明显低于基准，就是降频了（<a href="m1c10-performance.html">第 10 章</a>讲过散热压不住会降频）。内存要看速度和通道数：任务管理器里能看到内存是 DDR4 还是 DDR5、速度是多少，两条一样的内存会显示双通道。硬盘要看是 SSD 还是 HDD，还要看健康状态——任务管理器看不出来，系统自带的磁盘检查或硬盘厂商工具能看到 SMART 健康度，出现警告就意味着这块盘随时可能坏。显卡要分清是集成显卡还是独立显卡，玩游戏卡的时候，问题可能出在用错了显卡，而不是显卡不够强。</p>
       <h2>对照着判断瓶颈</h2>
       <p>拿着报告，对照前面学过的知识判断：内存经常用到 90% 以上，就是内存瓶颈；硬盘是机械盘，就是磁盘瓶颈；CPU 经常满载，就是 CPU 瓶颈。找到瓶颈再决定升级什么，而不是凭感觉花钱。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="判断电脑瓶颈的流程图">
+          <defs>
+            <marker id="arr12" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <polygon points="280,12 400,52 280,92 160,52" fill="#1a1a2e"/>
+          <text x="280" y="58" text-anchor="middle" font-size="16" fill="#fff">电脑慢，先看任务管理器</text>
+          <line x1="280" y1="92" x2="92" y2="126" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr12)"/>
+          <line x1="280" y1="92" x2="280" y2="126" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr12)"/>
+          <line x1="280" y1="92" x2="468" y2="126" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr12)"/>
+          <rect x="10" y="128" width="165" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="92" y="152" text-anchor="middle" font-size="13" fill="#1a1a2e">CPU 占用常年满载</text>
+          <text x="92" y="172" text-anchor="middle" font-size="13" fill="#1a1a2e">→ CPU 瓶颈</text>
+          <rect x="198" y="128" width="165" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="152" text-anchor="middle" font-size="13" fill="#1a1a2e">内存占用超过 90%</text>
+          <text x="280" y="172" text-anchor="middle" font-size="13" fill="#1a1a2e">→ 内存瓶颈</text>
+          <rect x="386" y="128" width="165" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="468" y="152" text-anchor="middle" font-size="13" fill="#1a1a2e">磁盘占用 100% 或机械盘</text>
+          <text x="468" y="172" text-anchor="middle" font-size="13" fill="#1a1a2e">→ 磁盘瓶颈</text>
+          <rect x="20" y="216" width="250" height="52" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="238" text-anchor="middle" font-size="13" fill="#1a1a2e">三项都不高：看温度和主频</text>
+          <text x="145" y="257" text-anchor="middle" font-size="12" fill="#666">是不是散热压不住降频了</text>
+          <rect x="290" y="216" width="250" height="52" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="238" text-anchor="middle" font-size="13" fill="#1a1a2e">卡的只是上网：先看网络</text>
+          <text x="415" y="257" text-anchor="middle" font-size="12" fill="#666">下载慢别怪硬件</text>
+        </svg>
+        <figcaption>图：电脑慢先看任务管理器，哪个指标满了，瓶颈就在哪一级；都不满就看温度和网络</figcaption>
+      </figure>
+      <p>升级的优先级也有讲究：机械盘换成 SSD，是让旧电脑变快最有效的一招，比加内存往往更明显；内存经常用到 90% 以上再加内存，平时只用一半就别加；CPU 常年满载，先看是不是有流氓程序或挖矿木马在偷算力（任务管理器里看哪个进程占得多），确认不是再考虑换 CPU。还有一种“假瓶颈”：三项占用都不高但还是卡，多半是散热降频，或者卡的根本不是本地硬件——打开网页慢，先看网速，别急着换电脑。</p>
+      <h2>体检报告里的安全检查</h2>
+      <p>做体检别只看性能，顺手做三项安全检查。第一，设备管理器里有没有黄色感叹号或未知设备：驱动没装好是小事，完全不认识的设备要查清楚来源再处理。第二，硬盘 SMART 健康度有没有警告：有警告就立即备份重要文件，别等它真的坏了再后悔——硬盘坏是突然发生的，不会提前打招呼。第三，msinfo32 里看一眼系统型号和 BIOS 模式，记下来：以后远程请人帮忙修电脑，对方第一句话往往就是问这几个数，有报告在手就不用现查。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>远程修电脑，我第一句话就是让客户发 msinfo32 的截图和任务管理器的性能页——这两个加起来，电脑的底子全在里面了，不用客户一句一句描述。最常见的一幕：客户说“电脑慢得没法用”，一看磁盘占用 100%、硬盘还是机械盘，换个 SSD 当天就好了；还有一次是 SMART 已经报警告，客户还在犹豫换不换盘，我直接说先备份再谈别的——硬盘说坏就坏，数据丢了再后悔就来不及了。这份体检报告做好存着，模块二学操作系统和网络的时候还会用到。</div>
       <h2>动手做</h2>
-      <p>1. 按 Win+R，依次输入 taskmgr、msinfo32、dxdiag、devmgmt.msc，把四个工具都打开看一遍。<br>2. 按上面的表写一份体检报告，存在记事本里。<br>3. 对照报告回答：你电脑的瓶颈在哪一级？如果只能升级一样东西，你会先升级什么，为什么？</p>
+      <p>1. 按 Win+R，依次输入 taskmgr、msinfo32、dxdiag、devmgmt.msc，把四个工具都打开看一遍。<br>2. 按上面的表写一份体检报告，存在记事本里。<br>3. 对照报告回答：你电脑的瓶颈在哪一级？如果只能升级一样东西，你会先升级什么，为什么？<br>4. 在虚拟机里也做一份同样的体检报告，和物理机的对照着看：虚拟机的 CPU、内存、硬盘数字是怎么来的，虚拟机分到的资源和物理机有什么不一样。</p>
       <h2>避坑</h2>
-      <p>工具只看不改，别在里面乱点不认识的按钮；别下载来路不明的“硬件检测”软件，系统自带的就够了；这份报告留着，以后学操作系统和网络的时候还会用到。</p>
+      <p>工具只看不改，别在里面乱点不认识的按钮；别下载来路不明的“硬件检测”软件，系统自带的就够了；这份报告留着，以后学操作系统和网络的时候还会用到。还有两点：想练改 BIOS 设置、分区、装驱动这类动手操作，只在虚拟机里练，别在主力电脑上试；报告里有系统序列号和硬件编号，别随便发到网上或发给陌生人，需要帮忙时只发给信得过的人。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>四件系统自带工具各管一摊：任务管理器看实时状态，msinfo32 看底子，dxdiag 看显卡声卡，设备管理器看设备和驱动。</li>
+          <li>读报告要看懂数字的含义：当前主频低于基准是降频，内存看速度和通道，硬盘要看 SSD 还是 HDD 以及 SMART 健康度。</li>
+          <li>判断瓶颈按图走：CPU 满载是 CPU 瓶颈，内存超 90% 是内存瓶颈，磁盘 100% 是磁盘瓶颈；都不满就看温度和网络。</li>
+          <li>升级有优先级：机械盘换 SSD 见效最快；内存够用就别加；CPU 满载先查有没有流氓程序在偷算力。</li>
+          <li>体检顺手做安全检查：未知设备查来源，SMART 警告立即备份，报告别随便发给陌生人。</li>
+          <li>模块一到这里就结束了：<a href="summary-module1.html">看模块一小结 →</a></li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="m1c11-boot.html">← 上一章：第 11 章：计算机是怎么启动的</a>
         <a href="../course.html">课程目录</a>

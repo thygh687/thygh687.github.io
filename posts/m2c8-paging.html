@@ -23,17 +23,63 @@
       <h1>模块二第 8 章：页面置换与缺页</h1>
       <div class="meta"><span class="tag">操作系统</span>2026-11-24 · 模块二</div>
       <p>程序要访问的页不在内存里，就会触发缺页中断，操作系统停下手里的活，去硬盘上把那页找回来。这个过程叫缺页处理，是虚拟内存能正常工作的关键。</p>
+      <h2>缺页分两种：轻的和重的</h2>
+      <p>不是所有缺页都要读硬盘。<strong>轻缺页</strong>：要的页其实已经在内存里了，只是页表里还没给它办好“登记”——比如程序刚启动，共享库已经在内存里，第一次用的时候补登记一下就行，几乎不花时间。<strong>重缺页</strong>：要的页在硬盘上（被换出去的，或者文件里还没读进来的部分），必须等硬盘读完，慢得多。性能工具里的缺页次数，绝大多数是轻缺页，别一看到数字大就以为硬盘在狂转。</p>
+      <p><strong>缺页和段错误是两回事。</strong>缺页是“这页是你的，只是暂时不在内存里”，操作系统能帮你找回来；段错误是“这页根本不是你的”，操作系统找不回来，只能终止程序——<a href="m2c7-virtual-memory.html">上一章</a>讲过段错误是怎么来的。排错的时候分清这一点：程序闪退报段错误，是程序自己的问题；程序只是变慢，是缺页多、内存吃紧的问题。</p>
       <h2>缺页处理的过程</h2>
       <p>CPU 访问一个虚拟地址，MMU 查页表，发现这页没有对应的物理页（或者在硬盘上），就触发缺页中断。操作系统接手：先看内存有没有空位，没有就得腾地方——选一页牺牲掉，把它写回硬盘（如果它被改过），再把需要的页从硬盘读进来，更新页表，回到刚才被打断的指令重新执行。程序完全感觉不到中间发生了什么，只是这次访问慢了一点。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="缺页处理流程图">
+          <defs>
+            <marker id="arr8" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="6" y="20" width="100" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="56" y="42" text-anchor="middle" font-size="12" fill="#1a1a2e">1 CPU 访问</text>
+          <text x="56" y="60" text-anchor="middle" font-size="11" fill="#666">MMU 查页表</text>
+          <rect x="116" y="20" width="100" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="166" y="42" text-anchor="middle" font-size="12" fill="#1a1a2e">2 页不在内存</text>
+          <text x="166" y="60" text-anchor="middle" font-size="11" fill="#666">触发缺页中断</text>
+          <rect x="226" y="20" width="100" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="276" y="42" text-anchor="middle" font-size="12" fill="#1a1a2e">3 选牺牲页</text>
+          <text x="276" y="60" text-anchor="middle" font-size="11" fill="#666">改过的先写回盘</text>
+          <rect x="336" y="20" width="100" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="386" y="42" text-anchor="middle" font-size="12" fill="#1a1a2e">4 从硬盘读入</text>
+          <text x="386" y="60" text-anchor="middle" font-size="11" fill="#666">更新页表</text>
+          <rect x="446" y="20" width="100" height="56" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="496" y="42" text-anchor="middle" font-size="12" fill="#1a1a2e">5 回到原指令</text>
+          <text x="496" y="60" text-anchor="middle" font-size="11" fill="#666">重新执行</text>
+          <line x1="106" y1="48" x2="114" y2="48" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr8)"/>
+          <line x1="216" y1="48" x2="224" y2="48" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr8)"/>
+          <line x1="326" y1="48" x2="334" y2="48" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr8)"/>
+          <line x1="436" y1="48" x2="444" y2="48" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr8)"/>
+          <text x="280" y="110" text-anchor="middle" font-size="13" fill="#1a1a2e">第 3 步最花时间：牺牲的页如果被改过，要先写回硬盘才能腾地方</text>
+          <text x="280" y="140" text-anchor="middle" font-size="13" fill="#1a1a2e">第 4 步更花时间：硬盘比内存慢得多，一次重缺页要等上毫秒级</text>
+          <text x="280" y="170" text-anchor="middle" font-size="12" fill="#666">轻缺页走不到第 3、4 步，所以几乎不花时间；重缺页要全程走完</text>
+          <text x="280" y="196" text-anchor="middle" font-size="12" fill="#666">程序感觉不到中间发生了什么——只是这次访问慢了一点</text>
+        </svg>
+        <figcaption>图：缺页处理五步——查表未命中、触发中断、选牺牲页、从硬盘读入、回到原指令重新执行</figcaption>
+      </figure>
       <h2>牺牲哪一页：置换算法</h2>
       <p>先进先出（FIFO）：最早进来的先出去，简单但可能把常用的页换出去。最近最少使用（LRU）：最久没用的先出去，效果最好，但实现起来要记录每个页的上次使用时间，代价大。时钟算法：LRU 的近似实现，像时钟指针一样轮流检查，实际系统常用。选得好不好，直接影响缺页的次数。</p>
+      <p>时钟算法具体是这么转的：内存里的每一页带一个“最近用过没有”的标记位，指针像钟表一样一页页扫过去——标记是 1 的，清零后放它一马；标记是 0 的，就是它了，换出去。扫一圈等于给所有页一次“再活一轮”的机会，效果接近 LRU，代价却小得多，Linux 和 Windows 用的都是这一类的近似算法。</p>
+      <p>还有个反直觉的结论：FIFO 有个叫 Belady 异常的毛病——内存给得更多了，缺页次数反而可能变多。直觉上“内存越大越不容易缺页”大体是对的，但算法选错了，多给的内存也可能帮倒忙。所以评价一个置换算法，不能只看名字，要看它在真实负载下的缺页次数。</p>
+      <p>真正决定缺页多少的，是程序的<strong>工作集</strong>：程序一段时间内反复用的那几页。如果工作集能塞进物理内存，缺页很少；塞不进，系统就在不停换页——抖动就是这么来的。这也是<a href="m1c8-locality.html">模块一第 8 章</a>讲的局部性原理在内存管理里的回响：程序爱扎堆访问，工作集才有意义，置换算法才有得选。缓解抖动的办法除了加内存、关程序，还有一个思路：让程序一次只专注干一件事，别同时摊开十几个大任务，工作集就小了。</p>
       <h2>抖动：内存不够的恶性循环</h2>
       <p>物理内存太小的时候，系统刚把一页换进来，马上又要把它换出去，CPU 的时间全花在换页上，真正干活的时间所剩无几，这就是抖动。电脑会卡到几乎动不了。唯一的办法是加内存，或者关掉一些程序。</p>
+      <p>安全上还要多想一层：被换到硬盘上的页，可能正躺着密码、密钥这类敏感数据。电脑休眠时内存整块写进硬盘，关机后也一样能被取证读出来。所以涉密的机器上，交换空间和休眠文件要加密——Windows 的 BitLocker、Linux 的加密 swap 干的就是这个活。下一章讲<a href="m2c9-filesystem.html">文件系统与权限</a>，会回头看“删掉的东西为什么还在硬盘上”——是同一个道理的另一面。</p>
       <div class="teacher-note">老师经验：内存耗尽是最常见的拒绝服务手段之一。攻击者不用打垮你的程序，只要让它不停地申请内存，系统就会陷入疯狂换页，最后整个机器都响应不了。看内存的时候，别只看“空闲”多少，要看“可用”多少——操作系统会把空闲内存拿去当缓存，数字上看着很少，实际是够用的。新手最容易在这里误判，以为内存满了就是中毒了。</div>
       <h2>动手做</h2>
       <p>1. 打开任务管理器 → 性能 → 内存，看“可用”和“缓存”两个数字，理解为什么内存占用率高不一定是坏事。<br>2. 在虚拟机的 Linux 里输入 <code>vmstat 1</code>，看 si（换入）和 so（换出）两列，正常情况下应该是 0。<br>3. 同时打开很多大程序，观察 si/so 开始跳动，就是在频繁换页了。</p>
       <h2>避坑</h2>
       <p>缺页不是错误，是正常机制，别被“缺页”这个名字吓到；LRU 效果最好但实现贵，实际用的是时钟算法；抖动的根治办法是加内存，清缓存只能顶一会儿。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>缺页分轻重：轻缺页只是补登记，几乎不花时间；重缺页要读硬盘，慢得多；缺页不是错误，段错误才是。</li>
+          <li>缺页处理五步：查表未命中、触发中断、选牺牲页、从硬盘读入、回到原指令重新执行。</li>
+          <li>置换算法拼的是缺页次数：LRU 效果好但实现贵，实际用的是时钟算法这类近似实现；FIFO 还有 Belady 异常。</li>
+          <li>抖动的根子是工作集塞不进物理内存，根治办法是加内存或关程序；换出去的页可能躺着敏感数据，交换空间要加密。</li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="m2c7-virtual-memory.html">← 上一章：第 7 章：内存管理：虚拟内存与分页</a>
         <a href="../course.html">课程目录</a>

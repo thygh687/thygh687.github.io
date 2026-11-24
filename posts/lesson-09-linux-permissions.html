@@ -22,16 +22,63 @@
     <article>
       <h1>第 9 课：文件权限与用户管理</h1>
       <div class="meta"><span class="tag">Linux</span>2026-11-24 · 阶段二</div>
+      <p><a href="lesson-01-computer.html">第 1 课</a>说过，操作系统是大管家，定规矩：哪个程序能读哪个文件、谁能装软件、谁能改系统设置，都是它说了算。这一课讲的就是这套规矩在 Linux 里的样子。学安全有一半是在学权限——权限设错了，病毒就长驱直入。</p>
       <h2>权限是什么</h2>
-      <p>Linux 里每个文件都有权限，规定了谁能读、谁能写、谁能执行。执行 <code>ls -l</code>，最前面那一串就是权限，比如 <code>-rw-r--r--</code>。</p>
+      <p>Linux 里每个文件都有权限，规定了谁能读、谁能写、谁能执行。执行 <code>ls -l</code>，最前面那一串就是权限，比如 <code>-rw-r--r--</code>。这串字符不是乱码，是三组规矩拼在一起，每组三个字母。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ls -l 权限拆解图">
+          <rect x="20" y="20" width="520" height="44" rx="8" fill="#1a1a2e"/>
+          <text x="40" y="49" font-family="Consolas, monospace" font-size="16" fill="#d7e3f4">-rw-r--r--  1  yufei  yufei  42  11月24日  10:00  笔记.txt</text>
+          <rect x="20" y="90" width="46" height="40" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="43" y="106" text-anchor="middle" font-size="15" fill="#1a1a2e">-</text>
+          <text x="43" y="124" text-anchor="middle" font-size="11" fill="#666">普通文件</text>
+          <rect x="76" y="90" width="120" height="40" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="136" y="106" text-anchor="middle" font-size="15" fill="#1a1a2e">rw-</text>
+          <text x="136" y="124" text-anchor="middle" font-size="11" fill="#666">所有者：读+写</text>
+          <rect x="206" y="90" width="120" height="40" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="266" y="106" text-anchor="middle" font-size="15" fill="#1a1a2e">r--</text>
+          <text x="266" y="124" text-anchor="middle" font-size="11" fill="#666">同组人：只读</text>
+          <rect x="336" y="90" width="120" height="40" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="396" y="106" text-anchor="middle" font-size="15" fill="#1a1a2e">r--</text>
+          <text x="396" y="124" text-anchor="middle" font-size="11" fill="#666">其他人：只读</text>
+          <rect x="466" y="90" width="74" height="40" rx="6" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="503" y="106" text-anchor="middle" font-size="12" fill="#1a1a2e">yufei</text>
+          <text x="503" y="124" text-anchor="middle" font-size="11" fill="#666">所有者</text>
+          <text x="280" y="162" text-anchor="middle" font-size="12" fill="#666">第 1 位是类型（- 文件，d 目录），后面每 3 位是一组人</text>
+          <text x="280" y="184" text-anchor="middle" font-size="12" fill="#666">横杠 - 的意思是“这项没有给”</text>
+        </svg>
+        <figcaption>图：ls -l 最前面一串字符的拆法——类型 + 所有者 + 同组人 + 其他人</figcaption>
+      </figure>
       <h2>rwx 三个字母</h2>
       <p><code>r</code> 是读，<code>w</code> 是写，<code>x</code> 是执行。权限分三组：文件所有者、所有者所在的组、其他人。比如 <code>rwx r-x r--</code> 就是所有者能读能写能执行，同组的人能读能执行，其他人只能读。</p>
+      <p>同一个字母，放在文件上和放在目录上，意思不一样——这是新手最容易晕的地方：</p>
+      <ul>
+        <li><strong>对文件：</strong><code>r</code> 能打开看内容；<code>w</code> 能改、能保存；<code>x</code> 能当成程序运行。没有 <code>x</code> 的脚本，你写得再对，系统也不让它跑，只会报 Permission denied。</li>
+        <li><strong>对目录：</strong><code>r</code> 能列出里面有什么（<code>ls</code>）；<code>w</code> 能在里面新建、删除、改名；<code>x</code> 能“走进去”（<code>cd</code>）和访问里面的文件。目录没有 <code>x</code>，哪怕有 <code>r</code>，也只能看到名字，打不开里面的东西——很多人卡在这里，以为是文件权限错了，其实是目录缺了 <code>x</code>。</li>
+      </ul>
+      <p>所以排错时要看两层：文件本身的权限，和它所在目录的权限。只改一层，问题可能还在另一层。</p>
       <h2>chmod 改权限</h2>
       <p><code>chmod 755 文件</code> 是最常见的改法：三个数字分别对应三组人，7 是读+写+执行，5 是读+执行，4 是只读。记不住数字也没关系，<code>chmod +x 文件</code> 就是给它加上执行权限。</p>
+      <p>数字是怎么来的？<code>r=4、w=2、x=1</code>，每组把有的加起来：<code>rwx</code> 是 4+2+1=7，<code>r-x</code> 是 4+1=5，<code>r--</code> 是 4。所以 <code>755</code> 就是“所有者全有，同组和其他人读+执行”——程序和目录最常用的权限；<code>644</code> 是“所有者读写，其他人只读”——普通文件最常用的权限；<code>600</code> 是“只有所有者能读写”——放密码、密钥这类私密文件就该用它。</p>
+      <p>两种写法各有用途：数字写法（<code>chmod 755</code>）一次把三组定死，适合从头定规矩；符号写法（<code>chmod +x</code>、<code>chmod o-w 文件</code>）只改一项、不动别的，适合微调——比如只给所有人去掉写权限，又不想动读和执行。还有 <code>chmod -R</code>，递归改整个文件夹，但要小心：它会把里面的每一个文件都改掉，改错了恢复起来很麻烦，敲之前先确认路径。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>见过最多的权限事故不是“权限太严”，是“权限太松”——图省事直接 <code>chmod 777</code>，所有人能读能写能执行，问题是暂时没了，但门也彻底敞开了。安全事件里，很多入侵就是从一个 777 的目录、一个所有人可写的脚本开始的。排错的正确顺序是：先看清现在是什么权限（ls -l），再想清楚应该是什么权限，最后只改最小的那一项。改权限之前问自己一句：改完之后，最坏是谁能干什么？答不上来就先别改。还有，脚本跑不起来先别急着加权限，先看第一行和报错——缺 x 是一回事，文件本身写错了是另一回事。</div>
+      <p><strong>避坑：</strong>一是别用 <code>777</code> 当万能钥匙，它是“所有人什么都能干”，不是“修好了”；二是改系统目录（比如 <code>/etc</code>）的权限之前，先想想有没有备份、能不能恢复——系统文件权限改错，整个系统都可能起不来；三是 <code>chmod</code> 改的是权限，不是所有者，想换主人要用 <code>chown</code>，这两个命令别混了。</p>
       <h2>root 和 sudo</h2>
       <p><code>root</code> 是超级用户，什么都能干，也最危险。平时用普通用户，需要管理员权限的时候在命令前面加 <code>sudo</code>，临时借用一次。</p>
+      <p>为什么这样设计？因为 root 没有“你确定吗”——它删系统文件不问、改配置不问、装软件不问。普通用户加 <code>sudo</code> 的好处是每一次提权都是一次显式的决定：你知道自己正在干一件需要管理员权限的事，输密码的那一刻就是一次停顿和确认。长期用 root 登录，等于把保险拆了开车，出事只是时间问题。</p>
+      <p>相关命令一次认全：<code>whoami</code> 看你现在是谁；<code>id</code> 看你的用户、组和编号；<code>sudo whoami</code> 会回答 root——因为它就是用 root 的身份跑的；<code>sudo -i</code> 是临时变成 root 的 shell，用完马上 <code>exit</code> 出来，别在里面逗留。用户管理上，<code>sudo adduser 新用户名</code> 建用户，<code>sudo passwd 用户名</code> 设密码，<code>sudo deluser 用户名</code> 删用户，<code>groups 用户名</code> 看他属于哪些组。删用户之前先想好他的文件归谁——人删了，文件还在，只是没了主人。</p>
+      <p><strong>什么时候该用 sudo，什么时候不该？</strong>装软件、改系统配置、看系统日志——该用。读自己的文件、写自己的笔记、跑自己的脚本——不该用。凡是 <code>sudo</code> 后面跟的命令，先问一句“这件事真的需要管理员吗？”不需要就别加。还有一条安全上的铁律：<code>sudo</code> 的密码就是你的登录密码，别把它告诉别人，也别为了省事把用户设成“不用密码就能 sudo”。</p>
       <h2>动手做</h2>
-      <p>建一个文件，<code>ls -l</code> 看它的权限，再 <code>chmod 600 文件</code>，再 <code>ls -l</code> 看变化。最后 <code>sudo whoami</code>，看它回答什么。</p>
+      <p>建一个文件，<code>ls -l</code> 看它的权限，再 <code>chmod 600 文件</code>，再 <code>ls -l</code> 看变化。最后 <code>sudo whoami</code>，看它回答什么。加做两步：建一个目录，故意把它改成没有 <code>x</code>（<code>chmod 644 目录</code>），试试 <code>cd</code> 进去会报什么错，再改回来；再用 <code>id</code> 看一眼自己的用户和组——<a href="lesson-10-linux-network.html">下一课</a>查端口的时候，<code>ss -tlnp</code> 看不到程序名，往往就是因为没加 <code>sudo</code>，权限不够。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>ls -l 最前面一串是三组规矩：所有者、同组人、其他人，每组 rwx 三个字母；第 1 位是类型（- 文件，d 目录）。</li>
+          <li>rwx 在文件和目录上意思不同：目录缺了 x 就进不去、打不开里面的文件；排错要看文件和目录两层。</li>
+          <li>chmod 数字写法一次定死三组（r=4、w=2、x=1），符号写法只改一项；755 给程序和目录，644 给普通文件，600 给私密文件。</li>
+          <li>永远别用 777 当万能钥匙；root 什么都能干所以最危险，平时用普通用户，需要时 sudo 临时借用一次。</li>
+          <li>whoami、id、adduser、passwd 是用户管理的基本功；下一课用网络命令时，权限不够会直接反映在输出上。</li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="lesson-08-linux-commands.html">← 上一课：第 8 课：Linux 常用命令</a>
         <a href="../course.html">课程目录</a>

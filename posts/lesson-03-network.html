@@ -22,18 +22,75 @@
     <article>
       <h1>第 3 课：网络是怎么连起来的</h1>
       <div class="meta"><span class="tag">网络</span>2026-11-24 · 阶段一</div>
+      <p>上一课的进程和文件都在一台电脑里。这一课，电脑要出门了：它怎么找到另一台电脑，怎么知道该走哪条路，又怎么区分对方电脑上的几十个服务？答案是四个概念：IP 地址、子网掩码、网关、端口，外加一个“数据包”。这四个概念，就是下一课 DNS、再下一课 HTTP 的地基，也是第 6 课三个排错命令要对上号的东西。</p>
       <h2>IP 地址：门牌号</h2>
-      <p>每台联网的设备都有一个 IP 地址，比如 <code>192.168.1.5</code>。没有门牌号，数据就不知道往哪送。</p>
+      <p>每台联网的设备都有一个 IP 地址，比如 <code>192.168.1.5</code>。没有门牌号，数据就不知道往哪送。IP 地址分两段看：前面一段是“哪个小区”（网络号），后面一段是“小区里的哪一户”（主机号）。你家里的电脑、手机拿到的 <code>192.168.1.x</code>，就是同一个小区里的门牌号——这是私有地址，只在你家里有效，出了家门，别人是找不到这个地址的；真正能上外网的，是你家路由器对外用的那个公网地址。</p>
+      <p><strong>什么时候会用到 IP？</strong>排错的时候最常用：ping 一个 IP，能通说明路是好的；ping 域名不通但 ping IP 通，问题多半在 DNS 那一步（<a href="dns-basics.html">第 4 课</a>）。还有，同一个网站的 IP 是会变的——服务器搬家、换了机房，IP 就换了，所以记域名不记 IP。</p>
       <h2>子网掩码：谁跟你在同一个小区</h2>
-      <p>子网掩码用来判断另一台设备跟你是不是在同一个局域网里。在同一个小区，直接敲门就行；不在，就得经过网关出去。</p>
+      <p>子网掩码用来判断另一台设备跟你是不是在同一个局域网里。在同一个小区，直接敲门就行；不在，就得经过网关出去。最常见的掩码 <code>255.255.255.0</code> 的意思是：前三段相同，就是同一个小区——<code>192.168.1.10</code> 和 <code>192.168.1.20</code> 是邻居，<code>192.168.1.10</code> 和 <code>192.168.2.10</code> 就不是，中间隔了一个网段。</p>
+      <p><strong>掩码配错了会怎样？</strong>掩码配得太小，本来是邻居的电脑会被当成“外人”，数据绕去网关，多走冤枉路甚至走不通；配得太大，本来该走网关的包被当成“邻居”直接发出去，发到一半没人应，表现为“有时候通、有时候不通”——这种时好时坏的毛病，排错时先怀疑掩码和网关。</p>
       <h2>网关：小区的门</h2>
-      <p>去外网的数据都要经过网关，一般就是你家里的路由器。网关坏了或者配错了，局域网里能通，外网出不去。</p>
+      <p>去外网的数据都要经过网关，一般就是你家里的路由器。网关坏了或者配错了，局域网里能通，外网出不去。这是最经典的一句排错口诀：<strong>内网通、外网不通，先看网关</strong>。反过来，内网都不通（连网关都 ping 不通），问题在你自己这边：网线、Wi-Fi、网卡，或者你根本没拿到地址。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="局域网内直达与经网关出外网示意图">
+          <defs>
+            <marker id="arr3" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="30" width="150" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="54" text-anchor="middle" font-size="15" fill="#1a1a2e">你的电脑</text>
+          <text x="95" y="74" text-anchor="middle" font-size="12" fill="#666">192.168.1.10</text>
+          <rect x="20" y="130" width="150" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="154" text-anchor="middle" font-size="15" fill="#1a1a2e">家里另一台电脑</text>
+          <text x="95" y="174" text-anchor="middle" font-size="12" fill="#666">192.168.1.20</text>
+          <rect x="230" y="80" width="150" height="56" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="305" y="104" text-anchor="middle" font-size="15" fill="#1a1a2e">网关（路由器）</text>
+          <text x="305" y="124" text-anchor="middle" font-size="12" fill="#666">192.168.1.1 · 小区的门</text>
+          <rect x="430" y="80" width="120" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="490" y="104" text-anchor="middle" font-size="15" fill="#1a1a2e">外网服务器</text>
+          <text x="490" y="124" text-anchor="middle" font-size="12" fill="#666">example.org</text>
+          <line x1="95" y1="86" x2="95" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <text x="180" y="112" font-size="12" fill="#1a1a2e">同一网段，直接敲门</text>
+          <line x1="170" y1="58" x2="228" y2="90" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <text x="200" y="40" text-anchor="middle" font-size="12" fill="#1a1a2e">去外网，先找网关</text>
+          <line x1="380" y1="108" x2="428" y2="108" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <text x="280" y="200" text-anchor="middle" font-size="13" fill="#1a1a2e">子网掩码 255.255.255.0：前三段相同，就是同一个小区</text>
+          <text x="280" y="224" text-anchor="middle" font-size="13" fill="#1a1a2e">192.168.1.10 与 192.168.1.20 是邻居，与 192.168.2.10 不是</text>
+          <text x="280" y="260" text-anchor="middle" font-size="12" fill="#666">网关就是家里路由器的内网地址，出外网的包都要经过它</text>
+        </svg>
+        <figcaption>图：同一个网段直接走，出了网段先找网关；网关就是家里路由器的内网地址</figcaption>
+      </figure>
       <h2>端口：房间号</h2>
-      <p>IP 地址找到那台电脑，端口找到那台电脑上的哪个服务。比如 80 是网页，443 是加密网页。一台电脑可以同时提供很多服务，靠端口区分。</p>
-      <h2>数据包</h2>
-      <p>数据在网上传的时候会被切成一个个小包，每个包都写着从哪来、到哪去。对方收到之后再拼起来。</p>
+      <p>IP 地址找到那台电脑，端口找到那台电脑上的哪个服务。比如 80 是网页，443 是加密网页。一台电脑可以同时提供很多服务，靠端口区分。打个比方：IP 是整栋楼的地址，端口是楼里某个房间的门牌——快递先找到楼（IP），再按房间号（端口）送到具体那个人手里。</p>
+      <p><strong>为什么端口重要？</strong>两个原因。第一，排错：网站打不开，可能是路不通，也可能是对方的 443 端口没开——路通不等于服务在。第二，安全：端口就是一台电脑对外开着的门，开得越多，能进来的路越多。所以防火墙干的活，很大一部分就是“哪些端口让进、哪些不让进”（<a href="lesson-15-firewall.html">第 15 课</a>会讲）。常见的端口记几个就够：80（网页 HTTP）、443（加密网页 HTTPS）、22（远程登录 SSH，Linux 里常用）、3389（Windows 远程桌面）。</p>
+      <p><strong>一个常见误区：</strong>“IP 通了，网站就应该能打开。”不对。IP 通只说明楼找得到，端口没开、服务没跑，照样打不开——就像你到了楼下，房间门锁着，进不去。</p>
+      <h2>数据包：切成小块再上路</h2>
+      <p>数据在网上传的时候会被切成一个个小包，每个包都写着从哪来、到哪去。对方收到之后再拼起来。每个包的“信封”上至少有四行字：源 IP、目标 IP、源端口、目标端口——前两个决定送到哪台电脑，后两个决定交给电脑上的哪个服务。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 170" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="数据包结构图">
+          <rect x="10" y="20" width="540" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="30" y="44" font-size="14" fill="#1a1a2e">信封：源 IP 192.168.1.10 → 目标 IP（对方）</text>
+          <text x="30" y="66" font-size="14" fill="#1a1a2e">源端口 52341 → 目标端口 443（对方的加密网页服务）</text>
+          <rect x="10" y="90" width="540" height="56" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="30" y="114" font-size="14" fill="#1a1a2e">信纸：真正要传的数据（比如一段网页请求）</text>
+          <text x="30" y="136" font-size="14" fill="#1a1a2e">数据太大时会被切成多个包，对方收到后再按顺序拼起来</text>
+        </svg>
+        <figcaption>图：每个数据包都是一封信——信封写着从哪来、到哪去、交给哪个服务，信纸才是数据本身</figcaption>
+      </figure>
+      <p><strong>为什么要切包？</strong>路是大家共用的，切成小包才能你一段我一段地轮流走，谁也不会把路独占太久；而且丢了一个包只需要重发那一个，不用整个文件重传。这也是第 6 课 ping 的原理：ping 发的就是一个很小的包，看它能不能走个来回。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>上不了网，别一上来就重启路由器——先分三段定位，省一半时间。第一段：ping 网关（比如 192.168.1.1），通了说明你到家门口的路没问题；不通，先查自己的网线、Wi-Fi 和地址（第 6 课的 ipconfig 就是干这个的）。第二段：ping 一个外网 IP，比如 8.8.8.8，通了说明出外网的路没问题；不通，问题在网关到外网这一段，多半是路由器或宽带的事。第三段：ping 域名，不通但 ping IP 通，问题在 DNS——这时候换个 DNS 试试，往往就好了。三段都通但网站打不开？那就不是路的问题，是端口或服务的问题，往第 5 课的方向查。</div>
+      <p><strong>避坑：</strong>“能上 QQ 但打不开网页”不是玄学——这是 DNS 或 443 端口的问题，不是整条网断了。还有，192.168 开头的地址是家里的私有地址，出了家门就没意义：别人给你一个 192.168.1.5 让你连，你在自己家里是连不上的。最后提醒一句：扫描别人的端口、试别人的服务，是攻击行为；想练手，只在自己的虚拟机里搭两台虚拟机互 ping、互扫（<a href="lesson-07-linux-vm.html">第 7 课</a>会装虚拟机）。</p>
       <h2>动手做</h2>
-      <p>按 <code>Win + R</code>，输入 <code>cmd</code> 回车，再输入 <code>ipconfig</code>，看自己的 IPv4 地址、子网掩码和默认网关。</p>
+      <p>按 <code>Win + R</code>，输入 <code>cmd</code> 回车，再输入 <code>ipconfig</code>，看自己的 IPv4 地址、子网掩码和默认网关。对照本课的图回答三个问题：你的地址和网关前三段一样吗？你的掩码是 255.255.255.0 吗？如果不一样，记下来，下次排错用得上。扫描、探测类练习只在虚拟机里做，绝不在真实网络上练手。</p>
+      <p>地址、网关、端口这三个概念，第 6 课会用 <code>ipconfig</code> 和 <code>ping</code> 再验证一遍（<a href="lesson-06-commands.html">第 6 课：ping、ipconfig、nslookup</a>）；Linux 下看地址的命令在<a href="lesson-10-linux-network.html">第 10 课</a>。下一课，名字是怎么变成地址的：<a href="dns-basics.html">第 4 课：DNS 是怎么回事</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>IP 地址是门牌号：前三段相同（掩码 255.255.255.0 时）就是同一个局域网，出了网段要走网关。</li>
+          <li>网关是小区的门，一般是家里路由器：内网通、外网不通，先看网关；连网关都不通，先查自己这边。</li>
+          <li>端口是房间号：IP 找到电脑，端口找到电脑上的服务；路通不等于服务在，80 是网页，443 是加密网页。</li>
+          <li>数据会被切成小包，每个包的信封上写着源 IP、目标 IP、源端口、目标端口。</li>
+          <li>下一课：<a href="dns-basics.html">DNS 是怎么回事</a>。</li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="lesson-02-files-processes.html">← 上一课：第 2 课：文件、进程与权限</a>
         <a href="../course.html">课程目录</a>

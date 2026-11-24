@@ -22,15 +22,65 @@
     <article>
       <h1>第 8 课：Linux 常用命令</h1>
       <div class="meta"><span class="tag">Linux</span>2026-11-24 · 阶段二</div>
-      <p>Linux 主要靠命令行。先记住这十个，天天用得上。打开虚拟机里的终端，一个一个敲。</p>
-      <h2>走到哪、看到什么</h2>
-      <p><code>pwd</code> 看你现在在哪个目录；<code>ls</code> 列出当前目录的东西；<code>cd 目录名</code> 换个目录；<code>cd ..</code> 回上一级。</p>
+      <p>Linux 主要靠命令行。先记住这十个，天天用得上。打开<a href="lesson-07-linux-vm.html">第 7 课</a>装好的虚拟机里的终端，一个一个敲。命令不用背，理解它在干什么，敲三遍手就记住了。</p>
+      <h2>先认路：你在哪里，周围有什么</h2>
+      <p>Linux 里没有 C 盘 D 盘，整个系统是一棵从根目录 <code>/</code> 长出来的树。你家目录是 <code>/home/你的用户名</code>，平时都在这里活动。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Linux 目录树图">
+          <rect x="230" y="12" width="100" height="36" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="15" fill="#1a1a2e">/ 根目录</text>
+          <rect x="20" y="80" width="100" height="36" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="70" y="103" text-anchor="middle" font-size="13" fill="#1a1a2e">/etc 配置</text>
+          <rect x="155" y="80" width="100" height="36" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="205" y="103" text-anchor="middle" font-size="13" fill="#1a1a2e">/home 用户</text>
+          <rect x="290" y="80" width="100" height="36" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="340" y="103" text-anchor="middle" font-size="13" fill="#1a1a2e">/var 日志</text>
+          <rect x="425" y="80" width="100" height="36" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="475" y="103" text-anchor="middle" font-size="13" fill="#1a1a2e">/usr 程序</text>
+          <rect x="155" y="148" width="100" height="36" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="205" y="171" text-anchor="middle" font-size="13" fill="#1a1a2e">你在这里</text>
+          <line x1="280" y1="48" x2="70" y2="78" stroke="#1a1a2e" stroke-width="1.2"/>
+          <line x1="280" y1="48" x2="205" y2="78" stroke="#1a1a2e" stroke-width="1.2"/>
+          <line x1="280" y1="48" x2="340" y2="78" stroke="#1a1a2e" stroke-width="1.2"/>
+          <line x1="280" y1="48" x2="475" y2="78" stroke="#1a1a2e" stroke-width="1.2"/>
+          <line x1="205" y1="116" x2="205" y2="146" stroke="#1a1a2e" stroke-width="1.2"/>
+          <text x="280" y="206" text-anchor="middle" font-size="12" fill="#666">/etc 放配置，/var 放日志——排错时最常去的两个地方</text>
+        </svg>
+        <figcaption>图：Linux 是一棵从 / 长出来的树；你的活动范围主要是 /home 下自己的目录</figcaption>
+      </figure>
+      <p><code>pwd</code> 看你现在在哪个目录（print working directory）；<code>ls</code> 列出当前目录的东西；<code>cd 目录名</code> 换个目录；<code>cd ..</code> 回上一级；<code>cd ~</code> 直接回家。路径有两种写法：<strong>绝对路径</strong>从根写起，比如 <code>/home/用户名/练习</code>，在哪敲都一样；<strong>相对路径</strong>从现在的位置算，比如 <code>cd 练习</code>，换个目录结果就不同。新手最常见的错就是把相对路径当成绝对路径——命令本身没错，只是“现在在哪”跟你想的不一样，先 <code>pwd</code> 看一眼再敲。</p>
+      <p>两个提效的习惯，现在就养成：一是 <strong>Tab 补全</strong>，输一半按 Tab，系统帮你把剩下的补出来，既快又不会打错字；二是 <strong>方向键上翻历史</strong>，按 ↑ 就能找回上一条命令，不用重新打。排错时还会用到 <code>history</code>，它列出你敲过的所有命令——别人问“你刚才到底干了什么”，它就是证据。</p>
       <h2>建、复制、移动、删除</h2>
       <p><code>mkdir 名字</code> 建文件夹；<code>cp 源文件 目标</code> 复制；<code>mv 旧名 新名</code> 移动或者改名；<code>rm 文件</code> 删除。注意：<code>rm</code> 删了没有回收站，删之前先想清楚。</p>
+      <p>这几个命令各有一个新手必踩的坑：</p>
+      <ul>
+        <li><strong><code>cp</code> 复制文件夹要加 <code>-r</code>。</strong><code>cp 文件夹 目标</code> 会报错，因为默认只复制单个文件；<code>cp -r 文件夹 目标</code> 才把整个文件夹连里面的东西一起搬走。报错不是命令坏了，是你少了一个参数。</li>
+        <li><strong><code>mv</code> 既是移动也是改名。</strong><code>mv 旧名 新名</code> 在同一个目录里就是改名，目标写成另一个目录就是移动。文件“不见了”的时候，先想想是不是被 <code>mv</code> 到别处去了。</li>
+        <li><strong><code>rm</code> 没有后悔药，尤其 <code>rm -rf</code>。</strong><code>-r</code> 是递归删整个文件夹，<code>-f</code> 是不问直接删，合起来就是“删光、不确认”。在虚拟机里练可以，但永远别在不确定的目录里敲，更别对着 <code>/</code> 或家目录敲。删之前先 <code>ls</code> 确认自己在哪、要删的是什么——<a href="lesson-07-linux-vm.html">第 7 课</a>的快照就是最后一道保险，但好习惯比保险更重要。</li>
+        <li><strong>删错了怎么办？</strong>第一时间停手，别再往同一块磁盘写东西（新写入会覆盖刚删的数据），然后从快照恢复。数据取证能恢复“已删除”文件（<a href="lesson-01-computer.html">第 1 课</a>讲过原理），但那是事后补救，不是日常操作。</li>
+      </ul>
       <h2>看内容、找文字</h2>
       <p><code>cat 文件</code> 把文件内容打印出来；<code>grep 文字 文件</code> 在文件里找指定的文字；<code>man 命令</code> 看这个命令的说明书，不会就查它。</p>
+      <p>这三个要讲深一点，因为它们是排错的基本功：</p>
+      <ul>
+        <li><strong><code>cat</code> 只适合看小文件。</strong>文件一大，它会把几千行一口气刷过去，根本看不清。大文件用 <code>less 文件</code>，可以上下翻、按 <code>/</code> 搜索、按 <code>q</code> 退出——看日志的时候天天用它。</li>
+        <li><strong><code>grep</code> 是在文字里钓鱼。</strong><code>grep 错误 日志文件</code> 只把含“错误”的行挑出来，几万行的日志一下子只剩几行。加上 <code>-i</code> 不区分大小写、<code>-n</code> 显示行号、<code>-r</code> 在整个文件夹里递归找。以后查日志、查配置，<code>grep</code> 是第一把筛子。</li>
+        <li><strong><code>man</code> 是说明书，不是字典。</strong><code>man ls</code> 打开 <code>ls</code> 的完整手册，用 <code>/</code> 搜关键字、<code>q</code> 退出。看不懂别硬啃，先看开头的“描述”和例子部分。更轻量的办法是 <code>命令 --help</code>，只列常用选项，够应急用。</li>
+      </ul>
+      <p><strong>报错也要会读。</strong>三种报错最常见，各有各的意思：<code>No such file or directory</code> 是路径错了——先 <code>pwd</code>、再 <code>ls</code>，确认文件到底在不在这；<code>Permission denied</code> 是权限不够——不是命令错了，是你这个用户没资格碰它，<a href="lesson-09-linux-permissions.html">第 9 课</a>专门讲权限；<code>Is a directory</code> 是你把文件夹当文件用了，比如对文件夹用了 <code>cat</code>，或者 <code>cp</code> 文件夹忘了 <code>-r</code>。报错不是“电脑坏了”，它是系统在告诉你哪一步不对。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>排错时，先复述三件事再动手：我在哪（pwd）、我面前有什么（ls）、我刚才敲了什么（history）。一半以上的“灵异问题”都是这三件事里有一件跟想的不一样——在 A 目录敲了针对 B 目录的命令，或者文件名打错一个字母。还有一条：敲 <code>rm</code> 之前，先把命令里的路径读一遍，大声读出来也行；凡是 <code>rm -rf</code> 后面跟的路径让你犹豫超过三秒的，先停下来，用 <code>ls</code> 看一眼再说。真正出事的从来不是命令本身，是手比脑子快。</div>
+      <p><strong>避坑：</strong>一是别在根目录 <code>/</code> 附近练 <code>rm</code> 和 <code>mv</code>，在家目录建个“练习”文件夹，所有实验都在里面做；二是文件名里别用空格，空格会被当成两个参数，<code>我的 文件</code> 会被认成两个东西——要用就用下划线；三是 <code>cat</code> 大文件之前先 <code>ls -l</code> 看一眼大小，几 MB 以上就换 <code>less</code>。</p>
       <h2>动手做</h2>
-      <p>在虚拟机里把上面每个命令敲一遍：建一个文件夹，进去，建一个文件，写一句话进去，再用 <code>cat</code> 看、用 <code>grep</code> 找，最后删掉。</p>
+      <p>在虚拟机里把上面每个命令敲一遍：建一个文件夹，进去，建一个文件，写一句话进去，再用 <code>cat</code> 看、用 <code>grep</code> 找，最后删掉。加做两步：故意敲错一次路径，看 <code>No such file or directory</code> 长什么样；再用 <code>man ls</code> 查一下 <code>ls -l</code> 是什么意思——<code>ls -l</code> 的输出，<a href="lesson-09-linux-permissions.html">下一课</a>要逐字拆开讲。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>Linux 是一棵从 / 长出来的树：pwd 看位置，ls 看内容，cd 换地方；绝对路径从根写起，相对路径看你现在在哪。</li>
+          <li>mkdir、cp、mv、rm 管增删改：cp 文件夹要加 -r；mv 既是移动也是改名；rm 没有回收站，rm -rf 尤其要慢半拍。</li>
+          <li>cat 看小文件，less 看大文件和日志；grep 是在文字里钓鱼，man 和 --help 是随身说明书。</li>
+          <li>报错要会读：No such file 是路径错了，Permission denied 是权限不够，Is a directory 是把文件夹当文件用了。</li>
+          <li>Tab 补全和方向键翻历史，现在就养成；下一课拆 ls -l，看权限到底是怎么回事。</li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="lesson-07-linux-vm.html">← 上一课：第 7 课：为什么学 Linux：先装个虚拟机</a>
         <a href="../course.html">课程目录</a>

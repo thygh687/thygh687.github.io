@@ -24,12 +24,77 @@
       <div class="meta">2026-11-06</div>
       <p>上网的时候，我们输入的是网址，比如 example.org；但电脑真正要找的，是一个 IP 地址。把网址翻译成 IP 地址的那一步，就是 DNS 干的活。</p>
       <p>可以这样理解：DNS 就是互联网的电话本。你报一个名字，它帮你查到号码。</p>
+      <h2>为什么非得有 DNS</h2>
+      <p>人记名字容易，记数字难；电脑正好相反，认数字不认名字。IP 地址是会变的：网站换服务器、换机房、扩容，IP 就跟着变，你总不能每次都重新背一串数字。所以中间需要一个翻译层：名字固定不变，背后的号码可以随便换，翻译这件事交给 DNS。你在第 3 课见过的 IP、网关、端口，全都是数字世界的东西；DNS 就是把“人用的名字”接到“电脑用的数字”上的那座桥。</p>
+      <h2>一次查询是怎么跑完的</h2>
+      <p>你在浏览器里输入 example.org、按回车，背后是一次接力查询：</p>
+      <ol>
+        <li><strong>先看自己的小本子（缓存）</strong>：浏览器和电脑都记着最近查过的名字，查过就直接用，不用再问别人。这就是为什么同一个网站第二次打开总觉得快一点。</li>
+        <li><strong>问本地 DNS 服务器</strong>：没记着，就去问你配好的 DNS 服务器（ipconfig 里看到的那一行“DNS 服务器”，比如 8.8.8.8）。它一般也记着很多常用名字的答案。</li>
+        <li><strong>一级一级往上问</strong>：本地服务器也不知道，就去问根服务器“<code>.org</code> 归谁管”，再问管 <code>.org</code> 的服务器“<code>example.org</code> 归谁管”，最后问到 example.org 自己的权威服务器，拿到真正的 IP 地址，再原路把答案送回来。</li>
+      </ol>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DNS 查询接力过程图">
+          <defs>
+            <marker id="arrDns" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="20" width="120" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">你的电脑</text>
+          <text x="80" y="62" text-anchor="middle" font-size="12" fill="#666">先查缓存</text>
+          <rect x="180" y="20" width="120" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="240" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">本地 DNS 服务器</text>
+          <text x="240" y="62" text-anchor="middle" font-size="12" fill="#666">比如 8.8.8.8</text>
+          <rect x="340" y="20" width="100" height="52" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="390" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">根服务器</text>
+          <text x="390" y="62" text-anchor="middle" font-size="12" fill="#666">.org 归谁管？</text>
+          <rect x="340" y="110" width="100" height="52" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="390" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">.org 服务器</text>
+          <text x="390" y="152" text-anchor="middle" font-size="12" fill="#666">example.org 归谁管？</text>
+          <rect x="340" y="200" width="100" height="52" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="390" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">权威服务器</text>
+          <text x="390" y="242" text-anchor="middle" font-size="12" fill="#666">答案：这个 IP</text>
+          <line x1="140" y1="46" x2="178" y2="46" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrDns)"/>
+          <line x1="300" y1="46" x2="338" y2="46" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrDns)"/>
+          <line x1="390" y1="72" x2="390" y2="108" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrDns)"/>
+          <line x1="390" y1="162" x2="390" y2="198" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrDns)"/>
+          <line x1="340" y1="240" x2="142" y2="240" stroke="#1a1a2e" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrDns)"/>
+          <text x="240" y="228" text-anchor="middle" font-size="12" fill="#666">答案原路返回，顺路被各级缓存记下来</text>
+          <text x="280" y="278" text-anchor="middle" font-size="12" fill="#666">下次再问同一个名字，缓存里有就不用跑这一趟了</text>
+        </svg>
+        <figcaption>图：DNS 查询是一次接力——先查自己的缓存，再一级一级往上问，最后拿到答案原路返回</figcaption>
+      </figure>
+      <p><strong>缓存是什么意思？</strong>答案不是永久有效的，每个答案都带一个“保质期”（TTL，存活时间）。保质期内直接用缓存，不用再问；过期了再重新问一遍。所以网站换了 IP，你这边可能还要等一会儿才生效——不是网站没换，是你的缓存还没过期。</p>
       <h2>动手验证</h2>
       <p>打开 PowerShell，输入：</p>
       <p><code>ping example.org</code></p>
       <p>返回的结果里会有一个 IP 地址，那就是 example.org 这个名字对应的号码。名字没变，号码可能会变——这也是 DNS 的工作之一。</p>
+      <p>再跑一条，专门问 DNS 要答案：</p>
+      <p><code>nslookup example.org</code></p>
+      <p>它会直接告诉你：问的是哪台 DNS 服务器，对方给的 IP 是什么。<strong>两条命令的结果对照着看，意思完全不一样</strong>：ping 通、nslookup 也查得到，名字和路都没问题；ping 报“找不到主机”，但 nslookup 查得到地址，说明 DNS 没问题，问题在路上；nslookup 也查不到，那 DNS 本身就有问题——可能是你配的 DNS 服务器挂了，也可能是名字根本不存在。第 6 课会把这套对照排错法完整走一遍。</p>
+      <h2>查不到、查错了，各意味着什么</h2>
+      <ul>
+        <li><strong>名字不存在（NXDOMAIN）</strong>：DNS 明确说“没这个名字”。先检查是不是自己把网址打错了一个字母——大多数“网站打不开”都是拼写问题。</li>
+        <li><strong>超时、没回应</strong>：问了半天没人理。可能是你配的 DNS 服务器出问题，也可能是你的网关根本没通——先回第 3 课的三段定位法，看是 DNS 的问题还是路的问题。</li>
+        <li><strong>查到了，但打开的是错的网站</strong>：这是最要警惕的一种。名字没错，号码是假的，你就会连到假的网站上去。</li>
+      </ul>
       <h2>为什么安全工程师要懂这个</h2>
-      <p>很多攻击就发生在“翻译”这一步：如果你查到的号码是假的，你就会连到假的网站。所以学安全，DNS 是绕不开的第一课。</p>
+      <p>很多攻击就发生在“翻译”这一步：如果你查到的号码是假的，你就会连到假的网站。所以学安全，DNS 是绕不开的第一课。常见的招数有三种：<strong>DNS 劫持</strong>——你问到的 DNS 服务器被人动了手脚，查什么都给你一个假地址；<strong>DNS 投毒</strong>——假答案被塞进缓存，保质期内所有问这个名字的人都拿到假地址；<strong>钓鱼域名</strong>——根本不用动 DNS，注册一个长得很像的名字（比如把字母 o 换成数字 0），等你自己打错、点错。</p>
+      <p>防住它的办法，第一是看：浏览器地址栏的域名，一个字母一个字母核对，尤其是从邮件、聊天记录里点开的链接；第二是认：加密网站的小锁只说明“这条路加密了”，不说明“这个网站是真的”——钓鱼网站也可以有小锁（<a href="lesson-05-http.html">第 5 课</a>会细讲）；第三是习惯：重要网站自己输入网址、走收藏夹，别点来路不明的链接。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>排错时遇到“能上网但某个网站打不开”，先别怀疑网站挂了——先 nslookup 一下，再换一个 DNS（比如 8.8.8.8）再查一次，两个答案不一样，问题就出在你原来那个 DNS 上。还有一个真实案例里最常见的坑：电脑里的 hosts 文件被人改了——这个文件优先级比 DNS 还高，写在里面的名字根本不走 DNS 查询，直接按文件里的假地址连。查 DNS 查了半天查不出问题，最后发现是 hosts 文件里多了一行，这在中招的电脑上见过不止一次。所以查 DNS 之前，先养成一个习惯：nslookup 的答案和 ping 显示的地址对不上时，先看 hosts 文件，再怀疑 DNS。</div>
+      <p><strong>避坑：</strong>不要以为“ping 得通，网站就没问题”——ping 走的是另一条路（第 6 课讲过，很多服务器直接禁 ping，网站照常能打开）。也不要随便把 DNS 改成网上抄来的地址：DNS 服务器能看到你查过的每一个名字，换 DNS 等于换了一个“查号台”，只用你信得过的。DNS 的实验（比如自己搭一个 DNS 服务器、改解析记录）只在虚拟机里做，不要在真实网络上改 DNS 配置练手。</p>
+      <h2>动手做</h2>
+      <p>在 PowerShell 里跑 <code>ping example.org</code> 和 <code>nslookup example.org</code>，把两个命令给出的 IP 记下来，对一对是不是同一个。再跑 <code>nslookup example.org 8.8.8.8</code>（指定问 8.8.8.8 这台服务器），看答案变没变——如果变了，说明不同 DNS 服务器给的答案可能不一样，DNS 本身就是个可以被动手脚的环节。</p>
+      <p>DNS 是第 3 课的地址和网关之后，打开网站之前必须过的一关：名字变地址靠它，地址变连接靠<a href="lesson-05-http.html">第 5 课的 HTTP</a>。第 6 课会把 ping、ipconfig、nslookup 串成一条排错链（<a href="lesson-06-commands.html">第 6 课：ping、ipconfig、nslookup</a>）。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>DNS 是互联网的电话本：把人用的名字翻译成电脑用的 IP 地址，名字不变，号码可以换。</li>
+          <li>一次查询是接力：先查缓存，再问本地 DNS 服务器，再一级一级问到权威服务器，答案原路返回。</li>
+          <li>答案有保质期（TTL）：缓存没过期就直接用，网站换 IP 后要等缓存过期才生效。</li>
+          <li>nslookup 和 ping 对照着看：一个查名、一个查路，分得清问题在哪一段。</li>
+          <li>翻译这一步最容易被动手脚：劫持、投毒、钓鱼域名，都是让假号码冒充真网站。</li>
+          <li>下一课：<a href="lesson-05-http.html">网站是怎么打开的</a>。</li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="lesson-03-network.html">← 上一课：第 3 课：网络是怎么连起来的</a>
         <a href="../course.html">课程目录</a>

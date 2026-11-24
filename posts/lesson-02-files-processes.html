@@ -22,16 +22,67 @@
     <article>
       <h1>第 2 课：文件、进程与权限</h1>
       <div class="meta"><span class="tag">基础</span>2026-11-24 · 阶段一</div>
-      <h2>文件</h2>
-      <p>文件就是一个名字加一个扩展名，比如 <code>笔记.txt</code>、<code>照片.jpg</code>、<code>安装.exe</code>。扩展名决定了用什么程序打开它。改扩展名不会改变文件本身，只会让系统不知道用什么打开。</p>
-      <h2>文件夹与路径</h2>
-      <p>文件夹是装文件的盒子，路径就是地址。比如 <code>C:\Users\你的名字\Desktop</code> 就是桌面。知道路径，才能在命令行里找到文件。</p>
-      <h2>进程</h2>
-      <p>进程就是正在运行的程序。一个程序可以有多个进程。电脑卡的时候，往往是某个进程占了太多 CPU 或者内存。</p>
-      <h2>权限</h2>
+      <p>第 1 课认了四个角色：CPU、内存、硬盘、操作系统。这一课看操作系统手里最常管的两样东西——文件和进程，以及管它们的规矩——权限。安全工作里的大部分排错，都是在这三样东西上打转：文件被改了没有？哪个进程在捣乱？它凭什么有这个权限？</p>
+      <h2>文件：不只是一个名字</h2>
+      <p>文件就是一个名字加一个扩展名，比如 <code>笔记.txt</code>、<code>照片.jpg</code>、<code>安装.exe</code>。但对操作系统来说，一个文件有四样东西：<strong>名字</strong>（你怎么找到它）、<strong>扩展名</strong>（系统凭它决定用什么程序打开）、<strong>内容</strong>（真正的数据）、<strong>权限</strong>（谁能读、谁能改）。</p>
+      <p><strong>为什么扩展名重要，又为什么不能只信扩展名？</strong>扩展名决定了双击之后发生什么：<code>.txt</code> 用记事本打开，<code>.exe</code> 直接运行。所以改扩展名不会改变文件本身，只会让系统不知道用什么打开——把 <code>照片.jpg</code> 改成 <code>照片.txt</code>，照片数据还在，只是系统会拿记事本去打开它，看到一堆乱码。但反过来也一样危险：一个文件叫 <code>发票.pdf.exe</code>，在默认隐藏已知扩展名的 Windows 上，你看到的只是“发票.pdf”，双击却是在运行一个程序。安全上记住一条：<strong>扩展名是“建议用什么打开”，不是“这个文件是什么”</strong>——真正决定文件是什么的，是文件开头几个字节的“文件头”，不是名字。</p>
+      <p><strong>什么时候要留意文件？</strong>下载了一个来路不明的附件、某个文件突然被改了时间、桌面上多了一个你没见过的文件——这些时候，先看它的完整名字（包括扩展名）、位置和修改时间，再决定动不动它。</p>
+      <h2>文件夹与路径：文件的地址</h2>
+      <p>文件夹是装文件的盒子，路径就是地址。比如 <code>C:\Users\你的名字\Desktop</code> 就是桌面。知道路径，才能在命令行里找到文件。路径分两种：<strong>绝对路径</strong>（从盘符写全，走到哪都找得到）和<strong>相对路径</strong>（相对于你现在的位置，换个位置就失效了）。排错时别人给你一条命令，里面写的是相对路径，你当前不在那个文件夹，命令就会报“找不到文件”——先看自己在哪，再看路径对不对。</p>
+      <p>还有一个容易踩的坑：文件名里有空格，命令行里要加引号。<code>C:\我的文件\笔记.txt</code> 不加引号，命令会把它当成两个东西，报错说找不到。</p>
+      <h2>进程：运行起来的程序</h2>
+      <p>程序是躺在硬盘里的文件，<strong>进程是它跑起来的样子</strong>：程序被读进内存、CPU 开始执行它，它就成了一个进程。一个程序可以有多个进程——浏览器开一个标签页就多一个进程，关掉标签页，进程也就没了。</p>
+      <p>每个进程都有三样身份信息：<strong>名字</strong>（它叫什么）、<strong>编号 PID</strong>（系统给它的唯一号码，名字可以重名，PID 不会）、<strong>归属用户</strong>（它是以谁的身份在跑，是普通用户还是管理员）。电脑卡的时候，往往是某个进程占了太多 CPU 或者内存——打开任务管理器，先看占用最高的那几行，再看它们是谁。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="程序变进程与权限检查流程图">
+          <defs>
+            <marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="30" width="150" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="56" text-anchor="middle" font-size="15" fill="#1a1a2e">程序：硬盘上的文件</text>
+          <text x="95" y="76" text-anchor="middle" font-size="12" fill="#666">安装.exe（还没跑）</text>
+          <rect x="210" y="30" width="150" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="285" y="56" text-anchor="middle" font-size="15" fill="#1a1a2e">进程：内存里的运行实例</text>
+          <text x="285" y="76" text-anchor="middle" font-size="12" fill="#666">名字 / PID / 归属用户</text>
+          <rect x="400" y="30" width="140" height="60" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="470" y="56" text-anchor="middle" font-size="15" fill="#1a1a2e">权限检查</text>
+          <text x="470" y="76" text-anchor="middle" font-size="12" fill="#666">你是谁？让不让你做？</text>
+          <line x1="170" y1="60" x2="208" y2="60" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <text x="189" y="48" text-anchor="middle" font-size="11" fill="#666">双击启动</text>
+          <line x1="360" y1="60" x2="398" y2="60" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <text x="379" y="48" text-anchor="middle" font-size="11" fill="#666">每做一步</text>
+          <rect x="80" y="150" width="180" height="52" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="170" y="172" text-anchor="middle" font-size="14" fill="#1a1a2e">通过：读文件、改文件、上网</text>
+          <text x="170" y="190" text-anchor="middle" font-size="12" fill="#666">在它被允许的范围内做事</text>
+          <rect x="300" y="150" width="180" height="52" rx="8" fill="#fef2f2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="390" y="172" text-anchor="middle" font-size="14" fill="#1a1a2e">拒绝：弹出提示或直接失败</text>
+          <text x="390" y="190" text-anchor="middle" font-size="12" fill="#666">权限不够，做不了这一步</text>
+          <line x1="470" y1="90" x2="170" y2="148" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <line x1="470" y1="90" x2="390" y2="148" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <text x="280" y="240" text-anchor="middle" font-size="13" fill="#1a1a2e">同一个程序，双击一次就多一个进程；关掉窗口，进程也就结束了</text>
+          <text x="280" y="264" text-anchor="middle" font-size="13" fill="#1a1a2e">进程带着“谁启动的它”这个身份去做每一件事</text>
+        </svg>
+        <figcaption>图：程序是硬盘上的文件，跑起来才叫进程；进程每做一步都要过权限检查这一关</figcaption>
+      </figure>
+      <p><strong>进程“在”不等于程序“好好的”：</strong>一个进程占着 CPU 不动，可能是它在正常干活，也可能是它卡死了；一个进程不见了，可能是它自己退出了，也可能是被杀毒软件拦住了。看进程要看三样一起看：名字、PID、归属用户，再加上它占了多少 CPU 和内存——只看名字最容易被骗。</p>
+      <h2>权限：谁能干什么</h2>
       <p>不是所有操作谁都能做。有些操作要管理员才让做，比如往系统文件夹里写东西、装软件。这不是麻烦，这是保护：恶意软件也得先过这一关。</p>
+      <p>权限要分两层看。<strong>第一层是“你是谁”</strong>：普通用户只能动自己的文件，管理员能动系统的东西。你平时用普通账户上网，病毒就算跑起来，也只能在普通用户的权限里折腾；你用管理员身份运行了一个来路不明的程序，就等于把大门的钥匙递给了它。<strong>第二层是“这个文件让谁干什么”</strong>：每个文件都有一张“允许名单”，写着谁能读、谁能改、谁能执行。右键文件 → 属性 → 安全，看到的就是这张名单。</p>
+      <p><strong>什么时候权限会拦住你，分别意味着什么？</strong>弹出“需要管理员权限”：说明你要动的东西超出了当前身份，点“是”之前先问一句——这个操作是我自己要做的吗？是我信任的程序发起的吗？直接报“拒绝访问”：可能是权限真的不够，也可能是文件正在被别的进程占用（比如想删一个正在运行的程序）；先看是哪个进程占着它，别急着改权限。改了权限也打不开：先确认自己看的是不是权限问题——文件损坏、磁盘出问题时，报错也长得很像。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>修电脑查可疑进程，别只看名字——病毒最爱起一个和系统进程一模一样的名字，比如把自己叫做 svchost.exe。先看两样东西再下结论：它在哪个文件夹里（真的系统进程在 C:\Windows\System32 里，藏在别处的基本有问题），以及它是谁启动的、占了多少资源。同样，看到“需要管理员权限”的弹窗，先停三秒：是我自己点的安装吗？是哪个程序弹出来的？随手点的“是”，就是很多中毒的起点。还有一条排错经验：删不掉、改不了的文件，先在任务管理器里找找是哪个进程占着它，关掉那个进程再试，比直接改权限安全得多。</div>
+      <p><strong>避坑：</strong>不要为了图省事天天用管理员账户，更不要把 UAC（用户账户控制）关掉——它弹出来的每一次，都是在问你“这事真是你让干的吗”。也不要一遇到“拒绝访问”就去改文件权限、把所有人改成“完全控制”：权限放宽了，当时是顺了，病毒进来也是顺的。还有，扩展名别只看一半：先在文件资源管理器里打开“查看 → 文件扩展名”，让 <code>.pdf.exe</code> 这种双扩展名现出原形。</p>
       <h2>动手做</h2>
-      <p>打开任务管理器 → 详细信息，看一眼正在跑的进程。再右键任意一个文件 → 属性 → 安全，看谁能读、谁能改这个文件。</p>
+      <p>打开任务管理器 → 详细信息，看一眼正在跑的进程：找一个你认识的程序，看它的 PID、归属用户和 CPU、内存占用。再右键任意一个文件 → 属性 → 安全，看谁能读、谁能改这个文件。最后打开文件资源管理器的“查看 → 文件扩展名”，确认扩展名是显示出来的。涉及陌生文件、陌生进程的练习，只在虚拟机里做，不要在日常用的电脑上乱试。</p>
+      <p>文件和进程是操作系统最基础的两样东西，<a href="m2c2-process.html">模块二第 2 章</a>会讲进程在系统里到底是怎么被创建和调度的，<a href="m2c9-filesystem.html">模块二第 9 章</a>会讲文件在磁盘上是怎么存的、删掉的东西为什么还能找回来。权限这条线还会一路讲下去：Linux 下的权限在<a href="lesson-09-linux-permissions.html">第 9 课</a>。下一课，电脑要出门了：<a href="lesson-03-network.html">第 3 课：网络是怎么连起来的</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>文件有四样东西：名字、扩展名、内容、权限；扩展名只是“建议用什么打开”，不是文件本身是什么。</li>
+          <li>程序是硬盘上的文件，跑起来才叫进程；一个程序可以有多个进程，每个进程有名字、PID 和归属用户。</li>
+          <li>权限分两层：你是谁（普通用户还是管理员），以及这个文件允许谁干什么。</li>
+          <li>查可疑进程别只看名字，先看它在哪个文件夹、是谁启动的、占了多少资源。</li>
+          <li>下一课：<a href="lesson-03-network.html">网络是怎么连起来的</a>。</li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="lesson-01-computer.html">← 上一课：第 1 课：计算机是怎么工作的</a>
         <a href="../course.html">课程目录</a>

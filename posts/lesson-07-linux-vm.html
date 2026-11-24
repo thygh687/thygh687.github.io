@@ -22,14 +22,66 @@
     <article>
       <h1>第 7 课：为什么学 Linux：先装个虚拟机</h1>
       <div class="meta"><span class="tag">Linux</span>2026-11-24 · 阶段二</div>
+      <p><a href="lesson-06-commands.html">第 6 课</a>的三条命令是在 Windows 里跑的，从这一课起，战场换到 Linux。不是因为 Windows 不好，而是因为安全这行的大部分工具和大部分服务器，都生在 Linux 上。</p>
       <h2>为什么要学 Linux</h2>
-      <p>很多安全工具生在 Linux 上，服务器也大多是 Linux。不会 Linux，安全这条路走不远。但不用怕，Linux 并不难，从几个命令开始就行。</p>
+      <p>三个理由，每一个都绕不开：</p>
+      <ul>
+        <li><strong>工具生在 Linux 上。</strong>后面要用的安全工具——抓包、扫描、日志分析——绝大多数先有 Linux 版本，有些甚至只有 Linux 版本。不会 Linux，工具装不上、命令看不懂，路就断了。</li>
+        <li><strong>服务器大多是 Linux。</strong>网站、云服务、公司内网的服务器，绝大多数跑 Linux。你以后要保护的、要检查的、要排错的机器，十有八九是它。只会 Windows，等于只认识一半的战场。</li>
+        <li><strong>Linux 把“规矩”摆在明面上。</strong><a href="lesson-01-computer.html">第 1 课</a>说过，操作系统是大管家，定规矩。Windows 的规矩很多藏在图形界面后面，Linux 的规矩直接写在文件和权限里——谁能读、谁能写、谁能执行，一眼就能看到。学安全就是学规矩，所以 Linux 是最好的练功场。<a href="lesson-09-linux-permissions.html">第 9 课</a>就会从这里入手。</li>
+      </ul>
+      <p><strong>什么时候不用急着学 Linux？</strong>如果只是日常用电脑、修电脑，Windows 完全够用。Linux 不是“更高级的电脑”，它只是在安全这条路上绕不开的一站。目标要清楚：我们学 Linux，是为了用它的命令行和工具，不是为了换个系统过日子。</p>
+      <p>常见误区：以为学 Linux 就是背几百条命令。不是。命令是查得到的（<a href="lesson-08-linux-commands.html">第 8 课</a>会讲 <code>man</code> 怎么查），真正要学的是 Linux 的思路——一切皆文件、权限分得清、出了问题先看日志。这三点想通了，命令自然越用越顺。</p>
       <h2>什么是虚拟机</h2>
-      <p>虚拟机就是在 Windows 里面再装一台电脑。它是假的电脑，但用起来跟真的一样。玩坏了删掉重来，主力系统一点事没有。练手就该在虚拟机里练。</p>
-      <h2>配置</h2>
-      <p>这台电脑内存 64GB，跑虚拟机很轻松。给虚拟机分 8GB 内存、4 核 CPU、50GB 硬盘（动态分配，用多少占多少），装个 Ubuntu 桌面版，够用了。</p>
+      <p>虚拟机就是在 Windows 里面再装一台电脑。它是“假”的电脑，但用起来跟真的一样：有自己的系统、自己的文件、自己的网络。关键的好处只有一个：<strong>玩坏了删掉重来，主力系统一点事没有。</strong></p>
+      <p>为什么不用“双系统”（真机上再装一个 Linux）？双系统是把 Linux 装进真实硬盘，分区一旦动错，Windows 也可能跟着遭殃；而且每换一次系统就要重启一次，练起来很别扭。虚拟机不用动硬盘、不用重启，关掉就是一个窗口，删掉就是一个文件。对初学者来说，这是唯一正确的起点。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="虚拟机结构图">
+          <defs>
+            <marker id="arr7" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="60" y="14" width="440" height="46" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="34" text-anchor="middle" font-size="15" fill="#1a1a2e">虚拟机里的 Linux（Ubuntu）</text>
+          <text x="280" y="53" text-anchor="middle" font-size="12" fill="#666">练手、跑命令、装工具——坏了就删掉重来</text>
+          <rect x="60" y="84" width="440" height="46" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="104" text-anchor="middle" font-size="15" fill="#1a1a2e">VirtualBox（虚拟化软件）</text>
+          <text x="280" y="123" text-anchor="middle" font-size="12" fill="#666">把一台真电脑“扮成”一台假电脑</text>
+          <rect x="60" y="154" width="440" height="46" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="174" text-anchor="middle" font-size="15" fill="#1a1a2e">你的 Windows 电脑（64GB 内存）</text>
+          <text x="280" y="193" text-anchor="middle" font-size="12" fill="#666">主力系统：分出一部分资源给虚拟机</text>
+          <line x1="280" y1="60" x2="280" y2="82" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr7)"/>
+          <line x1="280" y1="130" x2="280" y2="152" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr7)"/>
+          <text x="280" y="226" text-anchor="middle" font-size="12" fill="#666">虚拟机里的任何操作，都碰不到最下面这一层</text>
+        </svg>
+        <figcaption>图：虚拟机是三层结构——最下面是你的真电脑，中间是虚拟化软件，上面是用来练手的 Linux</figcaption>
+      </figure>
+      <p><strong>虚拟机和真机有什么不一样？</strong>对学习来说，几乎没有：命令一样、文件一样、网络一样。差别只在两处：一是性能——虚拟机分到的资源有限，跑大程序会慢一点，但学命令完全感觉不到；二是硬件——虚拟机里的“网卡”“硬盘”都是模拟出来的，练命令够用，但想练真实硬件排错，还得回真机。记住这个边界，就不会在虚拟机里纠结“为什么网速没真机快”这种假问题。</p>
+      <h2>配置：分多少才够</h2>
+      <p>这台电脑内存 64GB，跑虚拟机很轻松。给虚拟机分 <strong>8GB 内存、4 核 CPU、50GB 硬盘（动态分配，用多少占多少）</strong>，装个 Ubuntu 桌面版，够用了。</p>
+      <p>这几个数字不是随便定的：</p>
+      <ul>
+        <li><strong>8GB 内存：</strong>Ubuntu 桌面版自己就要吃掉约 2GB，剩下的留给浏览器和工具。分 4GB 也能开机，但一开浏览器就卡，练着练着就烦了；分 16GB 是浪费——主力系统还要留足余量。</li>
+        <li><strong>4 核 CPU：</strong>编译、解压、跑扫描工具时，核数直接决定快慢。1 核能跑，但装系统都要等半天；4 核是个舒服的平衡点。</li>
+        <li><strong>50GB 硬盘，动态分配：</strong>“动态分配”的意思是先只占一点地方，用多少、长多少，上限 50GB。别选“固定大小”——它会立刻在真机上划走 50GB，删虚拟机之前都拿不回来。50GB 听着大，但装完系统、装几个工具、攒几个实验文件，很快就用掉一半，留少了以后还得扩，更麻烦。</li>
+      </ul>
+      <p><strong>装哪个 Linux？</strong>先装 Ubuntu 桌面版。理由很实际：教程最多、出了问题搜得到答案、图形界面能兜底——命令卡住了，还能点鼠标先把事办了。等命令行熟了，再去碰那些没有桌面的服务器版。现在选“最容易上手的”，不是偷懒，是把精力留给命令本身。</p>
+      <h2>虚拟机的网络：先用默认的 NAT</h2>
+      <p>新建虚拟机时，网络默认是 NAT 模式：虚拟机能通过真机上网，但外面的机器看不到虚拟机。这对学习正好——虚拟机能上网装软件、查资料，又不会把实验里的服务暴露出去。<a href="lesson-10-linux-network.html">第 10 课</a>会用 <code>ip a</code> 亲眼看到这张虚拟网卡，到时候再回头看这个选择就明白了。</p>
+      <p>另一个模式叫“桥接”，虚拟机就像直接插进了你家路由器，拿一个和真机平起平坐的地址。现阶段别用：它会把虚拟机暴露给整个局域网，实验里开错一个服务，家里别的设备都看得见。等你知道自己在干什么了，再换不迟。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>装好系统第一件事不是学命令，是先拍一个快照（Snapshot）。快照就是给虚拟机存个档：以后不管把系统折腾成什么样，一点“恢复快照”，立刻回到刚装好的干净状态。修电脑的经验也一样——动手之前先想好怎么回滚。没有回滚方案的实验，等于在真机上裸奔。还有一条：虚拟机里的实验，永远别拿到真机、真实网站上去试。课程里所有实验都只在虚拟机里做，这条红线从第一天就要立住。</div>
+      <p><strong>避坑：</strong>一是装系统时如果提示“虚拟化未开启”，要去电脑的 BIOS/UEFI 里打开 VT-x/AMD-V——虚拟机跑不起来，十有八九是它没开；二是别在虚拟机里用 root 账号日常操作，权限越大、误操作代价越大，<a href="lesson-09-linux-permissions.html">第 9 课</a>会讲为什么平时要用普通用户加 <code>sudo</code>；三是快照别拍太多，拍多了占硬盘，关键节点（刚装好系统、装好一套工具）各拍一个就够了。</p>
       <h2>动手做</h2>
-      <p>去官网下载 VirtualBox 和 Ubuntu 桌面版镜像，打开 VirtualBox，新建一台虚拟机，按向导装好系统，第一次开机进到桌面。装好就先别急着学命令，熟悉一下桌面环境。</p>
+      <p>去官网下载 VirtualBox 和 Ubuntu 桌面版镜像，打开 VirtualBox，新建一台虚拟机：内存 8GB、CPU 4 核、硬盘 50GB 动态分配、网络保持默认 NAT，按向导装好系统，第一次开机进到桌面。装好就先别急着学命令，熟悉一下桌面环境，再拍第一个快照——名字就叫“刚装好”。然后打开终端（下一课要用），确认它能打开、能打字，就收工。</p>
+      <p>装好了，<a href="lesson-08-linux-commands.html">下一课</a>就开始在终端里敲第一批命令。虚拟机和 Linux 的关系，模块二的<a href="m2c1-os-intro.html">操作系统入门</a>还会从“大管家怎么管资源”的角度再讲一遍，到时候对照着看，理解会更深。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>学 Linux 是因为工具和服务器大多在 Linux 上，而且它的规矩摆在明面上，最适合练安全。</li>
+          <li>虚拟机是在 Windows 里再装一台电脑：玩坏了删掉重来，主力系统不受影响；初学者不要用双系统。</li>
+          <li>配置：8GB 内存、4 核 CPU、50GB 动态分配硬盘，装 Ubuntu 桌面版；网络先用默认的 NAT。</li>
+          <li>装好系统第一件事是拍快照——动手之前先想好怎么回滚。</li>
+          <li>所有实验只在虚拟机里做，绝不在真机和真实网站上练手。</li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="lesson-06-commands.html">← 上一课：第 6 课：动手：ping、ipconfig、nslookup</a>
         <a href="../course.html">课程目录</a>

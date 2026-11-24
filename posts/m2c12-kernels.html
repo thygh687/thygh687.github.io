@@ -23,19 +23,56 @@
       <h1>模块二第 12 章：Windows 与 Linux 内核有什么不一样</h1>
       <div class="meta"><span class="tag">操作系统</span>2026-11-24 · 模块二</div>
       <p>前面 11 章讲的概念，Windows 和 Linux 是相通的。但两个系统的内核设计、文件组织、安全机制各有不同。做安全，两个都要懂：服务器多是 Linux，终端多是 Windows。</p>
-      <h2>内核结构</h2>
-      <p>Linux 是单内核：内核是一个大整体，驱动、文件系统、网络栈都在内核里，效率高，但一个驱动出问题可能拖垮整个内核。Windows 的 NT 内核也是单内核为主，但模块化程度更高，很多服务跑在用户态。微内核是另一种思路：内核只留最基本的功能，其他都放用户态，更稳定但通信开销大，实际用的系统不多。</p>
+      <h2>内核结构：单内核、微内核、混合内核</h2>
+      <p>Linux 是单内核：内核是一个大整体，驱动、文件系统、网络栈都在内核里，效率高，但一个驱动出问题可能拖垮整个内核。好在 Linux 的驱动大多可以做成可加载模块：需要的时候装进内核，不需要的时候卸掉，不用每次都重新编译整个内核。Windows 的 NT 内核也是单内核为主，但模块化程度更高，很多服务跑在用户态，内核只留最核心的部分——这种“单内核打底、尽量模块化”的做法，常被叫做混合内核。微内核是另一种思路：内核只留最基本的功能（进程间通信、基本的内存和调度），驱动、文件系统这些都放用户态，更稳定、一个服务崩了不拖垮内核，但服务之间来回通信的开销大，实际用的桌面和服务器系统不多。</p>
+      <p>对学安全的人来说，结构决定了攻击面：单内核里驱动跑在内核态，一个有漏洞的驱动等于直接给了攻击者内核权限；微内核把驱动赶出内核，代价是性能。现实里没有完美答案，都是在效率和隔离之间取舍。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Linux 与 Windows 内核结构对比图">
+          <text x="140" y="28" text-anchor="middle" font-size="14" fill="#1a1a2e">Linux：单内核</text>
+          <text x="420" y="28" text-anchor="middle" font-size="14" fill="#1a1a2e">Windows NT：混合内核</text>
+          <rect x="30" y="42" width="220" height="40" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="67" text-anchor="middle" font-size="13" fill="#1a1a2e">用户态：程序、Shell、库</text>
+          <rect x="30" y="94" width="220" height="96" rx="6" fill="#1a1a2e"/>
+          <text x="140" y="118" text-anchor="middle" font-size="13" fill="#fff">内核态：一个整体</text>
+          <text x="140" y="142" text-anchor="middle" font-size="12" fill="#ccc">进程、内存、文件系统</text>
+          <text x="140" y="164" text-anchor="middle" font-size="12" fill="#ccc">网络、驱动（可加载模块）</text>
+          <rect x="310" y="42" width="220" height="40" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="67" text-anchor="middle" font-size="13" fill="#1a1a2e">用户态：程序、服务、子系统</text>
+          <rect x="310" y="94" width="220" height="48" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="112" text-anchor="middle" font-size="13" fill="#1a1a2e">用户态服务：更多系统服务</text>
+          <text x="420" y="130" text-anchor="middle" font-size="11" fill="#666">跑在用户态，崩了不拖垮内核</text>
+          <rect x="310" y="154" width="220" height="36" rx="6" fill="#1a1a2e"/>
+          <text x="420" y="177" text-anchor="middle" font-size="13" fill="#fff">内核态：执行体、驱动</text>
+          <text x="280" y="214" text-anchor="middle" font-size="12" fill="#666">共同点：驱动都在内核态——有漏洞的驱动就是内核级漏洞</text>
+        </svg>
+        <figcaption>图：Linux 把服务都放在一个大内核里，Windows NT 把一部分服务挪到用户态；但驱动两边都在内核态</figcaption>
+      </figure>
       <h2>文件组织</h2>
       <p>Linux 是一棵树：所有东西从根目录 / 开始，硬件设备也是文件（/dev 下面）。配置文件是纯文本，改个文件就是改配置。Windows 是盘符：C:、D: 各是一棵树，配置很多存在注册表这个数据库里。Linux 讲究“一切皆文件”，Windows 讲究图形化和注册表。</p>
       <h2>安全机制对比</h2>
       <p>Windows：用户账户控制（UAC）、访问控制列表（ACL）、Windows Defender、BitLocker 加密。Linux：权限位、SUID、SELinux/AppArmor（强制访问控制）、iptables/nftables 防火墙。思路上是一致的：最小权限、默认拒绝、审计留痕，只是实现方式不同。</p>
+      <h2>安全模型：权限怎么管</h2>
+      <p>两个系统管权限的思路，先看相同点：程序以某个身份运行（<a href="m2c2-process.html">第 2 章</a>讲过进程的身份），每次访问文件、每次系统调用，内核都拿这个身份去对权限（<a href="m2c9-filesystem.html">第 9 章</a>、<a href="m2c10-syscall.html">第 10 章</a>讲过这两道检查）。不同点在“谁说了算”的层次上。</p>
+      <p>Linux 传统上是自主访问控制（DAC）：文件所有者自己说了算，想把文件设成人人可读就设。SELinux 和 AppArmor 加了一层强制访问控制（MAC）：哪怕所有者同意，系统策略说不行就不行——策略由管理员定，用户改不了。Linux 还把 root 的权力拆成了几十个能力（capabilities）：一个程序只需要绑定低端口，就只给它那一个能力，不用给整个 root。</p>
+      <p>Windows 靠令牌和完整性级别：每个进程带着一个令牌，写着用户、所属组和特权；文件和进程还有完整性级别——低（浏览器沙箱里的标签页）、中（普通程序）、高（管理员）、系统。低级别的进程写不了中级别的东西，哪怕用户是同一个。UAC 弹出的那个确认框，本质上就是在问：要不要把这个进程从“中”升到“高”。两个系统都在做同一件事：把“谁能干什么”从“凭用户自觉”变成“由系统强制执行”。</p>
+      <h2>出了问题去哪查：日志和工具对照</h2>
+      <p>排错和取证，第一步都是看日志。Windows 看事件查看器（eventvwr）：系统、安全、应用程序三个日志分开记，登录失败、服务崩溃、驱动加载都在里面。Linux 看 journald（<code>journalctl</code>）和 /var/log 下的文本日志：登录在 auth.log/secure 里，内核消息在 dmesg 里。工具上也可以一一对照：任务管理器 ≈ top/htop，服务管理器 ≈ systemctl，注册表 ≈ /etc 下的文本配置，Process Monitor ≈ strace。两边会了，换系统只是换工具名字，思路不用换。</p>
       <h2>驱动模型</h2>
       <p>驱动是硬件和内核之间的翻译。Linux 的驱动很多直接编进内核或者以模块加载，开源的多；Windows 的驱动要经过微软签名才能装，签名机制是防恶意驱动的一道关。恶意软件如果能装上一个驱动，就等于进了内核，这是最高级别的控制权。</p>
+      <p>签名这道关具体是怎么拦的：Windows 要求内核驱动必须带微软签发的签名才允许加载，没签名的驱动装不上——这就是为什么装硬件要去厂商官网拿驱动，而不是随手下一个来路不明的安装包。攻击者想绕过它，要么偷到合法厂商的签名证书，要么找系统里还没修补的签名验证漏洞，这两种在真实攻击里都出现过。Linux 这边，模块加载可以靠 Secure Boot + 模块签名来管：开启了签名校验的内核，拒绝加载没签名的模块。驱动安全还有一个容易忽略的点：驱动跑在内核态，崩了就是蓝屏或内核崩溃，所以排错的时候，频繁蓝屏先怀疑最近装的驱动和它带的软件——这和<a href="m2c7-virtual-memory.html">第 7 章</a>讲的隔离是一个道理：内核态没有第二道墙。</p>
       <div class="teacher-note">老师经验：做安全要两边都懂，但分工要清楚。服务器端基本是 Linux 的天下：Web 服务、数据库、云平台，出了问题先看日志、看进程、看权限。终端和办公环境是 Windows 的天下：钓鱼邮件、宏病毒、勒索软件，主战场在 Windows 上。面试的时候，人家问“你会 Linux 吗”，其实是在问“你能不能在服务器上干活”；问“你会 Windows 吗”，是在问“你能不能处理终端安全”。两边都要能上手。</div>
       <h2>动手做</h2>
       <p>1. 在 Windows 上按 Win+R 输入 <code>msinfo32</code>，看系统摘要；在虚拟机的 Linux 里输入 <code>uname -a</code> 和 <code>cat /etc/os-release</code>，对比两个系统的基本信息。<br>2. 在 Linux 里输入 <code>ls /</code>，看根目录下的一级目录；在 Windows 上打开 C 盘，对比两边的组织方式。<br>3. 想一想：为什么服务器爱用 Linux，而办公电脑爱用 Windows？</p>
       <h2>避坑</h2>
       <p>别争“哪个系统更好”，它们分工不同；Linux 的“一切皆文件”要记住，这是理解 Linux 的钥匙；驱动能进内核，所以装驱动要格外小心，只装可信来源的。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>Linux 是单内核、Windows NT 是混合内核，但驱动两边都在内核态——有漏洞的驱动就是内核级漏洞，装驱动只认可信来源。</li>
+          <li>Linux 讲“一切皆文件”，配置是纯文本；Windows 讲盘符和注册表；日志一边是事件查看器，一边是 journald 和 /var/log。</li>
+          <li>权限思路一致、实现不同：Linux 是 DAC + SELinux/AppArmor 的 MAC + 能力拆分，Windows 是令牌 + 完整性级别 + UAC。</li>
+          <li>模块二到这里学完了，<a href="summary-module2.html">看模块二小结 →</a></li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="m2c11-lab.html">← 上一章：第 11 章：动手：进程、线程与系统调用</a>
         <a href="../course.html">课程目录</a>

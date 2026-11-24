@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阶段二小结：换一台电脑练手 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>阶段二小结：换一台电脑练手</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · 预备课第 7–10 课</div>
+      <p>四课讲的其实是一件事：换一台电脑练手。很多安全工具生在 Linux 上，服务器也大多是 Linux，不会 Linux，安全这条路走不远。但不用在主力机上冒险——先在虚拟机里搭一台假电脑，练熟了再说。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="四课知识串联图">
+          <defs>
+            <marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="130" y="10" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">虚拟机：实验场</text>
+          <rect x="130" y="70" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">常用命令：手脚</text>
+          <rect x="130" y="130" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">权限：规矩</text>
+          <rect x="130" y="190" width="300" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">网络命令：连通</text>
+          <line x1="280" y1="50" x2="280" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <line x1="280" y1="110" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <line x1="280" y1="170" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr2)"/>
+        </svg>
+        <figcaption>图：四课讲的其实是一件事——换一台电脑练手</figcaption>
+      </figure>
+      <h2>这四课是怎么连起来的</h2>
+      <p><a href="lesson-07-linux-vm.html">第 7 课</a>先搭实验场：虚拟机就是在 Windows 里面再装一台电脑，玩坏了删掉重来，主力系统一点事没有。课里给的配置是 8GB 内存、4 核 CPU、50GB 硬盘（动态分配），装个 Ubuntu 桌面版。有了这台假电脑，<a href="lesson-08-linux-commands.html">第 8 课</a>才练得起来手脚：Linux 主要靠命令行，pwd、ls、cd、mkdir、cp、mv、rm、cat、grep、man 这十个天天用得上。记住 rm 删了没有回收站，删之前先想清楚。</p>
+      <p>会动了，还要懂规矩。<a href="lesson-09-linux-permissions.html">第 9 课</a>的权限规定了谁能读、谁能写、谁能执行：rwx 三个字母分三组人，chmod 改权限，root 是最高权限，平时用 sudo 临时借一下。规矩不只是用来遵守的——以后做安全，权限就是第一道检查口。最后 <a href="lesson-10-linux-network.html">第 10 课</a>把网络接上：Windows 下的 ping、ipconfig 到了 Linux 里，名字换了，干的活一样——ping 看通不通，ip a 看本机配置，curl 发个请求看返回，ss 看谁在监听端口。注意 Linux 的 ping 默认一直发，按 Ctrl + C 停下来。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>在虚拟机里装好一台 Ubuntu，第一次开机进到桌面，熟悉一下桌面环境。</li>
+        <li>不看笔记，在终端里建文件夹、建文件、写一句话、再用 cat 看、用 grep 找、最后删掉。</li>
+        <li>看懂 ls -l 最前面那一串权限，知道 rwx 和三组人是什么意思，会用 chmod 改权限。</li>
+        <li>在虚拟机里跑一遍 ping、ip a、curl example.org、ss -tlnp，记下本机开了哪些端口。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>第 11 课开始讲安全常识：先把自己守住。密码、钓鱼、恶意软件、加密、防火墙——这五课不讲工具，讲的是你每天都在用的账号和电脑怎么才算安全。虚拟机还是你的实验场，动手练习都在里面做。</p>
+      <div class="lesson-nav">
+        <a href="lesson-10-linux-network.html">← 第 10 课：Linux 下的网络命令</a>
+        <a href="../course.html">课程目录</a>
+        <a href="lesson-11-passwords.html">下一课：第 11 课：密码与账号安全 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -23,17 +23,68 @@
       <h1>模块二第 11 章：动手：进程、线程与系统调用</h1>
       <div class="meta"><span class="tag">操作系统</span>2026-11-24 · 模块二</div>
       <p>这一章是模块二的综合动手：把前面学过的进程、线程、系统调用，用系统自带的工具亲眼看一遍。看完这一章，你对操作系统的理解就从“知道”变成“见过”了。</p>
+      <h2>先建基线：正常进程长什么样</h2>
+      <p>认异常之前，先把正常记在心里。看一个进程，养成查五样的习惯：</p>
+      <ul>
+        <li><strong>父进程是谁</strong>：每个进程都有父亲。正常的 svchost.exe，父亲是 services.exe；正常的浏览器渲染进程，父亲是浏览器主进程。父亲对不上（比如一个文档阅读器生出了命令行），就要警觉。</li>
+        <li><strong>路径对不对</strong>：系统进程住在系统目录里，比如 C:\Windows\System32。同样叫 svchost.exe，住在 C:\Users\你的名字\下面，就是假的。</li>
+        <li><strong>以谁的身份跑</strong>：系统服务多以 SYSTEM 或 NETWORK SERVICE 跑，普通程序以你的账户跑。一个记事本突然以 SYSTEM 身份跑，事情就不对了。</li>
+        <li><strong>什么时候启动的</strong>：半夜三点启动的陌生进程，比白天启动的值得怀疑；开机就自启的，要看它是不是你装过的软件。</li>
+        <li><strong>有没有签名</strong>：正规厂商的程序带数字签名，右键属性能看到。没签名的系统级程序，先打个问号。</li>
+      </ul>
+      <p>这五样对上号，不代表一定安全——恶意软件也会伪装路径和名字——但五样里有一两样对不上，调查就有了起点。安全分析的第一步永远是建立基线：先知道正常是什么样，异常才显眼。</p>
       <h2>Windows 上看进程和线程</h2>
       <p>任务管理器 → 详细信息：看进程的 PID、状态、用户名、CPU 和内存占用。右键列标题 → 选择列，勾上“线程”，看每个进程有多少线程。资源监视器（任务管理器 → 性能 → 打开资源监视器）能看到进程和它的子进程、打开的文件、网络连接。Process Explorer（微软官方的免费工具）能看得更细，包括进程的父子关系和加载的模块。</p>
       <h2>Linux 上看进程和线程</h2>
       <p><code>ps aux</code>：看所有进程。 <code>ps -eLf</code>：看进程和它的线程。 <code>top</code>：实时看 CPU 和内存占用，按 <code>P</code> 按 CPU 排序，按 <code>M</code> 按内存排序。 <code>pstree</code>：用树形图看进程的父子关系，一眼就能看出谁是谁生的。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="正常进程树与异常进程对照图">
+          <defs>
+            <marker id="arr11" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <text x="150" y="26" text-anchor="middle" font-size="14" fill="#1a1a2e">正常：一眼看得出谁生的谁</text>
+          <text x="430" y="26" text-anchor="middle" font-size="14" fill="#1a1a2e">异常：父子关系对不上</text>
+          <rect x="80" y="40" width="140" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="150" y="63" text-anchor="middle" font-size="13" fill="#1a1a2e">systemd（PID 1）</text>
+          <rect x="80" y="96" width="140" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="150" y="119" text-anchor="middle" font-size="13" fill="#1a1a2e">登录 Shell</text>
+          <rect x="80" y="152" width="140" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="150" y="175" text-anchor="middle" font-size="13" fill="#1a1a2e">浏览器主进程</text>
+          <rect x="80" y="202" width="140" height="28" rx="6" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="150" y="221" text-anchor="middle" font-size="12" fill="#1a1a2e">标签页进程 × 多个</text>
+          <line x1="150" y1="76" x2="150" y2="94" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr11)"/>
+          <line x1="150" y1="132" x2="150" y2="150" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr11)"/>
+          <line x1="150" y1="188" x2="150" y2="200" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr11)"/>
+          <rect x="360" y="40" width="140" height="36" rx="6" fill="#fef2f2" stroke="#b91c1c" stroke-width="1.5"/>
+          <text x="430" y="63" text-anchor="middle" font-size="13" fill="#b91c1c">文档阅读器</text>
+          <rect x="360" y="96" width="140" height="36" rx="6" fill="#fef2f2" stroke="#b91c1c" stroke-width="1.5"/>
+          <text x="430" y="119" text-anchor="middle" font-size="13" fill="#b91c1c">命令行（cmd）</text>
+          <rect x="360" y="152" width="140" height="36" rx="6" fill="#fef2f2" stroke="#b91c1c" stroke-width="1.5"/>
+          <text x="430" y="175" text-anchor="middle" font-size="13" fill="#b91c1c">powershell.exe</text>
+          <line x1="430" y1="76" x2="430" y2="94" stroke="#b91c1c" stroke-width="1.5" marker-end="url(#arr11)"/>
+          <line x1="430" y1="132" x2="430" y2="150" stroke="#b91c1c" stroke-width="1.5" marker-end="url(#arr11)"/>
+          <text x="430" y="214" text-anchor="middle" font-size="12" fill="#b91c1c">阅读器生出命令行？先查它</text>
+        </svg>
+        <figcaption>图：左边的父子关系都对得上，右边的阅读器生出命令行——这种“越界生育”是最常见的告警信号</figcaption>
+      </figure>
+      <h2>/proc：Linux 把进程变成文件</h2>
+      <p>Linux 有个巧办法：每个进程在 <code>/proc</code> 下面都有一个以 PID 命名的目录，里面全是“文件”——<code>cmdline</code> 是启动命令行，<code>exe</code> 是程序本体所在的路径，<code>status</code> 是状态，<code>fd</code> 是它打开的文件。<code>ps</code>、<code>top</code> 这些工具，其实就是在读 <code>/proc</code> 再排版给你看。明白这一点，排错就多了一个直接的办法：进程看着可疑，直接 <code>cat /proc/PID/cmdline</code>、<code>ls -l /proc/PID/exe</code>，看它到底是谁、从哪启动的。这也是<a href="m2c9-filesystem.html">第 9 章</a>“一切皆文件”思想最实在的一次落地：连进程都能当文件来读。</p>
       <h2>跟踪系统调用</h2>
       <p>在虚拟机的 Linux 里，用 <code>strace</code> 跟踪一个命令：<code>strace cat /etc/hostname</code>，看它打开了哪些文件、调了哪些系统调用。再试试 <code>strace -e trace=network ping -c 1 example.org</code>，只看网络相关的调用。Windows 上对应的工具是 Process Monitor，能看到进程的每一次文件、注册表和网络操作。</p>
+      <p>输出太多看不过来的时候，先加过滤再看。<code>strace -f</code> 会跟进子进程（不加它，fork 出来的子进程就跟丢了——<a href="m2c2-process.html">第 2 章</a>讲过进程是怎么生出子进程的）；<code>-e trace=openat,read</code> 只看文件操作；<code>-e trace=network</code> 只看网络；<code>-c</code> 只给汇总，不刷屏。Process Monitor 也一样：先设过滤器（只看某个进程、只看某种操作），再点开始，不然一秒几千条，眼睛先投降。跟踪的思路和<a href="m2c10-syscall.html">第 10 章</a>讲的一样：程序想干什么，最后都落在系统调用上；只不过这里不是听概念，是亲眼看。</p>
       <div class="teacher-note">老师经验：先学会看正常进程长什么样，才能认出异常的。正常的 svchost.exe 有十几个，父进程是 services.exe；正常的 chrome.exe 会开很多个，每个标签页一个。把这些正常样子记在心里，以后看到一个名字正常、但父进程不对、路径不对、启动时间是半夜的进程，马上就能警觉。安全分析的第一步永远是建立基线：先知道正常是什么样。</div>
       <h2>动手做</h2>
       <p>1. 在 Windows 上打开任务管理器，把“线程”列加出来，找出线程数最多的三个进程，记下来。<br>2. 在虚拟机的 Linux 里输入 <code>pstree -p | head -20</code>，找到 PID 为 1 的进程（init/systemd），它是所有进程的祖先。<br>3. 用 <code>strace ls</code> 跟踪一次 ls，数一数它调了多少次 openat。</p>
       <h2>避坑</h2>
       <p>工具只看不改，别随手结束不认识的进程，结束错了系统会出问题；strace 和 Process Monitor 输出很多，先加过滤条件再看；这份“正常进程长什么样”的印象要留着，后面安全运营模块会反复用到。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>先建基线再认异常：看一个进程，查父进程、路径、运行身份、启动时间、有没有签名，五样对不上就值得查。</li>
+          <li>Linux 的进程就是 /proc 下的文件：cmdline、exe、status、fd 直接读，比工具转述的更可靠。</li>
+          <li>strace 跟踪系统调用，先加过滤再看：-f 跟子进程，-e 只看某一类调用，-c 只看汇总；Process Monitor 也一样。</li>
+          <li>这份“正常长什么样”的印象要留着，后面安全运营模块会反复用到；下一章对比 Windows 和 Linux 内核有什么不一样。</li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="m2c10-syscall.html">← 上一章：第 10 章：系统调用</a>
         <a href="../course.html">课程目录</a>

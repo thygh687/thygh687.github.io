@@ -25,15 +25,60 @@
       <p>文件存在硬盘上，操作系统要管两个事：文件怎么组织（文件系统），以及谁能动它（权限）。这两件事，一个管“找得到”，一个管“动不得”。</p>
       <h2>文件是怎么存的</h2>
       <p>硬盘被分成一块一块，文件的内容存在这些块里，文件的信息（名字、大小、位置、权限）存在另外的地方：Linux 叫 inode，Windows 的 NTFS 叫 MFT。目录本身也是一种文件，里面记着文件名和对应的 inode。删除文件的时候，操作系统一般只删掉记录，内容还在原地，这就是删除的文件能恢复的原因。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="目录、inode 与数据块的关系图">
+          <defs>
+            <marker id="arr9a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <text x="90" y="28" text-anchor="middle" font-size="14" fill="#1a1a2e">目录</text>
+          <rect x="20" y="42" width="140" height="80" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="90" y="68" text-anchor="middle" font-size="13" fill="#1a1a2e">笔记.txt → 501</text>
+          <text x="90" y="92" text-anchor="middle" font-size="13" fill="#1a1a2e">照片.jpg → 502</text>
+          <text x="90" y="112" text-anchor="middle" font-size="12" fill="#666">只记名字和编号</text>
+          <text x="280" y="28" text-anchor="middle" font-size="14" fill="#1a1a2e">inode（编号 501）</text>
+          <rect x="205" y="42" width="150" height="80" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="68" text-anchor="middle" font-size="13" fill="#1a1a2e">大小、权限、时间</text>
+          <text x="280" y="92" text-anchor="middle" font-size="13" fill="#1a1a2e">数据块指针</text>
+          <text x="280" y="112" text-anchor="middle" font-size="12" fill="#666">不含文件名</text>
+          <text x="465" y="28" text-anchor="middle" font-size="14" fill="#1a1a2e">数据块</text>
+          <rect x="400" y="42" width="130" height="34" rx="6" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="64" text-anchor="middle" font-size="13" fill="#1a1a2e">块 1：文件内容</text>
+          <rect x="400" y="88" width="130" height="34" rx="6" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="110" text-anchor="middle" font-size="13" fill="#1a1a2e">块 2：文件内容</text>
+          <line x1="160" y1="68" x2="203" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr9a)"/>
+          <line x1="355" y1="68" x2="398" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr9a)"/>
+          <line x1="355" y1="98" x2="398" y2="105" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr9a)"/>
+          <text x="280" y="152" text-anchor="middle" font-size="13" fill="#1a1a2e">打开文件 = 目录查编号 → inode 查位置 → 读数据块</text>
+          <text x="280" y="180" text-anchor="middle" font-size="13" fill="#1a1a2e">删除文件 = 目录里划掉名字，数据块先不动</text>
+          <text x="280" y="208" text-anchor="middle" font-size="12" fill="#666">inode 记着“东西在哪”，目录记着“东西叫什么”，各管各的</text>
+        </svg>
+        <figcaption>图：目录只记名字和 inode 编号，inode 记大小、权限和数据块的位置，内容在数据块里</figcaption>
+      </figure>
+      <p>为什么要把“名字”和“信息”分开？因为这样一个文件可以有多个名字：硬链接就是给同一个 inode 再起一个名字，两个名字指向同一份数据，改一个，另一个也变了；删掉其中一个名字，数据还在，直到最后一个名字也被删掉，空间才真正释放。软链接（快捷方式）不一样：它是一个独立的小文件，里面只写着目标的路径，目标删了，它就指着空气，成了断掉的链接。备份和取证的时候，分清这两种链接很重要——拷了软链接，不等于拷了数据。</p>
+      <p>断电怎么办？写文件不是一个动作，而是好几步：先写数据块，再改 inode、改目录。写到一半断电，文件系统可能一半新一半旧，甚至目录和数据对不上号。所以现代文件系统（Linux 的 ext4、Windows 的 NTFS）都有日志：先把“打算干什么”记到日志里，再真正动手；断电重启后，先照着日志把没干完的活补上或者回滚，文件系统就还是完整的。日志防的是断电导致的结构损坏，不是防数据丢——刚写了一半的数据，该丢还是会丢，想不丢要靠备份。</p>
       <h2>权限：rwx</h2>
       <p>Linux 的权限是三组各三位：所有者、所属组、其他人，每组是读（r）、写（w）、执行（x）。比如 <code>-rwxr-xr-x</code>，意思是所有者能读能写能执行，同组和其他人只能读和执行。Windows 的权限更细，用访问控制列表（ACL）给每个用户单独规定能干什么。权限的核心思想就一句：默认不给，需要才给。</p>
+      <h2>容易踩的权限细节</h2>
+      <p><strong>目录的 x 不是“执行”，是“能进去”。</strong>文件上的 x 是能运行，目录上的 x 是能进入这个目录、访问里面已知名字的文件。目录只有 r 没有 x，你能看到里面有谁，却打不开任何一个；只有 x 没有 r，你看不到列表，但知道名字的照样能打开。网站目录权限配错，常常就是在这里翻车。</p>
+      <p><strong>新建文件的默认权限由 umask 定。</strong>系统默认 umask 一般是 022，新建的文件是 644（大家都能读，只有所有者能写），新建的目录是 755。要是 umask 被改成 000，新建的文件人人可写——服务器上配错一次，就是一个全站可写的洞。<a href="lesson-09-linux-permissions.html">第 9 课</a>练过用 chmod 改权限，规则是一样的。</p>
+      <p><strong>权限检查按顺序来，先匹配到的说了算。</strong>你是文件的所有者，就只看所有者那三位，哪怕“其他人”那栏更宽松，也跟你没关系；不是所有者、但在所属组里，就看组那三位。root 是例外：root 基本不受权限位限制，所以别拿 root 跑日常程序——一旦出事，没有任何权限能拦住它。</p>
+      <p><strong>还有两个特殊位容易漏：SGID 和粘滞位。</strong>SGID（组上的 s）让程序以文件所属组的身份运行，也让目录里新建的文件自动继承目录的组，团队共享目录常用它。粘滞位（t，最常见在 /tmp 上）的意思是：目录里人人能写，但每个人只能删自己的文件——没有它，别人能顺手删掉你的临时文件。检查一台机器的时候，SUID、SGID、粘滞位这三个要一起看。</p>
       <h2>特殊权限要小心</h2>
       <p>Linux 有个叫 SUID 的特殊权限：带 SUID 的程序，运行时用的是文件所有者的权限，而不是运行者的权限。比如 passwd 命令带 SUID，普通用户改密码的时候，实际上是以 root 的身份在写密码文件。这个机制很方便，也很危险：如果一个带 SUID 的程序有漏洞，普通用户就能借它拿到 root 权限。</p>
+      <p>SUID 之所以危险，根子在<a href="m2c2-process.html">第 2 章</a>讲过的进程身份上：权限检查看的是进程以谁的身份在跑，而不是坐在键盘前的是谁。带 SUID 的程序一启动，进程的身份就变成了文件所有者，之后它调的每一次 <code>open</code>（<a href="m2c10-syscall.html">第 10 章</a>会讲系统调用）都是拿所有者的身份去过的。所以审计 SUID 程序，等于在审计“哪些普通用户能借到的 root 身份”。自己写脚本、配定时任务的时候，记住同一条线：脚本的权限，等于运行它的那个身份的权限。</p>
       <div class="teacher-note">老师经验：Linux 提权，十次里有九次是从权限配置错误开始的。最常见的是三种：敏感文件可写（比如定时任务的脚本谁都能改）、带 SUID 的程序有漏洞、家目录权限放得太开。接手一台机器做检查，我第一件事就是找 SUID 程序和全系统可写的文件——<code>find / -perm -4000</code> 这条命令，安全从业者一辈子都在用。权限这章看着枯燥，实战里天天用。</div>
       <h2>动手做</h2>
       <p>1. 在虚拟机的 Linux 里输入 <code>ls -l</code>，读出几个文件的权限，翻译成“谁能干什么”。<br>2. 输入 <code>find / -perm -4000 2>/dev/null</code>，看系统里有哪些 SUID 程序。<br>3. 在 Windows 上右键一个文件 → 属性 → 安全，看它的访问控制列表。</p>
       <h2>避坑</h2>
       <p>权限的三个对象（所有者、组、其他人）别搞混；SUID 的意思是“用文件所有者的身份运行”，不是“所有人都能运行”；删除文件只删记录，内容还在——删敏感文件要彻底销毁，不只是删掉。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>目录只记名字和 inode 编号，inode 记大小、权限和数据块位置，内容在数据块里；删文件只删名字，内容还在。</li>
+          <li>硬链接是多一个名字，软链接是写着路径的小文件；日志防的是断电导致的结构损坏，不是数据丢失。</li>
+          <li>权限三组各三位，目录的 x 是“能进去”；新建文件的默认权限由 umask 定；权限检查按所有者 → 组 → 其他人的顺序，先匹配到的说了算。</li>
+          <li>SUID、SGID、粘滞位要一起查：提权十次有九次从权限配置错误开始，下一章看 open 是怎么查权限的。</li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="m2c8-paging.html">← 上一章：第 8 章：页面置换与缺页</a>
         <a href="../course.html">课程目录</a>
