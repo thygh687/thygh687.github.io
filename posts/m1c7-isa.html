@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 7 章：指令系统与寻址方式 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 7 章：指令系统与寻址方式</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-24 · 模块一</div>
+      <p>CPU 能听懂的所有指令，合起来叫指令系统，也叫指令集架构（ISA）。你的电脑和手机用的指令集不一样，这就是为什么电脑上的程序不能直接拿到手机上跑。</p>
+      <h2>指令的格式</h2>
+      <p>一条指令由操作码和操作数两部分组成。操作码说“干什么”，比如加法；操作数说“对谁干”，比如哪两个寄存器。有的指令操作数是 0 个，比如停机；有的是 1 个，比如取反；有的是 2 个，比如加法。指令长度也不一定都一样，有的定长，有的变长。</p>
+      <h2>寻址方式：数据在哪</h2>
+      <p>操作数可以来自不同的地方，这就叫寻址方式。立即数寻址：数据直接写在指令里，比如 <code>MOV AX, 5</code>，5 就是立即数。寄存器寻址：数据在寄存器里，比如 <code>MOV AX, BX</code>。直接寻址：指令里给的是内存地址，比如 <code>MOV AX, [1000]</code>，意思是把内存 1000 号位置的数据拿来。间接寻址：地址本身存在寄存器里，CPU 要先读寄存器，再按里面的地址去内存取数据。</p>
+      <h2>x86 和 ARM</h2>
+      <p>现在主流的指令集有两个：x86 和 ARM。x86 是复杂指令集（CISC），指令多、单条指令能干的事多，你的 Windows 电脑基本都是 x86。ARM 是精简指令集（RISC），指令少而简单、功耗低，手机、平板基本都是 ARM。苹果的电脑现在也用 ARM 了。两者互不兼容，所以程序要针对不同的指令集分别编译。</p>
+      <h2>动手做</h2>
+      <p>1. 对照着写三条指令，说出每条的操作码和操作数分别是什么：<code>MOV AX, 5</code>、<code>ADD AX, BX</code>、<code>MOV AX, [1000]</code>。<br>2. 说出上面三条分别用了哪种寻址方式。<br>3. 在任务管理器 → 性能 → CPU，看自己的电脑是 x86 还是 ARM。</p>
+      <h2>避坑</h2>
+      <p>指令集不用背指令表；知道 x86 和 ARM 的区别、寻址方式有几种就够了；“程序要在不同平台重新编译”这个结论要记住，后面学软件分发还会遇到。</p>
+      <div class="lesson-nav">
+        <a href="m1c6-logic.html">← 上一章：第 6 章：逻辑门与布尔代数</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m1c8-locality.html">下一章：第 8 章：存储层次与局部性原理 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

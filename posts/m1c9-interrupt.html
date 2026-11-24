@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 9 章：中断与 DMA · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 9 章：中断与 DMA</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-24 · 模块一</div>
+      <p>第 5 章讲了中断和 DMA 的概念，这一章把全过程展开：中断发生时 CPU 到底经历了什么，DMA 是怎么把 CPU 解放出来的。</p>
+      <h2>中断的全过程</h2>
+      <p>设备发来中断信号，CPU 在当前指令执行完后停下来，先把现场保存好（程序计数器和寄存器的值压进栈里），然后去查中断向量表，找到对应的中断处理程序去执行。处理完，再把现场恢复，回到原来被打断的地方继续执行。整个过程对原来的程序是透明的，它不知道自己被打断过。</p>
+      <h2>三种方式对比</h2>
+      <p>轮询：CPU 不停地问设备“有事吗”，简单但浪费时间，适合很少用的设备。中断：设备有事自己说，CPU 平时干别的，适合键盘、鼠标这种不定时来事的设备。DMA：大块数据搬运交给 DMA 控制器，CPU 只下命令和收结果，适合硬盘、网卡这种一次传很多数据的设备。</p>
+      <h2>DMA 的全过程</h2>
+      <p>CPU 告诉 DMA：从硬盘的哪个位置开始，搬多少数据，到内存的哪个地址。DMA 接管总线，一块一块地搬，CPU 同时去干别的。搬完 DMA 发一个中断告诉 CPU：“搬完了。”CPU 检查一下，继续干活。</p>
+      <h2>动手做</h2>
+      <p>1. 按几下键盘，同时看任务管理器 CPU 占用率的微小波动——每一次按键都是一次中断。<br>2. 复制一个大文件，看 CPU 占用率并不高：搬运的主力是 DMA，不是 CPU。<br>3. 想一想：为什么键盘用中断而不用轮询？为什么硬盘用 DMA 而不用中断一点一点搬？</p>
+      <h2>避坑</h2>
+      <p>中断处理程序要短，别在里面干重活，否则会拖住整个系统；DMA 不是万能的，搬的数据很小的时候，直接让 CPU 搬更快；中断、轮询、DMA 三者的适用场景要分清，这是常考的概念。</p>
+      <div class="lesson-nav">
+        <a href="m1c8-locality.html">← 上一章：第 8 章：存储层次与局部性原理</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m1c10-performance.html">下一章：第 10 章：性能：主频、核心、流水线 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

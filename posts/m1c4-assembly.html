@@ -22,18 +22,17 @@
     <article>
       <h1>模块一第 4 章：汇编入门</h1>
       <div class="meta"><span class="tag">组成原理</span>2026-11-24 · 模块一</div>
-      <p>汇编是离机器最近的语言：一条汇编指令，基本对应一条机器指令。看懂汇编，就等于能直接读懂 CPU 在干什么。</p>
-      <h2>几个基本动作</h2>
-      <p><code>MOV</code> 是搬数据，把一个值放进寄存器；<code>ADD</code> 是加法；<code>CMP</code> 是比较两个值；<code>JMP</code> 是跳转，跳到别处去执行。这几个加起来，就能写出循环和判断。</p>
-      <h2>一个例子</h2>
-      <p>把 5 和 3 加起来：</p>
-      <p><code>MOV AX, 5</code>：把 5 放进寄存器 AX。<br><code>ADD AX, 3</code>：AX 加上 3，现在 AX 里是 8。<br><code>MOV BX, AX</code>：把 AX 的值复制到 BX，现在 BX 也是 8。</p>
-      <h2>为什么安全要学这个</h2>
-      <p>以后学到漏洞和逆向的时候，都要看汇编：缓冲区溢出就是改了本该返回的地址，逆向就是把机器码还原成能读懂的意思。现在不用背，先混个脸熟，知道它长什么样、怎么读。</p>
+      <p>汇编是离机器最近的语言：一条汇编指令，基本对应一条机器指令。看懂汇编，就等于能直接读懂 CPU 在干什么。以后学漏洞和逆向的时候，都要看汇编。</p>
+      <h2>寄存器和基本指令</h2>
+      <p>AX、BX、CX、DX 是通用寄存器，相当于 CPU 手头的四个小抽屉。64 位电脑里它们还有更大的名字（RAX、RBX 等），先知道有这回事就行。几个最常用的指令：<code>MOV</code> 是搬数据，把一个值放进寄存器；<code>ADD</code>、<code>SUB</code> 是加减；<code>CMP</code> 是比较两个值；<code>JMP</code> 是无条件跳转，跳到别处去执行；<code>JNE</code> 是“不相等就跳”，用来做循环和判断。</p>
+      <h2>一个完整的例子：求 1 到 5 的和</h2>
+      <p><code>MOV CX, 5</code>：把 5 放进 CX，当计数器。<br><code>MOV AX, 0</code>：AX 清零，用来存结果。<br><code>loop: ADD AX, CX</code>：AX 加上 CX。<br><code>SUB CX, 1</code>：CX 减 1。<br><code>CMP CX, 0</code>：比较 CX 和 0。<br><code>JNE loop</code>：不相等就跳回 loop 继续。<br>跑完之后 AX 是 15，也就是 1+2+3+4+5。这就是循环在机器层面的样子：没有“for”这个概念，只有跳转。</p>
+      <h2>栈：先提一句</h2>
+      <p>栈是一块后进先出的内存，<code>PUSH</code> 是压进去，<code>POP</code> 是弹出来。函数调用、返回地址都存在栈里。以后讲缓冲区溢出的时候，栈是主角，现在先混个脸熟。</p>
       <h2>动手做</h2>
-      <p>纸上练习：<code>MOV AX, 10</code>、<code>ADD AX, 5</code>、<code>ADD AX, 2</code>，三步之后 AX 是多少？（答案：17。）再想一想，如果中间加一句 <code>MOV BX, AX</code>，BX 是多少？</p>
+      <p>1. 纸上单步执行上面的程序，写出每一步之后 AX 和 CX 的值，验证最后 AX 是 15。<br>2. 改成求 1 到 10 的和：只要把第一行的 5 改成 10，其他不变，答案是 55。<br>3. 想一想：如果把 <code>JNE loop</code> 改成 <code>JMP loop</code>，会发生什么？（答案：死循环，CX 减到 0 还会继续，变成负数继续加。）</p>
       <h2>避坑</h2>
-      <p>这一章不用背指令，先看懂 MOV、ADD、JMP 这几个就行；汇编是工具，不是目的，学到后面逆向课还会再见。</p>
+      <p>这一章不用背指令，先看懂 MOV、ADD、CMP、JMP 这几个就行；汇编是工具，不是目的，学到后面逆向课还会再见；读汇编要一行一行跟寄存器的值，别凭感觉猜。</p>
       <div class="lesson-nav">
         <a href="m1c3-memory.html">← 上一章：第 3 章：存储器：内存、缓存、硬盘</a>
         <a href="../course.html">课程目录</a>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 6 章：逻辑门与布尔代数 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 6 章：逻辑门与布尔代数</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-24 · 模块一</div>
+      <p>上一章说 CPU 是由很多小部件组成的，这一章回过头看最底层：这些部件本身又是由什么组成的？答案是逻辑门，而逻辑门是由晶体管组成的。电脑就是这样一层一层搭起来的。</p>
+      <h2>三种基本运算</h2>
+      <p>布尔代数只研究真和假，也就是 1 和 0。NOT 是取反：1 变 0，0 变 1。AND 是“与”：两个都是 1 结果才是 1，有一个 0 就是 0。OR 是“或”：只要有一个 1 结果就是 1。把所有输入组合和结果列成表，就是真值表。</p>
+      <h2>从门到加法器</h2>
+      <p>一个逻辑门就是实现一种运算的小电路。把门拼起来能做加法：1 位加法要算“和”还要算“进位”，用异或（XOR）算和——两个不一样才是 1，用与（AND）算进位——两个都是 1 才进位。这就是半加器；再加上低位的进位，就是全加器。把 32 个全加器串起来，就是 32 位加法器，也就是 ALU 里的一部分。</p>
+      <h2>ALU：电脑的算数大脑</h2>
+      <p>ALU 就是由成千上万个逻辑门拼成的，负责所有的算数和逻辑运算：加减乘除、比较大小、按位与或。CPU 里的其他部件也一样，都是门拼出来的。理解了这一点，电脑就不再是黑盒子了。</p>
+      <div class="video-note">视频讲解：<a href="https://www.youtube.com/watch?v=gI-qXk7XojA">Boolean Logic &amp; Logic Gates — Crash Course Computer Science #3</a>（YouTube，英文，可开自动字幕，约 10 分钟）<br>补充视频：<a href="https://www.youtube.com/watch?v=1I5ZMmrOfnA">How Computers Calculate - the ALU — Crash Course Computer Science #5</a>（YouTube，英文，可开自动字幕，约 11 分钟）</div>
+      <h2>动手做</h2>
+      <p>1. 写出 AND、OR、NOT 的真值表（各只有 2 到 4 行）。<br>2. 用异或算 1 + 1：和是 0，进位是 1，所以二进制 1 + 1 = 10，也就是十进制的 2。<br>3. 想一想：要算 5 + 3（二进制 101 + 011），每一位上的和与进位分别是什么？</p>
+      <h2>避坑</h2>
+      <p>真值表不用背，理解“与是都 1 才 1，或是有 1 就 1”；加法器知道是门拼出来的就行，不用自己画电路；这一章是为理解 CPU 打基础，不用深究电路细节。</p>
+      <div class="lesson-nav">
+        <a href="m1c5-io.html">← 上一章：第 5 章：总线与输入输出</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m1c7-isa.html">下一章：第 7 章：指令系统与寻址方式 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

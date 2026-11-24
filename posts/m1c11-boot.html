@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 11 章：计算机是怎么启动的 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 11 章：计算机是怎么启动的</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-24 · 模块一</div>
+      <p>按下电源键到看见桌面，中间经过了一串步骤。弄清楚这个过程，以后电脑开不了机，你就知道该从哪一步开始查。</p>
+      <h2>启动流程</h2>
+      <p>通电后，CPU 先执行主板上一块只读芯片里的固件（BIOS 或 UEFI），固件做自检：检查 CPU、内存、硬盘这些硬件在不在、好不好。然后固件按启动顺序找启动设备（一般是硬盘），从硬盘上加载引导程序，引导程序再加载操作系统内核，内核接管硬件、启动各种服务，最后出现登录界面。</p>
+      <h2>BIOS 和 UEFI</h2>
+      <p>BIOS 是老一代固件，UEFI 是新一代。现在的新电脑基本都是 UEFI：支持 2TB 以上的大硬盘启动，有图形界面，启动更快。UEFI 还有一个重要功能叫安全启动（Secure Boot）：只允许经过签名的操作系统启动，防止 rootkit 这类底层恶意软件在系统启动之前就偷偷加载。</p>
+      <h2>开不了机怎么查</h2>
+      <p>按启动流程倒着查：电源灯亮不亮（电源和主板），有没有自检画面（固件），报不报错（比如找不到启动设备就是硬盘或引导的问题），卡在哪个画面（Windows 转圈就是系统的问题）。知道流程，排查就有了顺序，而不是乱试。</p>
+      <h2>动手做</h2>
+      <p>1. 按 Win+R，输入 msinfo32 回车，看“BIOS 模式”那一行，是 UEFI 还是传统。<br>2. 再看“系统型号”“处理器”“安装的物理内存”，对照第 12 章的体检报告。<br>3. 开机时留意主板 logo 画面（别乱进 BIOS 改东西，先只看）。</p>
+      <h2>避坑</h2>
+      <p>BIOS 里别乱改不认识的选项，改错了可能开不了机；改启动顺序前先知道自己在干什么；安全启动别随便关，它是防底层恶意软件的一道门。</p>
+      <div class="lesson-nav">
+        <a href="m1c10-performance.html">← 上一章：第 10 章：性能：主频、核心、流水线</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m1c12-hardware-lab.html">下一章：第 12 章：动手：拆解一台电脑的硬件信息 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 12 章：动手：拆解一台电脑的硬件信息 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 12 章：动手：拆解一台电脑的硬件信息</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-24 · 模块一</div>
+      <p>这一章是模块一的综合动手：不用拆机箱，用系统自带工具给自己的电脑做一份“硬件体检报告”。做完这份报告，前面 11 章的概念就都落到实处了。</p>
+      <h2>四件工具</h2>
+      <p>任务管理器：看 CPU、内存、磁盘、GPU 的实时状态。msinfo32（系统信息）：看系统型号、处理器、内存、BIOS 模式。dxdiag（DirectX 诊断工具）：看显卡、声卡的详细信息。设备管理器：看所有硬件设备和驱动状态，有问题的设备会带黄色感叹号。</p>
+      <h2>写出你的体检报告</h2>
+      <p>按下面这张表，把自己电脑的信息填进去：CPU 型号、核心数、逻辑处理器数、主频；内存大小、已用多少、速度；硬盘类型（SSD 还是 HDD）、容量、剩余空间；显卡型号；BIOS 模式（UEFI 还是传统）；网络适配器型号。</p>
+      <h2>对照着判断瓶颈</h2>
+      <p>拿着报告，对照前面学过的知识判断：内存经常用到 90% 以上，就是内存瓶颈；硬盘是机械盘，就是磁盘瓶颈；CPU 经常满载，就是 CPU 瓶颈。找到瓶颈再决定升级什么，而不是凭感觉花钱。</p>
+      <h2>动手做</h2>
+      <p>1. 按 Win+R，依次输入 taskmgr、msinfo32、dxdiag、devmgmt.msc，把四个工具都打开看一遍。<br>2. 按上面的表写一份体检报告，存在记事本里。<br>3. 对照报告回答：你电脑的瓶颈在哪一级？如果只能升级一样东西，你会先升级什么，为什么？</p>
+      <h2>避坑</h2>
+      <p>工具只看不改，别在里面乱点不认识的按钮；别下载来路不明的“硬件检测”软件，系统自带的就够了；这份报告留着，以后学操作系统和网络的时候还会用到。</p>
+      <div class="lesson-nav">
+        <a href="m1c11-boot.html">← 上一章：第 11 章：计算机是怎么启动的</a>
+        <a href="../course.html">课程目录</a>
+        <a href="../course.html#m2">下一模块：操作系统（待写）→</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

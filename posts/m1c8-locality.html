@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 8 章：存储层次与局部性原理 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 8 章：存储层次与局部性原理</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-24 · 模块一</div>
+      <p>第 3 章讲了存储金字塔，这一章讲它为什么能成立：程序访问数据不是随机的，而是有规律的。这个规律叫局部性原理，整个缓存体系都建立在它上面。</p>
+      <h2>两种局部性</h2>
+      <p>时间局部性：刚用过的数据，马上又会用。比如循环里的变量，每一轮都要读。空间局部性：用了某个数据，它旁边的数据很快也会用到。比如数组是连续存的，读了第一个元素，第二个、第三个也快了。</p>
+      <h2>缓存是怎么利用局部性的</h2>
+      <p>缓存一次不是搬 1 个字节，而是一整块（叫缓存行，一般 64 字节）。因为空间局部性，旁边的字节很快会用到，一次多搬点是划算的。如果 CPU 要的数据在缓存里，叫命中，直接拿，几周期；不在，叫未命中，要去内存拿，上百周期。所以缓存越大，命中率一般越高，但大到一定程度收益就很小了。</p>
+      <h2>和安全有什么关系</h2>
+      <p>缓存是 CPU 和内存之间的共享资源，不同程序会互相影响。有人发现可以通过测量缓存的命中时间，推测出另一个程序在访问什么数据——这就是缓存侧信道攻击，著名的 Spectre 和 Meltdown 漏洞就和这个有关。细节以后在进阶模块讲，这里先知道“缓存也会泄露信息”这个结论。</p>
+      <h2>动手做</h2>
+      <p>1. 复制一个 1GB 的大文件，记下用时；再复制 1000 个 1MB 的小文件（总量也是 1GB），比较用时。小文件慢得多，因为每个文件都要寻址和管理，开销大。<br>2. 打开一个大程序，第一次打开慢，关掉马上再打开就快——第二次很多东西还在缓存里。</p>
+      <h2>避坑</h2>
+      <p>别以为内存越大越快，瓶颈要看是哪一级；缓存是自动工作的，不用手动管；“命中”和“未命中”这两个词要记住，后面讲虚拟内存和页面置换还会遇到同样的思想。</p>
+      <div class="lesson-nav">
+        <a href="m1c7-isa.html">← 上一章：第 7 章：指令系统与寻址方式</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m1c9-interrupt.html">下一章：第 9 章：中断与 DMA →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

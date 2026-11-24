@@ -25,7 +25,7 @@
       <section class="section">
         <h1 style="font-size: 28px; margin-bottom: 8px;">课程目录</h1>
         <p style="color: #666; margin-bottom: 8px;">从小白到网络安全工程师的完整路线，按专业课程框架排：先打基础（组成原理、操作系统、网络、编程），再学安全核心，最后实战与进阶。由浅入深，顺序建议从预备课开始往下学。</p>
-        <p style="color: #666;">每课都有文字讲解、一个动手做的步骤和一个避坑提示，需要看演示的地方会附视频链接。所有实验都在虚拟机里做，不动主力系统，也绝不在真实网站上练手。</p>
+        <p style="color: #666;">全套 9 个模块、96 章，按大学专业课的深度排：每章讲透一个知识点，不精简、不跳步。每课都有文字讲解、一个动手做的步骤和一个避坑提示，需要看演示的地方会附视频链接。所有实验都在虚拟机里做，不动主力系统，也绝不在真实网站上练手。内容比较多，一批一批写，写完的先上线，标“已上线”的点开就能学。</p>
       </section>
 
       <section class="section" id="levels">
@@ -80,107 +80,149 @@
       </section>
 
       <section class="course-stage" id="m1">
-        <h2>模块一：计算机组成原理 <span>5 章 · 已上线</span></h2>
+        <h2>模块一：计算机组成原理 <span>12 章 · 已上线</span></h2>
         <p>电脑最底层的样子：数据怎么表示，指令怎么执行，东西存在哪。</p>
         <ol class="lesson-list">
-          <li><a href="posts/m1c1-binary.html">第 1 章：二进制与数据表示</a><span>0 和 1 怎么表示数字和文字</span></li>
+          <li><a href="posts/m1c1-binary.html">第 1 章：二进制与数据表示</a><span>0 和 1 怎么表示数字、文字和小数</span></li>
           <li><a href="posts/m1c2-cpu.html">第 2 章：CPU 是怎么执行指令的</a><span>取指、译码、执行、写回</span></li>
           <li><a href="posts/m1c3-memory.html">第 3 章：存储器：内存、缓存、硬盘</a><span>存储金字塔，快与大的取舍</span></li>
           <li><a href="posts/m1c4-assembly.html">第 4 章：汇编入门</a><span>离机器最近的语言</span></li>
           <li><a href="posts/m1c5-io.html">第 5 章：总线与输入输出</a><span>数据怎么在电脑里跑，中断是什么</span></li>
+          <li><a href="posts/m1c6-logic.html">第 6 章：逻辑门与布尔代数</a><span>从晶体管到加法器</span></li>
+          <li><a href="posts/m1c7-isa.html">第 7 章：指令系统与寻址方式</a><span>x86 与 ARM，数据在哪</span></li>
+          <li><a href="posts/m1c8-locality.html">第 8 章：存储层次与局部性原理</a><span>缓存为什么能成立</span></li>
+          <li><a href="posts/m1c9-interrupt.html">第 9 章：中断与 DMA</a><span>设备和 CPU 怎么配合</span></li>
+          <li><a href="posts/m1c10-performance.html">第 10 章：性能：主频、核心、流水线</a><span>电脑快不快看什么</span></li>
+          <li><a href="posts/m1c11-boot.html">第 11 章：计算机是怎么启动的</a><span>BIOS/UEFI、安全启动</span></li>
+          <li><a href="posts/m1c12-hardware-lab.html">第 12 章：动手：拆解一台电脑的硬件信息</a><span>一份硬件体检报告</span></li>
         </ol>
       </section>
 
       <section class="course-stage" id="m2">
-        <h2>模块二：计算机操作系统 <span>6 章 · 待写</span></h2>
+        <h2>模块二：计算机操作系统 <span>12 章 · 待写</span></h2>
         <p>操作系统是大管家：管进程、管线程、管内存、管文件。</p>
         <ol class="lesson-list">
           <li><span class="lesson-title">第 1 章：操作系统是干什么的</span><span>管硬件、管进程、给程序提供服务</span></li>
           <li><span class="lesson-title">第 2 章：进程</span><span>程序跑起来就是进程，资源分配的基本单位</span></li>
           <li><span class="lesson-title">第 3 章：线程</span><span>同一进程里并行干活的执行单位</span></li>
-          <li><span class="lesson-title">第 4 章：并发：锁、死锁与竞态条件</span><span>多线程的麻烦从哪来</span></li>
-          <li><span class="lesson-title">第 5 章：内存管理：虚拟内存与分页</span><span>程序以为自己独占内存</span></li>
-          <li><span class="lesson-title">第 6 章：文件系统与权限</span><span>文件怎么存，谁能动</span></li>
+          <li><span class="lesson-title">第 4 章：进程间通信</span><span>进程之间怎么说话</span></li>
+          <li><span class="lesson-title">第 5 章：并发：锁、死锁与竞态条件</span><span>多线程的麻烦从哪来</span></li>
+          <li><span class="lesson-title">第 6 章：调度：CPU 时间怎么分</span><span>谁先跑、跑多久</span></li>
+          <li><span class="lesson-title">第 7 章：内存管理：虚拟内存与分页</span><span>程序以为自己独占内存</span></li>
+          <li><span class="lesson-title">第 8 章：页面置换与缺页</span><span>内存不够了怎么办</span></li>
+          <li><span class="lesson-title">第 9 章：文件系统与权限</span><span>文件怎么存，谁能动</span></li>
+          <li><span class="lesson-title">第 10 章：系统调用</span><span>程序怎么请操作系统帮忙</span></li>
+          <li><span class="lesson-title">第 11 章：动手：进程、线程与系统调用</span><span>用命令看进程和线程</span></li>
+          <li><span class="lesson-title">第 12 章：Windows 与 Linux 内核有什么不一样</span><span>两大系统的设计差异</span></li>
         </ol>
       </section>
 
       <section class="course-stage" id="m3">
-        <h2>模块三：计算机网络 <span>7 章 · 待写</span></h2>
+        <h2>模块三：计算机网络 <span>12 章 · 待写</span></h2>
         <p>从网线到网页，数据是怎么跨过半个地球找到你的。</p>
         <ol class="lesson-list">
           <li><span class="lesson-title">第 1 章：分层：OSI 与 TCP/IP</span><span>七层、四层，每层干什么</span></li>
           <li><span class="lesson-title">第 2 章：物理层与数据链路层</span><span>网线、MAC 地址、以太网</span></li>
           <li><span class="lesson-title">第 3 章：IP、子网与路由</span><span>数据包怎么找到路</span></li>
           <li><span class="lesson-title">第 4 章：TCP 与 UDP</span><span>三次握手、四次挥手、可靠与快速</span></li>
-          <li><span class="lesson-title">第 5 章：DNS、HTTP 与 TLS</span><span>应用层三大件</span></li>
-          <li><span class="lesson-title">第 6 章：动手：Wireshark 抓包</span><span>亲眼看数据包长什么样</span></li>
-          <li><span class="lesson-title">第 7 章：动手：搭一个局域网实验</span><span>两台虚拟机互相 ping</span></li>
+          <li><span class="lesson-title">第 5 章：TCP 拥塞控制与流量控制</span><span>网络堵了怎么办</span></li>
+          <li><span class="lesson-title">第 6 章：DNS、HTTP 与 TLS</span><span>应用层三大件</span></li>
+          <li><span class="lesson-title">第 7 章：HTTP/2、HTTP/3 与 QUIC</span><span>新一代的网页协议</span></li>
+          <li><span class="lesson-title">第 8 章：常见网络服务：DHCP、NAT</span><span>自动拿地址、上网怎么共享</span></li>
+          <li><span class="lesson-title">第 9 章：动手：Wireshark 抓包</span><span>亲眼看数据包长什么样</span></li>
+          <li><span class="lesson-title">第 10 章：动手：搭一个局域网实验</span><span>两台虚拟机互相 ping</span></li>
+          <li><span class="lesson-title">第 11 章：网络故障排查方法</span><span>断网了从哪开始查</span></li>
+          <li><span class="lesson-title">第 12 章：IPv6 入门</span><span>地址不够用了怎么办</span></li>
         </ol>
       </section>
 
       <section class="course-stage" id="m4">
-        <h2>模块四：编程基础 <span>6 章 · 待写</span></h2>
+        <h2>模块四：编程基础 <span>10 章 · 待写</span></h2>
         <p>安全工程师必须会写代码：先 Python，再 C，写出自己的小工具。</p>
         <ol class="lesson-list">
           <li><span class="lesson-title">第 1 章：编程是怎么回事</span><span>变量、判断、循环、函数</span></li>
           <li><span class="lesson-title">第 2 章：Python 入门</span><span>写第一个安全小工具</span></li>
           <li><span class="lesson-title">第 3 章：数据结构</span><span>列表、字典、集合，什么时候用哪个</span></li>
-          <li><span class="lesson-title">第 4 章：C 语言：指针与内存</span><span>直接碰内存的语言</span></li>
-          <li><span class="lesson-title">第 5 章：动手：写一个端口扫描器</span><span>socket 的第一次实战</span></li>
-          <li><span class="lesson-title">第 6 章：动手：写一个密码强度检查器</span><span>字符串处理练手</span></li>
+          <li><span class="lesson-title">第 4 章：函数、模块与面向对象</span><span>代码怎么组织才不乱</span></li>
+          <li><span class="lesson-title">第 5 章：文件操作与异常处理</span><span>读写文件、出错了怎么办</span></li>
+          <li><span class="lesson-title">第 6 章：正则表达式</span><span>安全工作里天天用的模式匹配</span></li>
+          <li><span class="lesson-title">第 7 章：C 语言：指针与内存</span><span>直接碰内存的语言</span></li>
+          <li><span class="lesson-title">第 8 章：动手：写一个端口扫描器</span><span>socket 的第一次实战</span></li>
+          <li><span class="lesson-title">第 9 章：动手：写一个密码强度检查器</span><span>字符串处理练手</span></li>
+          <li><span class="lesson-title">第 10 章：动手：写一个日志分析小工具</span><span>从日志里找异常</span></li>
         </ol>
       </section>
 
       <section class="course-stage" id="m5">
-        <h2>模块五：数据库与密码学 <span>5 章 · 待写</span></h2>
+        <h2>模块五：数据库与密码学 <span>10 章 · 待写</span></h2>
         <p>数据存在哪、怎么查，以及怎么保证数据不被偷看、不被改。</p>
         <ol class="lesson-list">
           <li><span class="lesson-title">第 1 章：SQL 基础</span><span>增删改查</span></li>
           <li><span class="lesson-title">第 2 章：动手：建一个数据库</span><span>装一个，建表插数据</span></li>
-          <li><span class="lesson-title">第 3 章：SQL 注入是怎么发生的</span><span>拼接字符串的代价</span></li>
-          <li><span class="lesson-title">第 4 章：对称与非对称加密</span><span>两把钥匙的故事</span></li>
-          <li><span class="lesson-title">第 5 章：哈希、签名与证书</span><span>指纹、签名、信任链</span></li>
+          <li><span class="lesson-title">第 3 章：数据库设计：表、主键、外键</span><span>数据怎么组织才合理</span></li>
+          <li><span class="lesson-title">第 4 章：SQL 注入是怎么发生的</span><span>拼接字符串的代价</span></li>
+          <li><span class="lesson-title">第 5 章：对称与非对称加密</span><span>两把钥匙的故事</span></li>
+          <li><span class="lesson-title">第 6 章：哈希、签名与证书</span><span>指纹、签名、信任链</span></li>
+          <li><span class="lesson-title">第 7 章：TLS 握手全过程</span><span>打开一个 HTTPS 网站时发生了什么</span></li>
+          <li><span class="lesson-title">第 8 章：密码存储：加盐哈希</span><span>密码绝不能明文存</span></li>
+          <li><span class="lesson-title">第 9 章：动手：用 OpenSSL 玩一遍</span><span>加密、解密、生成证书</span></li>
+          <li><span class="lesson-title">第 10 章：常见密码学错误</span><span>自己发明加密算法是大忌</span></li>
         </ol>
       </section>
 
       <section class="course-stage" id="m6">
-        <h2>模块六：网络安全基础 <span>5 章 · 待写</span></h2>
+        <h2>模块六：网络安全基础 <span>10 章 · 待写</span></h2>
         <p>安全真正开始的地方：攻击者怎么想，防御从哪里下手。</p>
         <ol class="lesson-list">
           <li><span class="lesson-title">第 1 章：威胁建模</span><span>攻击者会怎么想</span></li>
           <li><span class="lesson-title">第 2 章：钓鱼与社会工程学</span><span>骗人的技术</span></li>
           <li><span class="lesson-title">第 3 章：恶意软件全家福</span><span>病毒、木马、勒索软件</span></li>
           <li><span class="lesson-title">第 4 章：防火墙与入侵检测</span><span>门卫与哨兵</span></li>
-          <li><span class="lesson-title">第 5 章：动手：给电脑做一次安全检查</span><span>从头到尾查一遍</span></li>
+          <li><span class="lesson-title">第 5 章：漏洞、CVE 与 CVSS</span><span>漏洞是怎么编号和打分的</span></li>
+          <li><span class="lesson-title">第 6 章：身份认证与访问控制</span><span>你是谁、你能干什么</span></li>
+          <li><span class="lesson-title">第 7 章：安全基线与加固</span><span>一台机器上线前要检查什么</span></li>
+          <li><span class="lesson-title">第 8 章：动手：给电脑做一次安全检查</span><span>从头到尾查一遍</span></li>
+          <li><span class="lesson-title">第 9 章：动手：读一份漏洞报告</span><span>看懂 CVE 报告在说什么</span></li>
+          <li><span class="lesson-title">第 10 章：安全新闻与漏洞情报怎么跟</span><span>跟上新漏洞的方法</span></li>
         </ol>
       </section>
 
       <section class="course-stage" id="m7">
-        <h2>模块七：Web 安全与渗透测试 <span>6 章 · 待写</span></h2>
+        <h2>模块七：Web 安全与渗透测试 <span>12 章 · 待写</span></h2>
         <p>网站是怎么被攻破的，以及怎么合法地去找漏洞。</p>
         <ol class="lesson-list">
           <li><span class="lesson-title">第 1 章：Web 工作原理深入</span><span>请求、响应、会话、Cookie</span></li>
           <li><span class="lesson-title">第 2 章：SQL 注入实战</span><span>从原理到利用</span></li>
           <li><span class="lesson-title">第 3 章：XSS 跨站脚本</span><span>让别人的浏览器替你干活</span></li>
           <li><span class="lesson-title">第 4 章：CSRF 与 SSRF</span><span>借刀杀人的两种方式</span></li>
-          <li><span class="lesson-title">第 5 章：信息收集与扫描</span><span>动手之前的侦察</span></li>
-          <li><span class="lesson-title">第 6 章：提权、后渗透与报告</span><span>拿到权限之后干什么</span></li>
+          <li><span class="lesson-title">第 5 章：文件上传与逻辑漏洞</span><span>不止是技术漏洞</span></li>
+          <li><span class="lesson-title">第 6 章：XXE 与反序列化</span><span>容易忽略的两类漏洞</span></li>
+          <li><span class="lesson-title">第 7 章：信息收集与扫描</span><span>动手之前的侦察</span></li>
+          <li><span class="lesson-title">第 8 章：漏洞利用基础</span><span>从漏洞到控制权</span></li>
+          <li><span class="lesson-title">第 9 章：提权、后渗透与报告</span><span>拿到权限之后干什么</span></li>
+          <li><span class="lesson-title">第 10 章：动手：OWASP Top 10 逐条过</span><span>最常见的十类 Web 漏洞</span></li>
+          <li><span class="lesson-title">第 11 章：渗透测试方法论</span><span>一次测试的标准流程</span></li>
+          <li><span class="lesson-title">第 12 章：法律与道德边界</span><span>什么能做，什么绝对不能做</span></li>
         </ol>
       </section>
 
       <section class="course-stage" id="m8">
-        <h2>模块八：安全运营与应急响应 <span>4 章 · 待写</span></h2>
+        <h2>模块八：安全运营与应急响应 <span>8 章 · 待写</span></h2>
         <p>蓝队的工作：盯着、发现、出事之后怎么办。</p>
         <ol class="lesson-list">
           <li><span class="lesson-title">第 1 章：SOC 是干什么的</span><span>7×24 小时盯着屏幕的人</span></li>
           <li><span class="lesson-title">第 2 章：SIEM 与日志分析</span><span>日志会说话</span></li>
           <li><span class="lesson-title">第 3 章：应急响应流程</span><span>出事之后的标准动作</span></li>
           <li><span class="lesson-title">第 4 章：动手：分析一次模拟入侵</span><span>对着日志破案</span></li>
+          <li><span class="lesson-title">第 5 章：数字取证入门</span><span>证据怎么找、怎么保</span></li>
+          <li><span class="lesson-title">第 6 章：威胁情报</span><span>攻击者最近在干什么</span></li>
+          <li><span class="lesson-title">第 7 章：漏洞管理流程</span><span>从发现到修复的闭环</span></li>
+          <li><span class="lesson-title">第 8 章：写一份安全事件报告</span><span>把一次事件讲清楚</span></li>
         </ol>
       </section>
 
       <section class="course-stage" id="m9">
-        <h2>模块九：进阶与新趋势 <span>5 章 · 待写</span></h2>
+        <h2>模块九：进阶与新趋势 <span>10 章 · 待写</span></h2>
         <p>跟上时代：逆向、云、容器、零信任、AI 时代的新攻防。</p>
         <ol class="lesson-list">
           <li><span class="lesson-title">第 1 章：汇编与缓冲区溢出</span><span>漏洞是怎么发生的</span></li>
@@ -188,6 +230,11 @@
           <li><span class="lesson-title">第 3 章：云安全基础</span><span>云上的责任分界线</span></li>
           <li><span class="lesson-title">第 4 章：容器安全</span><span>镜像、隔离与逃逸</span></li>
           <li><span class="lesson-title">第 5 章：零信任与 AI 时代的安全</span><span>新的攻防形态</span></li>
+          <li><span class="lesson-title">第 6 章：移动安全入门</span><span>手机 App 的安全问题</span></li>
+          <li><span class="lesson-title">第 7 章：工控与物联网安全入门</span><span>摄像头、路由器也不安全</span></li>
+          <li><span class="lesson-title">第 8 章：供应链安全</span><span>你用的软件包可信吗</span></li>
+          <li><span class="lesson-title">第 9 章：动手：破解一个简单的 crackme</span><span>逆向的第一次实战</span></li>
+          <li><span class="lesson-title">第 10 章：考证与求职路线</span><span>证书、简历、面试怎么准备</span></li>
         </ol>
       </section>
     </div>
