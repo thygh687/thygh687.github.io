@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块二第 10 章：系统调用 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块二第 10 章：系统调用</h1>
+      <div class="meta"><span class="tag">操作系统</span>2026-11-24 · 模块二</div>
+      <p>普通程序在用户态，碰不到硬件。想读写文件、联网、创建进程，必须请内核帮忙。程序请内核帮忙的唯一正规途径，就是系统调用。这是用户态和内核态之间唯一的一座桥。</p>
+      <h2>一次系统调用经历了什么</h2>
+      <p>程序把要干的事和参数放进寄存器，执行一条特殊的指令（x86 上是 syscall），CPU 从用户态切换到内核态，内核查表找到对应的处理函数，执行完把结果放回寄存器，再切回用户态，程序继续跑。一次系统调用要切换两次模式，是有代价的，所以程序不会没事就调它。</p>
+      <h2>最常用的系统调用</h2>
+      <p>open/read/write/close：打开、读写、关闭文件。fork/execve：创建新进程、换成别的程序。socket/connect/send/recv：网络通信。mmap：申请内存。程序员平时调的库函数（比如 C 语言的 fopen），底层最后都是调这些系统调用。</p>
+      <h2>为什么安全要盯着系统调用</h2>
+      <p>一个程序想干什么，最后都要落实到系统调用上：读了哪个文件、连了哪个地址、创建了什么进程，全都能从系统调用里看出来。所以很多安全监控就是在系统调用层盯着：程序调了不该调的调用，或者参数不对劲，就报警、就拦截。杀毒软件和 EDR 的核心能力之一，就是这个。</p>
+      <div class="teacher-note">老师经验：做应急响应的时候，我经常用 strace 跟踪可疑程序的系统调用。一个程序声称自己是记事本，却在调 socket 连外网、在读浏览器保存密码的文件——系统调用不会说谎。恶意软件可以伪装名字、伪装窗口，但它要干坏事，就必须调系统调用。所以看系统调用，是看穿伪装最直接的办法。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机的 Linux 里输入 <code>strace -e trace=openat ls</code>，看 ls 这个命令打开了哪些文件。<br>2. 再输入 <code>strace -c ls</code>，看这次运行总共调了多少次系统调用。<br>3. 对比一下：同样是 ls，加了 -e 和不加 -e，输出有什么不同。</p>
+      <h2>避坑</h2>
+      <p>系统调用是用户态进内核态的唯一正规途径，这句话要记住；库函数和系统调用不是一回事，库函数是包装，系统调用是底层；strace 只在 Linux 上有，Windows 上对应的工具叫 Process Monitor。</p>
+      <div class="lesson-nav">
+        <a href="m2c9-filesystem.html">← 上一章：第 9 章：文件系统与权限</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m2c11-lab.html">下一章：第 11 章：动手：进程、线程与系统调用 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

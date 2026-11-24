@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块二第 4 章：进程间通信 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块二第 4 章：进程间通信</h1>
+      <div class="meta"><span class="tag">操作系统</span>2026-11-24 · 模块二</div>
+      <p>进程之间默认是隔离的，看不见对方的内存。但很多时候它们需要说话：浏览器要把下载好的文件交给杀毒软件扫描，两个程序要交换数据。进程间通信（IPC）就是解决这个问题的，操作系统提供了好几种方式。</p>
+      <h2>四种常见方式</h2>
+      <p>管道：像水管，一头进一头出，单向传数据。命令行里 <code>dir | findstr</code> 用的就是管道。消息队列：像邮箱，消息排队等着取。共享内存：两个进程约定用同一块内存，最快，但要自己处理同步问题。Socket：不但能本机通信，还能跨网络通信，网络编程的基础，模块三和模块四会再遇到它。</p>
+      <h2>为什么需要操作系统出面</h2>
+      <p>进程不能直接碰别的进程的内存，所以通信必须经过操作系统搭桥：要么操作系统帮忙传数据，要么操作系统划一块共享区域并管好权限。没有这道手续，隔离就形同虚设。</p>
+      <h2>IPC 和权限</h2>
+      <p>通信通道也有权限：谁能连、谁能读写，操作系统说了算。一个低权限的进程，不应该能随便连上高权限进程的通信通道。如果能连上，就可能让高权限进程替它干活——这就是提权的一种路子。</p>
+      <div class="teacher-note">老师经验：很多真实的提权漏洞就出在 IPC 上。低权限的程序通过管道、共享内存或者本地 Socket 连上一个高权限的服务，然后发一条精心构造的消息，让服务替它执行命令。查这类问题的时候，我先看高权限服务开了哪些 IPC 通道，再看这些通道有没有做身份校验。很多服务默认“本机来的都可信”，这就是问题所在。</div>
+      <h2>动手做</h2>
+      <p>1. 打开命令提示符，输入 <code>tasklist | findstr explorer</code>，体会管道：前一个命令的输出变成了后一个命令的输入。<br>2. 在虚拟机的 Linux 里输入 <code>ls | grep txt</code>，同样是管道。<br>3. 输入 <code>ipcs</code>（Linux），看系统里现有的消息队列和共享内存。</p>
+      <h2>避坑</h2>
+      <p>IPC 的四种方式不用死记硬背，先分清“传数据”和“共享内存”这两类；共享内存最快但最危险，因为同步要自己管；“本机来的都可信”是最常见的错误假设，安全上永远别这么想。</p>
+      <div class="lesson-nav">
+        <a href="m2c3-thread.html">← 上一章：第 3 章：线程</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m2c5-concurrency.html">下一章：第 5 章：并发：锁、死锁与竞态条件 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

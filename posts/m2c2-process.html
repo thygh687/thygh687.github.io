@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块二第 2 章：进程 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块二第 2 章：进程</h1>
+      <div class="meta"><span class="tag">操作系统</span>2026-11-24 · 模块二</div>
+      <p>程序是存在硬盘上的静态文件，跑起来就是进程。双击打开浏览器，硬盘上的程序被装进内存，操作系统给它分配资源、建一个进程，这个程序才算“活”了。进程是操作系统分配资源的基本单位。</p>
+      <h2>进程里有什么</h2>
+      <p>每个进程有一块独立的内存空间（代码、数据、栈、堆），有一套寄存器状态，有打开的文件和网络连接。操作系统用一个叫进程控制块（PCB）的数据结构记录这些信息：进程是谁、状态如何、用了多少资源。进程之间默认互相看不见对方的内存，这就是隔离。</p>
+      <h2>进程的状态</h2>
+      <p>就绪：等着 CPU 来跑。运行：正在 CPU 上跑。阻塞：等着某件事（比如等硬盘读数据、等用户输入），暂时跑不了。操作系统不停地在这些状态之间切换进程，所以你的电脑能同时开着浏览器、音乐和聊天软件——其实 CPU 在飞快地轮流跑它们。</p>
+      <h2>进程的创建和结束</h2>
+      <p>新进程由老进程创建：Linux 里是 fork（复制一个自己）再 exec（换成要跑的程序）；Windows 里是 CreateProcess。进程结束有正常退出和被杀掉两种：程序自己跑完，或者被用户、被系统、被另一个进程杀掉。</p>
+      <div class="teacher-note">老师经验：恶意软件最喜欢伪装成正常进程的名字，比如 svchost.exe、explorer.exe。安全值守查进程，从来不只看名字，要看三样：路径对不对（真的 svchost.exe 在 C:\Windows\System32 下面）、父进程是谁（它的“爹”应该是 services.exe）、启动参数有没有古怪。名字会骗人，这三样很难全骗过去。</div>
+      <h2>动手做</h2>
+      <p>1. 打开任务管理器 → 详细信息，看进程的 PID、状态、用户名。<br>2. 右键一个进程 → 打开文件所在位置，看它的真实路径。<br>3. 在虚拟机的 Linux 里输入 <code>ps aux</code>，看进程列表，再输入 <code>ps -ef --forest</code> 看父子关系。</p>
+      <h2>避坑</h2>
+      <p>别把“程序”和“进程”混为一谈：程序是静态的，进程是跑起来的；一个程序可以同时跑出多个进程（比如开两个浏览器窗口）；进程之间默认是隔离的，这是安全的基础，后面讲漏洞还会回来。</p>
+      <div class="lesson-nav">
+        <a href="m2c1-os-intro.html">← 上一章：第 1 章：操作系统是干什么的</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m2c3-thread.html">下一章：第 3 章：线程 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块二第 11 章：动手：进程、线程与系统调用 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块二第 11 章：动手：进程、线程与系统调用</h1>
+      <div class="meta"><span class="tag">操作系统</span>2026-11-24 · 模块二</div>
+      <p>这一章是模块二的综合动手：把前面学过的进程、线程、系统调用，用系统自带的工具亲眼看一遍。看完这一章，你对操作系统的理解就从“知道”变成“见过”了。</p>
+      <h2>Windows 上看进程和线程</h2>
+      <p>任务管理器 → 详细信息：看进程的 PID、状态、用户名、CPU 和内存占用。右键列标题 → 选择列，勾上“线程”，看每个进程有多少线程。资源监视器（任务管理器 → 性能 → 打开资源监视器）能看到进程和它的子进程、打开的文件、网络连接。Process Explorer（微软官方的免费工具）能看得更细，包括进程的父子关系和加载的模块。</p>
+      <h2>Linux 上看进程和线程</h2>
+      <p><code>ps aux</code>：看所有进程。 <code>ps -eLf</code>：看进程和它的线程。 <code>top</code>：实时看 CPU 和内存占用，按 <code>P</code> 按 CPU 排序，按 <code>M</code> 按内存排序。 <code>pstree</code>：用树形图看进程的父子关系，一眼就能看出谁是谁生的。</p>
+      <h2>跟踪系统调用</h2>
+      <p>在虚拟机的 Linux 里，用 <code>strace</code> 跟踪一个命令：<code>strace cat /etc/hostname</code>，看它打开了哪些文件、调了哪些系统调用。再试试 <code>strace -e trace=network ping -c 1 example.org</code>，只看网络相关的调用。Windows 上对应的工具是 Process Monitor，能看到进程的每一次文件、注册表和网络操作。</p>
+      <div class="teacher-note">老师经验：先学会看正常进程长什么样，才能认出异常的。正常的 svchost.exe 有十几个，父进程是 services.exe；正常的 chrome.exe 会开很多个，每个标签页一个。把这些正常样子记在心里，以后看到一个名字正常、但父进程不对、路径不对、启动时间是半夜的进程，马上就能警觉。安全分析的第一步永远是建立基线：先知道正常是什么样。</div>
+      <h2>动手做</h2>
+      <p>1. 在 Windows 上打开任务管理器，把“线程”列加出来，找出线程数最多的三个进程，记下来。<br>2. 在虚拟机的 Linux 里输入 <code>pstree -p | head -20</code>，找到 PID 为 1 的进程（init/systemd），它是所有进程的祖先。<br>3. 用 <code>strace ls</code> 跟踪一次 ls，数一数它调了多少次 openat。</p>
+      <h2>避坑</h2>
+      <p>工具只看不改，别随手结束不认识的进程，结束错了系统会出问题；strace 和 Process Monitor 输出很多，先加过滤条件再看；这份“正常进程长什么样”的印象要留着，后面安全运营模块会反复用到。</p>
+      <div class="lesson-nav">
+        <a href="m2c10-syscall.html">← 上一章：第 10 章：系统调用</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m2c12-kernels.html">下一章：第 12 章：Windows 与 Linux 内核有什么不一样 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

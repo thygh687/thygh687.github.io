@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块二第 7 章：内存管理：虚拟内存与分页 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块二第 7 章：内存管理：虚拟内存与分页</h1>
+      <div class="meta"><span class="tag">操作系统</span>2026-11-24 · 模块二</div>
+      <p>每个程序都以为自己独占了全部内存，其实它们都在用虚拟内存。操作系统给每个进程画了一张“假地图”，程序按图索骥，操作系统在背后把虚拟地址翻译成真正的物理地址。</p>
+      <h2>虚拟地址和物理地址</h2>
+      <p>程序看到的地址是虚拟地址，从 0 开始，好像整块内存都是它的。真实的物理内存只有一份，由操作系统统一分配。翻译的工具叫页表：内存被切成一页一页（一般 4KB），页表记录每一页虚拟地址对应哪一页物理地址。CPU 里有个叫 MMU 的部件，专门干翻译的活，程序每次访问内存都要经过它。</p>
+      <h2>分页的好处</h2>
+      <p>隔离：每个进程有自己的页表，看不见别的进程的内存，一个进程崩了不会拖垮别的。共享：同一份代码（比如系统库）可以映射到多个进程的虚拟地址里，物理上只存一份，省内存。灵活：程序要多少内存就给多少页，不够了再向操作系统要。</p>
+      <h2>虚拟内存和硬盘</h2>
+      <p>物理内存不够的时候，操作系统会把暂时不用的页挪到硬盘上的交换空间（Windows 叫页面文件，Linux 叫 swap），等要用的时候再搬回来。程序感觉不到，好像内存永远够用——但硬盘比内存慢上万倍，挪来挪去多了，电脑就卡了。</p>
+      <div class="teacher-note">老师经验：进程隔离是安全的第一道墙，靠的就是页表。每个进程只能看到自己的内存，攻击者想偷看别的进程的数据，首先要突破这道墙。Meltdown 和 Spectre 这两个漏洞之所以轰动，就是因为它们打破了这道墙：普通程序能读到内核和其他进程的内存。补丁打了这么多年，根子还是硬件设计上的问题。所以内存管理不是纯理论，它是安全攻防的前线。</div>
+      <h2>动手做</h2>
+      <p>1. 打开任务管理器 → 性能 → 内存，看“已提交”和“分页池”这两个数字，体会虚拟内存比物理内存大。<br>2. 在虚拟机的 Linux 里输入 <code>free -h</code>，看内存和 swap 的使用情况。<br>3. 打开很多程序把内存占满，观察电脑变卡的过程——这就是在频繁换页。</p>
+      <h2>避坑</h2>
+      <p>虚拟地址和物理地址一定要分清，这是全章的核心；页表是翻译用的，不是存数据的；swap 是应急用的，不是内存的替代品，依赖它电脑会很卡。</p>
+      <div class="lesson-nav">
+        <a href="m2c6-scheduling.html">← 上一章：第 6 章：调度：CPU 时间怎么分</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m2c8-paging.html">下一章：第 8 章：页面置换与缺页 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

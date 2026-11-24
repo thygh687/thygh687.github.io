@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块二第 1 章：操作系统是干什么的 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块二第 1 章：操作系统是干什么的</h1>
+      <div class="meta"><span class="tag">操作系统</span>2026-11-24 · 模块二</div>
+      <p>操作系统是电脑的大管家，夹在硬件和程序之间。程序想用 CPU、内存、硬盘、网卡，都不能直接伸手拿，必须通过操作系统。这一个规矩，是整个计算机安全的根基。</p>
+      <h2>操作系统管什么</h2>
+      <p>进程管理：哪个程序先跑、跑多久。内存管理：每个程序分多少内存、互相不能乱看。文件系统：文件存在哪、谁能动。设备管理：键盘、硬盘、网卡这些硬件怎么用。安全机制：用户、权限、审计。没有操作系统，每个程序都要自己管硬件，那会乱成一团。</p>
+      <h2>内核和用户态</h2>
+      <p>操作系统最核心的部分叫内核。内核运行在特权模式（内核态），能碰硬件；普通程序运行在用户态，碰不到硬件。两者之间有一道墙，程序想干点特权的事（比如读写文件、联网），必须通过系统调用请内核帮忙。后面第 10 章会细讲系统调用。</p>
+      <h2>常见的操作系统</h2>
+      <p>Windows：个人电脑和公司办公的主力，图形界面友好。Linux：服务器的主力，开源、稳定，安全工作里天天打交道。macOS：苹果电脑的系统，底层也是类 Unix。做安全，三种都要认识，但主攻 Windows 和 Linux。</p>
+      <div class="teacher-note">老师经验：安全工作的第一步，就是理解“操作系统是所有安全机制的根基”。权限、隔离、审计这些词，背后都是操作系统在执行。以后看到任何安全产品，不管它叫防火墙、杀毒还是 EDR，最后都要落到操作系统提供的机制上。</div>
+      <h2>动手做</h2>
+      <p>1. 按 Win+R，输入 winver 回车，看自己的 Windows 版本和内部版本号。<br>2. 在虚拟机里打开 Ubuntu，输入 <code>uname -a</code>，看 Linux 的内核版本。<br>3. 对比一下：两个系统都能上网、能存文件，但背后的内核完全不同。</p>
+      <h2>避坑</h2>
+      <p>别把“操作系统”和“电脑”混为一谈：电脑是硬件，操作系统是软件；内核态和用户态这道墙是全书最重要的概念之一，一定要真懂；不用急着背各种系统的版本号，先分清 Windows 和 Linux 的分工。</p>
+      <div class="lesson-nav">
+        <a href="../course.html">← 课程目录</a>
+        <a href="m2c2-process.html">下一章：第 2 章：进程 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

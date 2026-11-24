@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块二第 9 章：文件系统与权限 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块二第 9 章：文件系统与权限</h1>
+      <div class="meta"><span class="tag">操作系统</span>2026-11-24 · 模块二</div>
+      <p>文件存在硬盘上，操作系统要管两个事：文件怎么组织（文件系统），以及谁能动它（权限）。这两件事，一个管“找得到”，一个管“动不得”。</p>
+      <h2>文件是怎么存的</h2>
+      <p>硬盘被分成一块一块，文件的内容存在这些块里，文件的信息（名字、大小、位置、权限）存在另外的地方：Linux 叫 inode，Windows 的 NTFS 叫 MFT。目录本身也是一种文件，里面记着文件名和对应的 inode。删除文件的时候，操作系统一般只删掉记录，内容还在原地，这就是删除的文件能恢复的原因。</p>
+      <h2>权限：rwx</h2>
+      <p>Linux 的权限是三组各三位：所有者、所属组、其他人，每组是读（r）、写（w）、执行（x）。比如 <code>-rwxr-xr-x</code>，意思是所有者能读能写能执行，同组和其他人只能读和执行。Windows 的权限更细，用访问控制列表（ACL）给每个用户单独规定能干什么。权限的核心思想就一句：默认不给，需要才给。</p>
+      <h2>特殊权限要小心</h2>
+      <p>Linux 有个叫 SUID 的特殊权限：带 SUID 的程序，运行时用的是文件所有者的权限，而不是运行者的权限。比如 passwd 命令带 SUID，普通用户改密码的时候，实际上是以 root 的身份在写密码文件。这个机制很方便，也很危险：如果一个带 SUID 的程序有漏洞，普通用户就能借它拿到 root 权限。</p>
+      <div class="teacher-note">老师经验：Linux 提权，十次里有九次是从权限配置错误开始的。最常见的是三种：敏感文件可写（比如定时任务的脚本谁都能改）、带 SUID 的程序有漏洞、家目录权限放得太开。接手一台机器做检查，我第一件事就是找 SUID 程序和全系统可写的文件——<code>find / -perm -4000</code> 这条命令，安全从业者一辈子都在用。权限这章看着枯燥，实战里天天用。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机的 Linux 里输入 <code>ls -l</code>，读出几个文件的权限，翻译成“谁能干什么”。<br>2. 输入 <code>find / -perm -4000 2>/dev/null</code>，看系统里有哪些 SUID 程序。<br>3. 在 Windows 上右键一个文件 → 属性 → 安全，看它的访问控制列表。</p>
+      <h2>避坑</h2>
+      <p>权限的三个对象（所有者、组、其他人）别搞混；SUID 的意思是“用文件所有者的身份运行”，不是“所有人都能运行”；删除文件只删记录，内容还在——删敏感文件要彻底销毁，不只是删掉。</p>
+      <div class="lesson-nav">
+        <a href="m2c8-paging.html">← 上一章：第 8 章：页面置换与缺页</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m2c10-syscall.html">下一章：第 10 章：系统调用 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

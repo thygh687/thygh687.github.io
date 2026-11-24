@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块二第 12 章：Windows 与 Linux 内核有什么不一样 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块二第 12 章：Windows 与 Linux 内核有什么不一样</h1>
+      <div class="meta"><span class="tag">操作系统</span>2026-11-24 · 模块二</div>
+      <p>前面 11 章讲的概念，Windows 和 Linux 是相通的。但两个系统的内核设计、文件组织、安全机制各有不同。做安全，两个都要懂：服务器多是 Linux，终端多是 Windows。</p>
+      <h2>内核结构</h2>
+      <p>Linux 是单内核：内核是一个大整体，驱动、文件系统、网络栈都在内核里，效率高，但一个驱动出问题可能拖垮整个内核。Windows 的 NT 内核也是单内核为主，但模块化程度更高，很多服务跑在用户态。微内核是另一种思路：内核只留最基本的功能，其他都放用户态，更稳定但通信开销大，实际用的系统不多。</p>
+      <h2>文件组织</h2>
+      <p>Linux 是一棵树：所有东西从根目录 / 开始，硬件设备也是文件（/dev 下面）。配置文件是纯文本，改个文件就是改配置。Windows 是盘符：C:、D: 各是一棵树，配置很多存在注册表这个数据库里。Linux 讲究“一切皆文件”，Windows 讲究图形化和注册表。</p>
+      <h2>安全机制对比</h2>
+      <p>Windows：用户账户控制（UAC）、访问控制列表（ACL）、Windows Defender、BitLocker 加密。Linux：权限位、SUID、SELinux/AppArmor（强制访问控制）、iptables/nftables 防火墙。思路上是一致的：最小权限、默认拒绝、审计留痕，只是实现方式不同。</p>
+      <h2>驱动模型</h2>
+      <p>驱动是硬件和内核之间的翻译。Linux 的驱动很多直接编进内核或者以模块加载，开源的多；Windows 的驱动要经过微软签名才能装，签名机制是防恶意驱动的一道关。恶意软件如果能装上一个驱动，就等于进了内核，这是最高级别的控制权。</p>
+      <div class="teacher-note">老师经验：做安全要两边都懂，但分工要清楚。服务器端基本是 Linux 的天下：Web 服务、数据库、云平台，出了问题先看日志、看进程、看权限。终端和办公环境是 Windows 的天下：钓鱼邮件、宏病毒、勒索软件，主战场在 Windows 上。面试的时候，人家问“你会 Linux 吗”，其实是在问“你能不能在服务器上干活”；问“你会 Windows 吗”，是在问“你能不能处理终端安全”。两边都要能上手。</div>
+      <h2>动手做</h2>
+      <p>1. 在 Windows 上按 Win+R 输入 <code>msinfo32</code>，看系统摘要；在虚拟机的 Linux 里输入 <code>uname -a</code> 和 <code>cat /etc/os-release</code>，对比两个系统的基本信息。<br>2. 在 Linux 里输入 <code>ls /</code>，看根目录下的一级目录；在 Windows 上打开 C 盘，对比两边的组织方式。<br>3. 想一想：为什么服务器爱用 Linux，而办公电脑爱用 Windows？</p>
+      <h2>避坑</h2>
+      <p>别争“哪个系统更好”，它们分工不同；Linux 的“一切皆文件”要记住，这是理解 Linux 的钥匙；驱动能进内核，所以装驱动要格外小心，只装可信来源的。</p>
+      <div class="lesson-nav">
+        <a href="m2c11-lab.html">← 上一章：第 11 章：动手：进程、线程与系统调用</a>
+        <a href="../course.html">课程目录</a>
+        <a href="../course.html#m3">下一模块：计算机网络（待写）→</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>
