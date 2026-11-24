@@ -25,6 +25,31 @@
       <p>CPU 的工作就是一个循环，不停重复四个步骤：取指、译码、执行、写回。你打开的每个程序、点的每次鼠标，最后都是这个循环在干活。</p>
       <h2>四个步骤</h2>
       <p>取指：程序计数器记着下一条指令在内存的哪个地址，CPU 按这个地址把指令拿来，放进指令寄存器。译码：控制单元看懂这条指令是要干什么。执行：让相应的部件去干活，比如让 ALU 做加法，或者让内存读写数据。写回：把结果存回寄存器。然后程序计数器指向下一条，循环继续。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 155" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="取指、译码、执行、写回循环图">
+          <defs>
+            <marker id="arr1" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="10" y="40" width="110" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="65" y="64" text-anchor="middle" font-size="16" fill="#1a1a2e">取指</text>
+          <text x="65" y="84" text-anchor="middle" font-size="12" fill="#666">从内存拿指令</text>
+          <rect x="150" y="40" width="110" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="205" y="64" text-anchor="middle" font-size="16" fill="#1a1a2e">译码</text>
+          <text x="205" y="84" text-anchor="middle" font-size="12" fill="#666">看懂要干什么</text>
+          <rect x="290" y="40" width="110" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="345" y="64" text-anchor="middle" font-size="16" fill="#1a1a2e">执行</text>
+          <text x="345" y="84" text-anchor="middle" font-size="12" fill="#666">ALU 干活</text>
+          <rect x="430" y="40" width="110" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="485" y="64" text-anchor="middle" font-size="16" fill="#1a1a2e">写回</text>
+          <text x="485" y="84" text-anchor="middle" font-size="12" fill="#666">结果存回寄存器</text>
+          <line x1="120" y1="68" x2="148" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr1)"/>
+          <line x1="260" y1="68" x2="288" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr1)"/>
+          <line x1="400" y1="68" x2="428" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr1)"/>
+          <path d="M 485 108 L 485 130 L 65 130 L 65 102" fill="none" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr1)"/>
+          <text x="275" y="150" text-anchor="middle" font-size="12" fill="#666">程序计数器指向下一条，循环继续</text>
+        </svg>
+        <figcaption>图：CPU 的工作循环，一条指令走完四步，马上开始下一条</figcaption>
+      </figure>
       <h2>关键部件</h2>
       <p>程序计数器（PC）：下一条指令的地址。寄存器：CPU 手头的小抽屉，放正在用的数据，速度最快、容量最小。ALU：算术逻辑单元，负责加减乘除和比较。控制单元：指挥，负责把指令翻译成各个部件的动作信号。时钟：卡节奏，每跳一下往前走一步。</p>
       <h2>指令就是二进制数</h2>

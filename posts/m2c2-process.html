@@ -27,6 +27,29 @@
       <p>每个进程有一块独立的内存空间（代码、数据、栈、堆），有一套寄存器状态，有打开的文件和网络连接。操作系统用一个叫进程控制块（PCB）的数据结构记录这些信息：进程是谁、状态如何、用了多少资源。进程之间默认互相看不见对方的内存，这就是隔离。</p>
       <h2>进程的状态</h2>
       <p>就绪：等着 CPU 来跑。运行：正在 CPU 上跑。阻塞：等着某件事（比如等硬盘读数据、等用户输入），暂时跑不了。操作系统不停地在这些状态之间切换进程，所以你的电脑能同时开着浏览器、音乐和聊天软件——其实 CPU 在飞快地轮流跑它们。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 175" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="进程状态转换图">
+          <defs>
+            <marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="55" width="120" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="79" text-anchor="middle" font-size="16" fill="#1a1a2e">就绪</text>
+          <text x="80" y="99" text-anchor="middle" font-size="12" fill="#666">等着 CPU 来跑</text>
+          <rect x="220" y="55" width="120" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="79" text-anchor="middle" font-size="16" fill="#1a1a2e">运行</text>
+          <text x="280" y="99" text-anchor="middle" font-size="12" fill="#666">正在 CPU 上跑</text>
+          <rect x="420" y="55" width="120" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="480" y="79" text-anchor="middle" font-size="16" fill="#1a1a2e">阻塞</text>
+          <text x="480" y="99" text-anchor="middle" font-size="12" fill="#666">等硬盘、等输入</text>
+          <line x1="140" y1="83" x2="218" y2="83" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <line x1="340" y1="83" x2="418" y2="83" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <path d="M 250 50 Q 180 18 110 50" fill="none" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <text x="180" y="16" text-anchor="middle" font-size="12" fill="#666">时间片用完</text>
+          <path d="M 480 117 L 480 145 L 80 145 L 80 117" fill="none" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <text x="280" y="165" text-anchor="middle" font-size="12" fill="#666">等到了，回到就绪</text>
+        </svg>
+        <figcaption>图：进程的三种状态和转换</figcaption>
+      </figure>
       <h2>进程的创建和结束</h2>
       <p>新进程由老进程创建：Linux 里是 fork（复制一个自己）再 exec（换成要跑的程序）；Windows 里是 CreateProcess。进程结束有正常退出和被杀掉两种：程序自己跑完，或者被用户、被系统、被另一个进程杀掉。</p>
       <div class="teacher-note">老师经验：恶意软件最喜欢伪装成正常进程的名字，比如 svchost.exe、explorer.exe。安全值守查进程，从来不只看名字，要看三样：路径对不对（真的 svchost.exe 在 C:\Windows\System32 下面）、父进程是谁（它的“爹”应该是 services.exe）、启动参数有没有古怪。名字会骗人，这三样很难全骗过去。</div>

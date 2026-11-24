@@ -25,6 +25,20 @@
       <p>存储器是个金字塔：越靠近 CPU 越快、越小、越贵；越远离越慢、越大、越便宜。电脑就是在这个取舍里工作的。</p>
       <h2>每一层是干什么的</h2>
       <p>寄存器在 CPU 里面，容量只有几十个字节，速度最快，放正在算的数据。缓存分 L1、L2、L3，离 CPU 越近越快越小，是 CPU 身边的小抄，常用的东西放这里，省得老跑内存去拿。内存是工作台，正在运行的程序和数据都在这里，断电就清空；内存越大，能同时摊开的东西越多，电脑越不容易卡。硬盘是仓库，长期保存文件，断电也不丢。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 235" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="存储金字塔">
+          <rect x="200" y="10" width="160" height="40" rx="6" fill="#1a1a2e"/>
+          <text x="280" y="35" text-anchor="middle" font-size="15" fill="#fff">寄存器</text>
+          <rect x="160" y="60" width="240" height="40" rx="6" fill="#334155"/>
+          <text x="280" y="85" text-anchor="middle" font-size="15" fill="#fff">缓存 L1 / L2 / L3</text>
+          <rect x="110" y="110" width="340" height="40" rx="6" fill="#64748b"/>
+          <text x="280" y="135" text-anchor="middle" font-size="15" fill="#fff">内存 RAM</text>
+          <rect x="50" y="160" width="460" height="40" rx="6" fill="#94a3b8"/>
+          <text x="280" y="185" text-anchor="middle" font-size="15" fill="#fff">硬盘 SSD / HDD</text>
+          <text x="280" y="222" text-anchor="middle" font-size="13" fill="#666">越往上越快、越小、越贵；越往下越慢、越大、越便宜</text>
+        </svg>
+        <figcaption>图：存储金字塔</figcaption>
+      </figure>
       <h2>速度差多少</h2>
       <p>寄存器基本 1 个时钟周期就能拿到数据，缓存几个到几十个周期，内存要上百个周期，硬盘要几毫秒——是内存的上万倍。所以电脑慢，很多时候是卡在等硬盘上，而不是 CPU 不够快。</p>
       <h2>内存：DDR 和双通道</h2>
