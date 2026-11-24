@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 9 课：文件权限与用户管理 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>第 9 课：文件权限与用户管理</h1>
+      <div class="meta"><span class="tag">Linux</span>2026-11-24 · 阶段二</div>
+      <h2>权限是什么</h2>
+      <p>Linux 里每个文件都有权限，规定了谁能读、谁能写、谁能执行。执行 <code>ls -l</code>，最前面那一串就是权限，比如 <code>-rw-r--r--</code>。</p>
+      <h2>rwx 三个字母</h2>
+      <p><code>r</code> 是读，<code>w</code> 是写，<code>x</code> 是执行。权限分三组：文件所有者、所有者所在的组、其他人。比如 <code>rwx r-x r--</code> 就是所有者能读能写能执行，同组的人能读能执行，其他人只能读。</p>
+      <h2>chmod 改权限</h2>
+      <p><code>chmod 755 文件</code> 是最常见的改法：三个数字分别对应三组人，7 是读+写+执行，5 是读+执行，4 是只读。记不住数字也没关系，<code>chmod +x 文件</code> 就是给它加上执行权限。</p>
+      <h2>root 和 sudo</h2>
+      <p><code>root</code> 是超级用户，什么都能干，也最危险。平时用普通用户，需要管理员权限的时候在命令前面加 <code>sudo</code>，临时借用一次。</p>
+      <h2>动手做</h2>
+      <p>建一个文件，<code>ls -l</code> 看它的权限，再 <code>chmod 600 文件</code>，再 <code>ls -l</code> 看变化。最后 <code>sudo whoami</code>，看它回答什么。</p>
+      <div class="lesson-nav">
+        <a href="lesson-08-linux-commands.html">← 上一课：第 8 课：Linux 常用命令</a>
+        <a href="../course.html">课程目录</a>
+        <a href="lesson-10-linux-network.html">下一课：第 10 课：Linux 下的网络命令 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

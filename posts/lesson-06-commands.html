@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 6 课：动手：ping、ipconfig、nslookup · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>第 6 课：动手：ping、ipconfig、nslookup</h1>
+      <div class="meta"><span class="tag">动手</span>2026-11-24 · 阶段一</div>
+      <p>前面五课的概念，用这三个命令一次验证完。先按 <code>Win + R</code>，输入 <code>cmd</code> 回车，打开命令行。</p>
+      <h2>ping：对方在不在，要多久</h2>
+      <p><code>ping example.org</code></p>
+      <p>发个小包过去问一声。返回的时间就是延迟，一般几十毫秒。超时或者全部丢失，说明这条路不通。</p>
+      <h2>ipconfig：看本机的网络配置</h2>
+      <p><code>ipconfig</code></p>
+      <p>看自己的 IPv4 地址、子网掩码、默认网关和 DNS 服务器。第 3 课的四个概念，一条命令全看到了。</p>
+      <h2>nslookup：问 DNS 要地址</h2>
+      <p><code>nslookup example.org</code></p>
+      <p>直接问 DNS 服务器：这个域名对应哪个 IP。返回的地址应该和 ping 显示的那个一致。</p>
+      <h2>排错思路</h2>
+      <p>上不了网的时候，按这个顺序查：先 ping 网关（家里网络通不通），再 ping 外网地址（能上网吗），最后 nslookup（是不是 DNS 的问题）。一步一步缩小范围。</p>
+      <h2>动手做</h2>
+      <p>三条命令各跑一遍，把结果记下来：你的 IP 是多少，网关是多少，example.org 的 IP 是多少。</p>
+      <div class="lesson-nav">
+        <a href="lesson-05-http.html">← 上一课：第 5 课：网站是怎么打开的</a>
+        <a href="../course.html">课程目录</a>
+        <a href="lesson-07-linux-vm.html">下一课：第 7 课：为什么学 Linux：先装个虚拟机 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

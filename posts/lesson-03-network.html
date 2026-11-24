@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 3 课：网络是怎么连起来的 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>第 3 课：网络是怎么连起来的</h1>
+      <div class="meta"><span class="tag">网络</span>2026-11-24 · 阶段一</div>
+      <h2>IP 地址：门牌号</h2>
+      <p>每台联网的设备都有一个 IP 地址，比如 <code>192.168.1.5</code>。没有门牌号，数据就不知道往哪送。</p>
+      <h2>子网掩码：谁跟你在同一个小区</h2>
+      <p>子网掩码用来判断另一台设备跟你是不是在同一个局域网里。在同一个小区，直接敲门就行；不在，就得经过网关出去。</p>
+      <h2>网关：小区的门</h2>
+      <p>去外网的数据都要经过网关，一般就是你家里的路由器。网关坏了或者配错了，局域网里能通，外网出不去。</p>
+      <h2>端口：房间号</h2>
+      <p>IP 地址找到那台电脑，端口找到那台电脑上的哪个服务。比如 80 是网页，443 是加密网页。一台电脑可以同时提供很多服务，靠端口区分。</p>
+      <h2>数据包</h2>
+      <p>数据在网上传的时候会被切成一个个小包，每个包都写着从哪来、到哪去。对方收到之后再拼起来。</p>
+      <h2>动手做</h2>
+      <p>按 <code>Win + R</code>，输入 <code>cmd</code> 回车，再输入 <code>ipconfig</code>，看自己的 IPv4 地址、子网掩码和默认网关。</p>
+      <div class="lesson-nav">
+        <a href="lesson-02-files-processes.html">← 上一课：第 2 课：文件、进程与权限</a>
+        <a href="../course.html">课程目录</a>
+        <a href="dns-basics.html">下一课：第 4 课：DNS 是怎么回事 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

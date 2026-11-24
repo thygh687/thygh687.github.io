@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 15 课：防火墙与端口 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>第 15 课：防火墙与端口</h1>
+      <div class="meta"><span class="tag">安全</span>2026-11-24 · 阶段三</div>
+      <h2>防火墙：门卫</h2>
+      <p>防火墙按规则决定哪些网络流量能进、哪些能出。Windows 自带防火墙，默认开着，别乱关。关掉它等于把门卫撤了，门还开着。</p>
+      <h2>端口：服务入口</h2>
+      <p>第 3 课讲过，端口是电脑上某个服务的入口。开着的端口就是开着的门。只开需要的，剩下的关掉，能少一个入口就少一个入口。</p>
+      <h2>怎么看自己开了什么</h2>
+      <p>在 cmd 里输入 <code>netstat -ano</code>，看本机正在监听的端口和对应的进程号。再去任务管理器里对一下进程号，就知道是哪个程序在监听。</p>
+      <h2>动手做</h2>
+      <p>跑一遍 <code>netstat -ano</code>，记下监听的端口。再打开控制面板 → Windows 防火墙，看一眼现在的规则。认不出某个端口是干什么的，就去查一下，别急着关。</p>
+      <div class="lesson-nav">
+        <a href="lesson-14-encryption.html">← 上一课：第 14 课：加密基础</a>
+        <a href="../course.html">课程目录</a>
+        <a href="lesson-16-directions.html">下一课：第 16 课：基础打牢后，四个方向怎么选 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

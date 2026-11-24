@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 14 课：加密基础 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>第 14 课：加密基础</h1>
+      <div class="meta"><span class="tag">安全</span>2026-11-24 · 阶段三</div>
+      <h2>对称加密：一把钥匙</h2>
+      <p>加密和解密用同一把钥匙，速度快。问题是钥匙怎么安全地交到对方手里，钥匙一旦泄露，锁就形同虚设。</p>
+      <h2>非对称加密：两把钥匙</h2>
+      <p>公钥加密，私钥解密。公钥可以公开，私钥自己留好。对方用你的公钥加密，只有你的私钥能解开。实际使用中，两种加密经常配合着用。</p>
+      <h2>HTTPS 和证书</h2>
+      <p>HTTPS 就是 HTTP 加上 TLS 加密，防偷看、防篡改。浏览器地址栏的小锁，点开能看到证书：这个网站是谁、证书是谁发的、什么时候到期。证书不对或者过期了，浏览器会警告，别硬闯。</p>
+      <h2>哈希：数据的指纹</h2>
+      <p>哈希是给一段数据算个固定长度的指纹。改一个字，指纹就完全变了。下载软件的时候对一下官方给的哈希值，就能知道文件有没有被人动过。</p>
+      <h2>动手做</h2>
+      <p>打开一个 HTTPS 网站，点地址栏的小锁，看证书是谁发的、发给谁、什么时候到期。</p>
+      <div class="lesson-nav">
+        <a href="lesson-13-malware.html">← 上一课：第 13 课：恶意软件与防护</a>
+        <a href="../course.html">课程目录</a>
+        <a href="lesson-15-firewall.html">下一课：第 15 课：防火墙与端口 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>
