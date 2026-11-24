@@ -23,19 +23,92 @@
       <h1>第 6 课：动手：ping、ipconfig、nslookup</h1>
       <div class="meta"><span class="tag">动手</span>2026-11-24 · 阶段一</div>
       <p>前面五课的概念，用这三个命令一次验证完。先按 <code>Win + R</code>，输入 <code>cmd</code> 回车，打开命令行。</p>
-      <h2>ping：对方在不在，要多久</h2>
+      <h2>ping：先问一句“你在吗”</h2>
+      <p>ping 是网络排错的第一句话。遇到“上不了网”“打不开网站”，先 ping 一下，就能把问题缩小一半。它回答三个问题：对方在不在？路通不通？要多久？</p>
       <p><code>ping example.org</code></p>
-      <p>发个小包过去问一声。返回的时间就是延迟，一般几十毫秒。超时或者全部丢失，说明这条路不通。</p>
-      <h2>ipconfig：看本机的网络配置</h2>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ping 来回过程图">
+          <defs>
+            <marker id="arr4" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="55" width="120" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="79" text-anchor="middle" font-size="16" fill="#1a1a2e">你的电脑</text>
+          <text x="80" y="99" text-anchor="middle" font-size="12" fill="#666">192.168.1.10</text>
+          <rect x="420" y="55" width="120" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="480" y="79" text-anchor="middle" font-size="16" fill="#1a1a2e">example.org</text>
+          <text x="480" y="99" text-anchor="middle" font-size="12" fill="#666">对方服务器</text>
+          <line x1="140" y1="42" x2="418" y2="42" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr4)"/>
+          <text x="280" y="30" text-anchor="middle" font-size="13" fill="#1a1a2e">发个小包：Echo 请求</text>
+          <line x1="420" y1="128" x2="142" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr4)"/>
+          <text x="280" y="146" text-anchor="middle" font-size="13" fill="#1a1a2e">对方回一声：Echo 回复</text>
+        </svg>
+        <figcaption>图：ping 就是发个小包过去、等对方回一声，time 就是这一来一回花的时间</figcaption>
+      </figure>
+      <p><strong>通了，说明什么？</strong>收到 4 个回复（Reply from …），time=20ms 左右。说明：你的网卡没问题、网关通、中间的路通、对方也回话了——整条路是好的。</p>
+      <p><strong>不通，说明什么？</strong>先看报错长什么样，不同的报错指向不同的问题：</p>
+      <ul>
+        <li><strong>请求超时（Request timed out）</strong>：包发出去没回来。可能对方关机了，或者对方的防火墙把 ping 挡了，或者中间某段路断了。</li>
+        <li><strong>无法访问目标主机（Destination host unreachable）</strong>：连第一跳都没出去，往往是你这边的网关不对，或者本机根本没连上网。</li>
+        <li><strong>找不到主机（Ping request could not find host）</strong>：名字都没解析出来，这是 DNS 的问题，不是路的问题——<a href="dns-basics.html">第 4 课</a>讲过，名字变地址靠 DNS。</li>
+      </ul>
+      <p><strong>什么时候用 ping？</strong>上不了网的时候第一个就用它；怀疑某个服务器挂了，先 ping 一下；打游戏卡、视频卡，ping 一下看看延迟是不是飙到几百毫秒。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>ping 不通不等于服务器挂了——很多服务器为了安全直接禁掉 ping，网站照常能打开。ping 是用来缩小范围的，不是用来下结论的。</div>
+      <h2>ipconfig：先看看自己是谁</h2>
+      <p>出问题先看自己：有没有拿到地址？网关对不对？DNS 是谁？这三个问题，一条命令全答了。<a href="lesson-03-network.html">第 3 课</a>的四个概念，就是在这里对上号的。</p>
       <p><code>ipconfig</code></p>
-      <p>看自己的 IPv4 地址、子网掩码、默认网关和 DNS 服务器。第 3 课的四个概念，一条命令全看到了。</p>
-      <h2>nslookup：问 DNS 要地址</h2>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ipconfig 输出图解">
+          <rect x="10" y="10" width="540" height="170" rx="8" fill="#1a1a2e"/>
+          <text x="30" y="48" font-family="Consolas, monospace" font-size="13" fill="#d7e3f4">IPv4 地址 . . . . : 192.168.1.10</text>
+          <text x="330" y="48" font-size="13" fill="#fbbf24">← 你的门牌号</text>
+          <text x="30" y="83" font-family="Consolas, monospace" font-size="13" fill="#d7e3f4">子网掩码 . . . . : 255.255.255.0</text>
+          <text x="330" y="83" font-size="13" fill="#fbbf24">← 划出同一网段</text>
+          <text x="30" y="118" font-family="Consolas, monospace" font-size="13" fill="#d7e3f4">默认网关 . . . . : 192.168.1.1</text>
+          <text x="330" y="118" font-size="13" fill="#fbbf24">← 出门的大门</text>
+          <text x="30" y="153" font-family="Consolas, monospace" font-size="13" fill="#d7e3f4">DNS 服务器 . . . : 8.8.8.8</text>
+          <text x="330" y="153" font-size="13" fill="#fbbf24">← 查号台</text>
+        </svg>
+        <figcaption>图：ipconfig 输出里最要紧的四行，各自的意思写在右边</figcaption>
+      </figure>
+      <p><strong>重点看两行异常：</strong>IPv4 地址如果变成 <code>169.254.x.x</code> 开头，说明没拿到地址——DHCP 没配上，先检查网线、Wi-Fi，重启路由器；默认网关如果是 <code>0.0.0.0</code>，说明没配网关，包出不去。</p>
+      <p><strong>什么时候用 ipconfig？</strong>刚连上网却没网时先跑它；换了 Wi-Fi、换了网络之后，确认地址变了没有；排错的第一步永远是它——先确认自己没问题，再去怪别人。</p>
+      <h2>nslookup：专门问 DNS 要地址</h2>
       <p><code>nslookup example.org</code></p>
-      <p>直接问 DNS 服务器：这个域名对应哪个 IP。返回的地址应该和 ping 显示的那个一致。</p>
-      <h2>排错思路</h2>
-      <p>上不了网的时候，按这个顺序查：先 ping 网关（家里网络通不通），再 ping 外网地址（能上网吗），最后 nslookup（是不是 DNS 的问题）。一步一步缩小范围。</p>
+      <p>直接问 DNS 服务器：这个域名对应哪个 IP。返回的地址应该和 ping 显示的那个一致。它和 ping 是一对搭档：ping 域名时报“找不到主机”，但 nslookup 查得到地址，说明 DNS 没问题，问题在路上；nslookup 也查不到，那 DNS 本身就有问题。</p>
+      <h2>排错思路：三条命令是一条链</h2>
+      <p>上不了网的时候，按这个顺序查，每一步通了再往下一步，哪一步断了，问题就在哪一段：</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 110" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="排错链条图">
+          <defs>
+            <marker id="arr5" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="6" y="28" width="100" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="56" y="47" text-anchor="middle" font-size="12" fill="#1a1a2e">1 ipconfig</text>
+          <text x="56" y="65" text-anchor="middle" font-size="11" fill="#666">自己有地址吗</text>
+          <rect x="114" y="28" width="100" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="164" y="47" text-anchor="middle" font-size="12" fill="#1a1a2e">2 ping 网关</text>
+          <text x="164" y="65" text-anchor="middle" font-size="11" fill="#666">家里通吗</text>
+          <rect x="222" y="28" width="100" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="272" y="47" text-anchor="middle" font-size="12" fill="#1a1a2e">3 ping 8.8.8.8</text>
+          <text x="272" y="65" text-anchor="middle" font-size="11" fill="#666">能上外网吗</text>
+          <rect x="330" y="28" width="100" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="380" y="47" text-anchor="middle" font-size="12" fill="#1a1a2e">4 ping 域名</text>
+          <text x="380" y="65" text-anchor="middle" font-size="11" fill="#666">名字能解析吗</text>
+          <rect x="438" y="28" width="100" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="488" y="47" text-anchor="middle" font-size="12" fill="#1a1a2e">5 nslookup</text>
+          <text x="488" y="65" text-anchor="middle" font-size="11" fill="#666">DNS 本身好吗</text>
+          <line x1="106" y1="52" x2="112" y2="52" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr5)"/>
+          <line x1="214" y1="52" x2="220" y2="52" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr5)"/>
+          <line x1="322" y1="52" x2="328" y2="52" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr5)"/>
+          <line x1="430" y1="52" x2="436" y2="52" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr5)"/>
+          <text x="280" y="100" text-anchor="middle" font-size="12" fill="#666">哪一步断了，问题就在哪一段</text>
+        </svg>
+        <figcaption>图：排错是一条链，哪一步断了，问题就在哪一段</figcaption>
+      </figure>
+      <p>这条链就是前面五课串起来的：<a href="lesson-03-network.html">第 3 课</a>的地址和网关、<a href="dns-basics.html">第 4 课</a>的 DNS、<a href="lesson-05-http.html">第 5 课</a>的网站打开过程。到了模块三，还会再回来——用 Wireshark 把这些包亲眼抓下来看。</p>
+      <p><strong>避坑：</strong>别拿 ping 当“网站挂没挂”的唯一标准；ping 域名和 ping IP 结果不一样时，先怀疑 DNS，不要怀疑路。</p>
       <h2>动手做</h2>
-      <p>三条命令各跑一遍，把结果记下来：你的 IP 是多少，网关是多少，example.org 的 IP 是多少。</p>
+      <p>三条命令各跑一遍，把结果记下来：你的 IP 是多少，网关是多少，example.org 的 IP 是多少。再故意断一次网（拔网线或关 Wi-Fi），看 ipconfig 和 ping 的报错怎么变——报错长什么样，下次一眼就认出来。</p>
       <div class="lesson-nav">
         <a href="lesson-05-http.html">← 上一课：第 5 课：网站是怎么打开的</a>
         <a href="../course.html">课程目录</a>
