@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阶段一小结：从一台电脑到一张网 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>阶段一小结：从一台电脑到一张网</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · 预备课第 1–6 课</div>
+      <p>六课讲的其实是一件事：你面前的这台电脑，怎么跟外面的世界连起来。每一课都是下一步的台阶，缺了哪一级，后面的路都走不通。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="六课知识串联图">
+          <defs>
+            <marker id="arr7" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="130" y="10" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">一台电脑：CPU、内存、硬盘、操作系统</text>
+          <rect x="130" y="70" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">连上网：IP 地址、网关、端口</text>
+          <rect x="130" y="130" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">找地址：DNS 把名字变成 IP</text>
+          <rect x="130" y="190" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">打开网站：HTTP 请求、HTTPS</text>
+          <rect x="130" y="250" width="300" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="275" text-anchor="middle" font-size="14" fill="#1a1a2e">出问题：ping、ipconfig、nslookup</text>
+          <line x1="280" y1="50" x2="280" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr7)"/>
+          <line x1="280" y1="110" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr7)"/>
+          <line x1="280" y1="170" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr7)"/>
+          <line x1="280" y1="230" x2="280" y2="248" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr7)"/>
+        </svg>
+        <figcaption>图：六课讲的其实是一件事——一台电脑怎么跟外面的世界连起来</figcaption>
+      </figure>
+      <h2>这六课是怎么连起来的</h2>
+      <p>打开一个网站，全过程是这样的：<a href="lesson-01-computer.html">第 1 课</a>的四个角色配合工作——大管家把浏览器从硬盘读到内存，CPU 一条条执行；<a href="lesson-03-network.html">第 3 课</a>的地址和网关让你的电脑连上网；<a href="dns-basics.html">第 4 课</a>的 DNS 把网址变成 IP；<a href="lesson-05-http.html">第 5 课</a>的 HTTP 发请求、收页面。任何一步出问题，<a href="lesson-06-commands.html">第 6 课</a>的排错链就派上用场：先看自己有没有地址，再看家里通不通，再看名字能不能解析。</p>
+      <p>反过来也一样：<a href="lesson-02-files-processes.html">第 2 课</a>的文件和进程，就是大管家手里管的东西——浏览器是一个进程，它读的文件在硬盘上，它占的内存就是工作台上摊开的部分。六课没有一课是孤立的。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>不看笔记，讲出电脑四个角色是干什么的，以及程序跑起来的四步。</li>
+        <li>说清 IP、网关、DNS、HTTP 各自的作用，以及打开一个网站要经过哪几步。</li>
+        <li>上不了网时，按 ipconfig → ping 网关 → ping 外网 → ping 域名 → nslookup 的顺序，一步步缩小范围。</li>
+        <li>看懂 ipconfig 输出里最要紧的四行：地址、子网掩码、网关、DNS。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>第 7 课开始学 Linux：先装个虚拟机。后面很多安全工具只在 Linux 上跑得顺，虚拟机就是你的实验场——在里面随便折腾，坏了恢复快照就行，不影响自己的电脑。</p>
+      <div class="lesson-nav">
+        <a href="lesson-06-commands.html">← 第 6 课：动手：ping、ipconfig、nslookup</a>
+        <a href="../course.html">课程目录</a>
+        <a href="lesson-07-linux-vm.html">下一课：第 7 课：为什么学 Linux：先装个虚拟机 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

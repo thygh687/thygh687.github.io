@@ -109,6 +109,15 @@
       <p><strong>避坑：</strong>别拿 ping 当“网站挂没挂”的唯一标准；ping 域名和 ping IP 结果不一样时，先怀疑 DNS，不要怀疑路。</p>
       <h2>动手做</h2>
       <p>三条命令各跑一遍，把结果记下来：你的 IP 是多少，网关是多少，example.org 的 IP 是多少。再故意断一次网（拔网线或关 Wi-Fi），看 ipconfig 和 ping 的报错怎么变——报错长什么样，下次一眼就认出来。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>ping 回答三个问题：对方在不在、路通不通、要多久；不通时先看报错长什么样。</li>
+          <li>ipconfig 先看自己：有没有地址、网关对不对、DNS 是谁；169.254 开头就是没拿到地址。</li>
+          <li>nslookup 专门问 DNS：它和 ping 搭档，一个查路、一个查名。</li>
+          <li>三条命令是一条排错链：哪一步断了，问题就在哪一段。</li>
+          <li>六课学完了，<a href="summary-stage1.html">看阶段一小结：从一台电脑到一张网 →</a></li>
+        </ul>
+      </div>
       <div class="lesson-nav">
         <a href="lesson-05-http.html">← 上一课：第 5 课：网站是怎么打开的</a>
         <a href="../course.html">课程目录</a>
