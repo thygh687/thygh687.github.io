@@ -1,0 +1,49 @@
+/* 个人博客样式：简洁、干净，无外部字体和 CDN */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  color: #222; background: #fff; line-height: 1.8; font-size: 17px;
+}
+a { color: #1a73e8; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+
+/* 页眉 */
+header.site { border-bottom: 1px solid #eee; padding: 28px 0 20px; }
+header.site .name { font-size: 26px; font-weight: 700; color: #111; }
+header.site .name a { color: #111; }
+header.site .name a:hover { text-decoration: none; }
+header.site .desc { color: #888; font-size: 15px; margin-top: 4px; }
+nav { margin-top: 14px; }
+nav a { color: #555; margin-right: 20px; font-size: 15px; }
+nav a.active { color: #111; font-weight: 600; }
+
+/* 文章列表 */
+.post-list { list-style: none; padding: 8px 0 40px; }
+.post-list li { padding: 22px 0; border-bottom: 1px solid #f0f0f0; }
+.post-list .date { color: #999; font-size: 14px; }
+.post-list h2 { font-size: 21px; margin: 4px 0 6px; line-height: 1.5; }
+.post-list h2 a { color: #111; }
+.post-list .excerpt { color: #666; font-size: 15px; }
+
+/* 文章页 */
+article { padding: 32px 0 48px; }
+article h1 { font-size: 26px; line-height: 1.5; margin-bottom: 6px; }
+article .meta { color: #999; font-size: 14px; margin-bottom: 24px; }
+article p { margin-bottom: 18px; }
+article h2 { font-size: 20px; margin: 28px 0 12px; }
+.back { display: inline-block; margin-top: 8px; color: #555; font-size: 15px; }
+
+/* 关于页 */
+.about { padding: 32px 0 48px; }
+.about h1 { font-size: 26px; margin-bottom: 16px; }
+.about p { margin-bottom: 18px; color: #444; }
+
+/* 页脚 */
+footer.site { border-top: 1px solid #eee; padding: 20px 0 40px; color: #aaa; font-size: 14px; text-align: center; }
+
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  header.site .name { font-size: 22px; }
+  article h1, .about h1 { font-size: 22px; }
+}

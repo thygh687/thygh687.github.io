@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNS 是怎么回事：ping 一下就明白了 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>DNS 是怎么回事：ping 一下就明白了</h1>
+      <div class="meta">2026-11-06</div>
+      <p>上网的时候，我们输入的是网址，比如 example.org；但电脑真正要找的，是一个 IP 地址。把网址翻译成 IP 地址的那一步，就是 DNS 干的活。</p>
+      <p>可以这样理解：DNS 就是互联网的电话本。你报一个名字，它帮你查到号码。</p>
+      <h2>动手验证</h2>
+      <p>打开 PowerShell，输入：</p>
+      <p><code>ping example.org</code></p>
+      <p>返回的结果里会有一个 IP 地址，那就是 example.org 这个名字对应的号码。名字没变，号码可能会变——这也是 DNS 的工作之一。</p>
+      <h2>为什么安全工程师要懂这个</h2>
+      <p>很多攻击就发生在“翻译”这一步：如果你查到的号码是假的，你就会连到假的网站。所以学安全，DNS 是绕不开的第一课。</p>
+      <p><a class="back" href="../index.html">← 回首页</a></p>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>
