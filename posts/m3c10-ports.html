@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块三第 10 章：常用端口与协议速查 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块三第 10 章：常用端口与协议速查</h1>
+      <div class="meta"><span class="tag">计算机网络</span>2026-11-25 · 模块三</div>
+      <p>IP地址找到电脑，端口找到电脑里的具体服务。同样一台服务器，80 端口是网站，22 端口是远程登录，3306 端口是数据库——地址一样，端口不同，敲开的是不同的门。安全工作里，端口是最先要看的东西：攻击者扫描的第一件事就是“这台机器开了哪些端口”，因为每一个开着的端口都是一个可能进入的入口。这一章就是一张系统的速查表：最常见的端口、跑的是什么协议、用来干什么、是 TCP 还是 UDP、以及它最常见的风险。表要留着以后随时回来翻。</p>
+
+      <h2>端口 = 楼里的房间号</h2>
+      <p>把一台电脑想成一栋楼：IP地址是楼的门牌号，端口就是楼里的房间号。快递（数据包）到了楼门口，光知道门牌号不够，还得知道送到哪个房间——80 号房是网站前台，22 号房是管理员办公室。端口号一共 0 到 65535：0–1023 是周知端口（well-known），留给最常用的公共服务，下面这张表里的基本都在这个范围；1024–49151 是注册端口，给特定的软件用；49152–65535 是临时端口，客户端发起连接时随机挑一个当源端口，用完就还回去。</p>
+      <p>同一个端口号在 TCP 和 UDP 里是两个不同的房间：TCP 的 53 和 UDP 的 53 互不干扰。DNS 同时用两种：平时查域名走 UDP 53（快），区数据传输或大包回复走 TCP 53。下面表格里“TCP/UDP”一列写的是该服务通常用的传输协议。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="端口是楼里的房间号示意图">
+          <defs>
+            <marker id="port-arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="150" y="15" width="260" height="160" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="40" text-anchor="middle" font-size="15" fill="#1a1a2e">一台电脑（一个 IP 地址）</text>
+          <rect x="170" y="55" width="110" height="40" rx="6" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="225" y="80" text-anchor="middle" font-size="14" fill="#1a1a2e">80 房：网站</text>
+          <rect x="300" y="55" width="110" height="40" rx="6" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="355" y="80" text-anchor="middle" font-size="14" fill="#1a1a2e">22 房：远程登录</text>
+          <rect x="170" y="110" width="110" height="40" rx="6" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="225" y="135" text-anchor="middle" font-size="14" fill="#1a1a2e">443 房：加密网站</text>
+          <rect x="300" y="110" width="110" height="40" rx="6" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="355" y="135" text-anchor="middle" font-size="14" fill="#1a1a2e">3306 房：数据库</text>
+          <line x1="80" y1="95" x2="168" y2="95" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#port-arr)"/>
+          <text x="80" y="80" text-anchor="middle" font-size="13" fill="#1a1a2e">数据包</text>
+          <text x="80" y="120" text-anchor="middle" font-size="12" fill="#666">目标端口 80</text>
+        </svg>
+        <figcaption>图：端口就是楼里的房间号——地址找到楼，端口找到楼里的具体服务</figcaption>
+      </figure>
+
+      <h2>常用端口与协议速查表</h2>
+      <p>按端口号从小到大排。读表时重点看最后两列：这个服务通常走 TCP 还是 UDP，以及它最常见的风险——以后看到陌生端口，先回来翻这张表。</p>
+      <table>
+        <thead>
+          <tr><th>端口</th><th>协议 / 服务</th><th>用途</th><th>TCP / UDP</th><th>常见风险</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>21</td><td>FTP（文件传输）</td><td>传文件，老牌的文件传输协议</td><td>TCP</td><td>明文传用户名、口令和文件内容，容易被嗅探；尽量用 SFTP 代替</td></tr>
+          <tr><td>22</td><td>SSH（安全 Shell）</td><td>加密的远程登录和远程命令执行</td><td>TCP</td><td>弱口令会被暴力破解；应只用密钥登录，并限制能登录的来源</td></tr>
+          <tr><td>23</td><td>Telnet（远程终端）</td><td>远程登录的老办法</td><td>TCP</td><td>全程明文，口令直接在网上传；已被 SSH 取代，看到它开着要警惕</td></tr>
+          <tr><td>25</td><td>SMTP（发邮件）</td><td>服务器之间发邮件</td><td>TCP</td><td>开放中继会被垃圾邮件利用；也是钓鱼邮件进出的通道</td></tr>
+          <tr><td>53</td><td>DNS（域名解析）</td><td>域名查 IP 地址</td><td>UDP（为主），TCP</td><td>DNS 投毒、DNS 放大攻击；对外开放的解析器会被利用来打别人</td></tr>
+          <tr><td>67 / 68</td><td>DHCP（自动配地址）</td><td>自动发 IP 地址、网关、DNS</td><td>UDP</td><td>假 DHCP 服务器会发错网关，把流量引向攻击者；见 <a href="m3c9-dhcp-nat.html">第 9 章</a></td></tr>
+          <tr><td>80</td><td>HTTP（网页）</td><td>不加密的网页访问</td><td>TCP</td><td>明文传输，内容可被嗅探和篡改；应重定向到 443</td></tr>
+          <tr><td>110</td><td>POP3（收邮件）</td><td>从服务器收邮件到本地</td><td>TCP</td><td>默认明文，口令和邮件内容可被嗅探；应用加密的 995 端口</td></tr>
+          <tr><td>143</td><td>IMAP（收邮件）</td><td>在服务器上管理邮件</td><td>TCP</td><td>默认明文；应用加密的 993 端口；弱口令会被暴力破解</td></tr>
+          <tr><td>443</td><td>HTTPS（加密网页）</td><td>加密的网页访问（HTTP over TLS）</td><td>TCP</td><td>证书配错或过期会报警；但端口本身开着不等于网站就没有漏洞</td></tr>
+          <tr><td>445</td><td>SMB（文件共享）</td><td>Windows 文件共享和打印机共享</td><td>TCP</td><td>绝不能暴露到互联网；勒索软件最爱走它，内网也要严格限制</td></tr>
+          <tr><td>3306</td><td>MySQL（数据库）</td><td>MySQL 数据库服务</td><td>TCP</td><td>绝不能暴露到互联网；弱口令等于数据库直接送人</td></tr>
+          <tr><td>3389</td><td>RDP（远程桌面）</td><td>Windows 远程桌面</td><td>TCP（为主），UDP</td><td>暴露到互联网会被暴力破解和漏洞利用；必须走 VPN 或严格限制来源</td></tr>
+        </tbody>
+      </table>
+      <p>表里只列了最常见的十三个，实际工作中还会遇到更多：993/995 是加密的收邮件端口，1433 是 SQL Server，5432 是 PostgreSQL，6379 是 Redis，27017 是 MongoDB。规律是一样的：先认出端口，再问“这个服务应不应该出现在这里”。数据库端口（3306、1433、5432）出现在互联网上，几乎一定是配置错了；管理端口（22、3389）出现在互联网上，一定要问“有没有加第二层保护”。</p>
+
+      <h2>端口开着意味着什么</h2>
+      <p>一个端口“开着”，意思是这台电脑上有个服务正在监听这个端口，随时准备接受连进来的请求。开着本身不是坏事——网站不开 443 就没人能访问；但每多开一个端口，就多一个入口：攻击者不用猜你装了什么软件，扫一遍端口就全知道了。所以安全的第一条习惯是：只开必须开的端口。服务器上跑了数据库，就只让应用服务器连 3306，别让全世界都能连；远程桌面只给管理员用，就别对着互联网开 3389。</p>
+      <p><strong>端口开着，不等于服务是安全的。</strong>443 开着只说明网站用了加密，不说明网站没有漏洞；22 开着只说明能远程登录，不说明口令够强。反过来也一样：端口关着不等于安全——服务可能换了个不常见的端口在跑，或者藏在别的入口后面。端口是排查的起点，不是结论。</p>
+      <p>还有一种情况要会认：端口“开着”但没有服务在监听——比如防火墙放行了，服务却没启动，扫描时会显示“过滤”而不是“开放”。排错时先分清是端口没开、服务没起，还是防火墙挡了，三种情况的修法完全不同。</p>
+
+      <h2>怎么看本机开了哪些端口</h2>
+      <p>在自己的虚拟机里看，不用任何扫描工具，系统自带的命令就够了。Linux 虚拟机里用 <code>ss</code>（新）或 <code>netstat</code>（老）：<code>ss -tuln</code> 列出所有正在监听的 TCP 和 UDP 端口，<code>-t</code> 是 TCP，<code>-u</code> 是 UDP，<code>-l</code> 是只看监听状态，<code>-n</code> 是直接显示数字端口、不去查名字。想知道是哪个程序在监听，再加 <code>-p</code>：<code>sudo ss -tulnp</code>。Windows 虚拟机里用 <code>netstat -ano</code>：<code>-a</code> 显示所有连接和监听端口，<code>-n</code> 显示数字，<code>-o</code> 显示占用端口的进程号，再去任务管理器按 PID 对上是哪个程序。</p>
+      <p>看输出时先看“监听地址”那一列：<code>0.0.0.0:22</code> 意思是所有网卡都监听 22 端口，谁都能连；<code>127.0.0.1:3306</code> 意思是只监听本机回环地址，只有本机能连——数据库这样配就是对的。认不出某个端口时，回来翻上面那张表；表里没有的，记下来去查，不要猜。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>接手一台服务器，我做的第一件事就是 ss -tulnp，看它到底开了哪些端口，再一个一个问“这个是干什么的、谁在用、应不应该开”。最常见的是“装软件时顺手装上的服务忘了关”：数据库、测试用的 Web 服务、开发工具的调试端口，全开着，装的人自己都忘了。还有一次，一台对外的服务器开了 445——文件共享对着互联网，问下来是“图方便”临时开的，临时了半年。记住：端口清单要定期对，关掉的端口要确认它真的关了（服务停了、防火墙也挡了），只关一处不保险。还有，扫端口这件事只许对自己的机器做，扫别人的机器在很多地方是违规甚至违法的，别拿 nmap 去扫你不拥有的地址。</div>
+
+      <h2>动手做</h2>
+      <p>1. 在自己的 Linux 虚拟机里运行 <code>ss -tuln</code>，把正在监听的端口都记下来；再运行 <code>sudo ss -tulnp</code>，看每个端口背后是哪个程序。<br>2. 对照本章的速查表，给记下来的每个端口写一句注释：这是什么服务、应不应该开着。表里没有的端口，记下来单独查。<br>3. 在 Windows 虚拟机里运行 <code>netstat -ano</code>，找到 LISTENING 状态的行，按 PID 在任务管理器里对上程序名，和 Linux 那边的结果对比：同一台机器、不同系统，监听的端口有什么不一样。<br>4. 只看不动手：想一想你家路由器的管理页面——它监听的端口通常是 80 或 443，只在内网能访问。如果从外网也能打开你家路由器的登录页，那就是端口映射或远程管理开错了，马上关掉。<br>5. 故意验证一次“端口关着意味着什么”：在虚拟机里停掉一个你认得的服务（比如停掉 SSH 服务），再跑一次 <code>ss -tuln</code>，看 22 端口是不是从列表里消失了；再把它启动回来。</p>
+
+      <h2>避坑</h2>
+      <p>别把“端口开着”等同于“有漏洞”，也别把“端口关着”等同于“安全”——端口只是排查的起点；不要用端口扫描去扫别人的机器，只看自己的虚拟机和自己的电脑；数据库端口（3306、1433、5432）和文件共享端口（445）绝不能暴露到互联网；看到 23（Telnet）开着要立刻警惕——它全程明文，正常情况早该用 SSH 代替了；记端口别死记硬背，记住“查表”这个动作：认不出就翻表，翻表也没有就去查，别猜。</p>
+
+      <p>端口认熟了，下一章换一个战场：有线网的端口在墙上插着，无线网的“端口”飘在空气里——<a href="m3c11-wireless.html">第 11 章：无线网络安全：WPA2/WPA3</a>，讲 Wi-Fi 是怎么加密的、又是怎么被攻破的。再往后，<a href="m3c14-wireshark.html">第 14 章</a>会用 Wireshark 把包亲眼抓下来，到时候按端口过滤，一眼就能看出每个包是去哪个服务的。端口这张表，也是<a href="../course.html#m6">模块六</a>讲攻击和<a href="../course.html#m7">模块七</a>讲防御时的共同语言——先认得门，才谈得上守门。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>IP地址找到电脑，端口找到电脑里的具体服务；同一端口号在 TCP 和 UDP 里是两个不同的房间。</li>
+          <li>一个端口开着，就是一个服务在监听、一个可能进入的入口；只开必须开的端口。</li>
+          <li>3306、445、3389 这类端口绝不能直接暴露到互联网，23（Telnet）明文传输早该淘汰。</li>
+          <li>看本机端口用 ss -tuln（Linux）或 netstat -ano（Windows），先看监听地址是 0.0.0.0 还是 127.0.0.1。</li>
+          <li>端口扫描只许对自己的机器做，扫别人的机器是违规甚至违法的。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m3c9-dhcp-nat.html">← 上一章：第 9 章：常见网络服务：DHCP、NAT</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m3c11-wireless.html">下一章：第 11 章：无线网络安全：WPA2/WPA3 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

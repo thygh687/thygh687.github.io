@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块三第 17 章：IPv6 入门 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块三第 17 章：IPv6 入门</h1>
+      <div class="meta"><span class="tag">计算机网络</span>2026-11-25 · 模块三</div>
+      <p>IPv4 的地址快用完了——这不是预言，是已经发生的事。IPv6 就是接替它的下一代地址：地址长得多、够用得多，拿地址的方式也不一样。这一章先把“为什么换”和“地址长什么样”讲清楚，再亲手在虚拟机里看一眼自己的 IPv6 地址。</p>
+      <h2>为什么地址不够用了：IPv4 只有 32 位</h2>
+      <p>IPv4 地址是 32 位二进制数，总共 2 的 32 次方个地址，约 43 亿个。听起来不少，但全世界的电脑、手机、路由器、摄像头、家电都要联网，43 亿根本不够分。<a href="m3c3-ip.html">第 3 章</a>讲过，地址不够用时靠 <a href="m3c9-dhcp-nat.html">第 9 章</a>的 NAT 顶着：整个家庭、整个公司共用一个公网地址，内部机器用私有地址，路由器在中间做翻译。</p>
+      <p>NAT 只是缓兵之计，不是解决办法。它有三个代价：第一，端到端被打破了——外面的机器不能直接找到你家里的一台电脑，想从外面连进来要做端口映射；第二，路由器要给每个连接记一笔翻译表，连接一多就成了瓶颈，排错也变难：日志里看到的地址是翻译后的地址；第三，依赖 NAT 的应用（比如点对点直连）要额外想办法打洞。地址不够这个根本问题，NAT 一天也没解决过，只是把“没地址”藏在了路由器后面。</p>
+      <p>IPv6 的思路是把地址空间直接放大：128 位，2 的 128 次方个地址，大约是 3.4×10<sup>38</sup> 个。打个比方：IPv4 的地址池像一个小区，IPv6 的地址池像给地球表面每一粒沙子都分一个地址还绰绰有余。地址够了，NAT 就不再是必需品，每台设备都可以有一个全球唯一的地址，端到端直连又回来了。</p>
+      <h2>IPv6 地址长什么样：冒号隔开的十六进制</h2>
+      <p>128 位写成二进制太长了，IPv6 用 16 进制、每 16 位一组、冒号隔开，写成 8 组：</p>
+      <p><code>2001:0db8:0000:0000:0000:ff00:0042:8329</code></p>
+      <p>写起来还是长，所以有两条压缩规则：第一，每组前面的 0 可以省掉，<code>0db8</code> 写成 <code>db8</code>，<code>0042</code> 写成 <code>42</code>；第二，连续的全零组可以用一对冒号 <code>::</code> 一次性代替。上面的地址就变成：</p>
+      <p><code>2001:db8::ff00:42:8329</code></p>
+      <p>注意 <code>::</code> 一个地址里只能用一次——用两次就不知道每处各省了几组，地址就没法唯一还原了。刚学的时候最容易在这里看晕：数一数，压缩后的地址展开后必须是 8 组，不够 8 组的就是被 <code>::</code> 省掉的零。</p>
+      <p>前缀用斜杠表示，和 IPv4 的子网掩码一个意思：<code>2001:db8::/32</code> 表示前 32 位是网络部分。家庭和企业里最常见的是 <code>/64</code>：前 64 位是网络前缀，后 64 位是主机自己编的接口标识。一个 <code>/64</code> 里有 2 的 64 次方个地址——一个子网的地址，比整个 IPv4 地址空间还大得多。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="IPv4 与 IPv6 地址长度对比图">
+          <defs>
+            <marker id="arr17" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <text x="20" y="30" font-size="14" fill="#1a1a2e">IPv4：32 位，约 43 亿个地址</text>
+          <rect x="20" y="40" width="180" height="34" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="110" y="62" text-anchor="middle" font-size="13" fill="#1a1a2e">192.168.1.10</text>
+          <text x="20" y="105" font-size="14" fill="#1a1a2e">IPv6：128 位，约 3.4×10³⁸ 个地址</text>
+          <rect x="20" y="115" width="520" height="34" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="137" text-anchor="middle" font-size="13" fill="#1a1a2e">2001:db8::ff00:42:8329</text>
+          <text x="280" y="175" text-anchor="middle" font-size="12" fill="#666">地址长了 4 倍，数量多了约 10²⁸ 倍——NAT 不再是必需品</text>
+        </svg>
+        <figcaption>图：IPv4 只有 32 位，IPv6 是 128 位；地址空间不是大了一点，是大了约 10 的 28 次方倍</figcaption>
+      </figure>
+      <h2>地址类型：单播、组播、任播，还有链路本地</h2>
+      <p>IPv6 里没有广播——广播被组播取代了。三种通信方式要分清：</p>
+      <p><strong>单播：</strong>一对一，一个地址只属于一台设备。最常见的全球单播地址以 <code>2</code> 或 <code>3</code> 开头（范围是 <code>2000::/3</code>），这就是能在全网路由的“公网地址”。</p>
+      <p><strong>组播：</strong>一对多，发给一组订阅了这个地址的设备。组播地址以 <code>ff</code> 开头（<code>ff00::/8</code>）。IPv6 里很多“喊一嗓子”的功能都靠组播，比如邻居发现、路由器通告——IPv4 里靠广播干的活，IPv6 里都改成组播了，好处是只有真正关心的设备才收这个包，不打扰别人。</p>
+      <p><strong>任播：</strong>一对“最近的一个”。同一个任播地址可以配在多台设备上，包会被送到离发送者最近的那一台。任播在 IPv4 里也有，但 IPv6 里是正式的地址类型，常用于 DNS 服务器这类“哪台近就找哪台”的服务。</p>
+      <p>还有两种特殊地址最常见，见到要认得：<strong>链路本地地址</strong>以 <code>fe80::</code> 开头（范围 <code>fe80::/10</code>），每台开了 IPv6 的设备自动就有一个，只在同一条链路（同一个局域网）里有效，出不了网关。它是设备之间“打招呼”用的，比如自动配置、邻居发现都靠它。<strong>唯一本地地址</strong>以 <code>fc00::/7</code> 开头（实际用的是 <code>fd00::/8</code>），相当于 IPv6 版的私有地址，内部用、不上公网。最后，<code>::1</code> 是回环地址，相当于 IPv4 的 <code>127.0.0.1</code>。</p>
+      <h2>不用 DHCP 也能拿到地址：无状态自动配置 SLAAC</h2>
+      <p>IPv6 最省事的一点：设备可以自己给自己配地址，不用等 DHCP 服务器发。过程叫 SLAAC（无状态地址自动配置）：路由器定期在局域网里发路由器通告（RA），告诉大家“我这条网的前缀是 2001:db8:abcd::/64”；主机收到后，把前缀和自己的接口标识拼起来，就得到了一个全球单播地址。接口标识的生成有两种办法：老办法是把 MAC 地址嵌进去（EUI-64），新办法是随机生成一个临时地址（隐私扩展）。</p>
+      <p>“无状态”的意思是路由器不用记谁拿了哪个地址——地址是主机自己算出来的，没有租期、没有地址池，路由器只管通告前缀。这和 <a href="m3c9-dhcp-nat.html">第 9 章</a>的 DHCP 是两种思路：DHCPv6 是“有状态”的，服务器统一分配、统一记账；SLAAC 是“没人管账”的，各自算各自的。实际网络里两种常常混着用：SLAAC 配地址，DHCPv6 只发 DNS 这类额外信息。</p>
+      <p><strong>什么时候会出问题？</strong>主机收不到路由器通告，就配不出全球单播地址，只剩一个链路本地地址 <code>fe80::</code> 开头的地址——能上局域网，出不了外网。这时别先怪地址，先看路由器有没有开 IPv6 通告、虚拟机的网卡是不是只配了 IPv4。反过来，如果一台机器突然有了 IPv6 地址但上不了网，先看它的默认路由：IPv6 的默认路由也是从路由器通告里学来的，通告没了，路由就没了。</p>
+      <h2>过渡：双栈是现在的主流</h2>
+      <p>全世界不可能一夜之间都换成 IPv6，过渡期的主流办法是<strong>双栈</strong>：一台设备同时跑 IPv4 和 IPv6 两套协议栈，两个地址都有，访问哪个网站就用哪套——目标有 IPv6 地址就走 IPv6，没有就走 IPv4。你的电脑和手机现在很可能就是双栈：打开网络设置看一眼，同时有 IPv4 地址和 <code>fe80::</code>、<code>2001:</code> 开头的地址，就是双栈在工作。</p>
+      <p>双栈之外还有隧道（把 IPv6 包包在 IPv4 包里穿过只支持 IPv4 的网络）和翻译（NAT64，把 IPv6 和 IPv4 互相转），这些是运营商和骨干网的事，初学先知道名字就行。真正要记住的只有一句：过渡期会很长，两种协议要并存很多年，做安全的人两套都得会查。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>IPv6 最容易坑人的地方，是它常常“悄悄开着”。很多系统默认就开了 IPv6，管理员只给 IPv4 写了防火墙规则，IPv6 的端口就敞着——等于正门上了锁，后门没关。排错时还有一条：同一个服务，IPv4 通、IPv6 不通（或者反过来）太常见了，先分清你测的是哪一套协议，再下结论。还有隐私那一笔：用 MAC 地址生成的接口标识是固定的，走到哪都带着同一台设备的指纹，现代系统默认用随机临时地址就是为了这个——看一台机器的 IPv6 地址，顺手看一眼它是固定的还是临时的，能看出不少东西。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里看自己的 IPv6 地址。Linux 虚拟机跑 <code>ip -6 addr show</code>，Windows 虚拟机跑 <code>ipconfig</code>。找到以 <code>fe80::</code> 开头的链路本地地址，再看有没有 <code>2001:</code> 或 <code>fd00:</code> 开头的地址——有全球单播地址，说明你的虚拟机网络已经通了 IPv6。<br>2. ping 一台虚拟机。先 ping 回环：<code>ping -6 ::1</code>。再 ping 另一台虚拟机的链路本地地址——注意链路本地地址要带上网卡名，比如 Linux 上是 <code>ping -6 fe80::xxxx%eth0</code>，Windows 上是 <code>ping fe80::xxxx%12</code>（数字是网卡编号，ipconfig 里能看到）。不带网卡名会报错，因为 <code>fe80::</code> 的地址在每条链路里都可能重复，系统不知道从哪块网卡发。<br>3. 对照一下：记下这台虚拟机的 IPv4 地址和 IPv6 地址各是什么，再看它有没有默认路由——Linux 用 <code>ip -6 route</code>，Windows 用 <code>route print -6</code>。只有链路本地地址、没有默认路由的机器，出不了外网。</p>
+      <h2>避坑</h2>
+      <p>别把 IPv6 当成“IPv4 加长版”：它没有广播（改成组播了）、没有 NAT 的必要（地址够用，端到端直连）、子网划分按 <code>/64</code> 来、地址还会自己变（隐私扩展的临时地址用一阵就换）。拿 IPv4 的习惯硬套 IPv6，排错时会处处撞墙；防火墙规则只写 IPv4 不写 IPv6，等于留了个后门；还有，<code>::</code> 压缩只能用一次，写地址时数一数够不够 8 组。</p>
+      <p>IPv6 是模块三的最后一块拼图：从<a href="m3c3-ip.html">第 3 章</a>的 IP 寻址、<a href="m3c9-dhcp-nat.html">第 9 章</a>的 DHCP 和 NAT，到这一章的下一代地址，寻址这条线算是走完了。下一章是模块三的结课实战——把前面 17 章的本事合起来，给一个小网络做一次完整的安全体检：<a href="m3c18-capstone.html">第 18 章：动手：综合实战——给一个小网络做安全体检</a>。再往前，<a href="../course.html#m4">模块四：编程基础</a>会教你先 Python 再 C，把这些网络知识写成自己的小工具。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>IPv4 只有 32 位、约 43 亿个地址，不够用了；NAT 只是缓兵之计，藏住了问题，没解决地址短缺。</li>
+          <li>IPv6 是 128 位地址，8 组冒号隔开的十六进制；前导零可省，连续全零组可用 :: 代替一次，且只能用一次。</li>
+          <li>地址分单播、组播、任播；没有广播；链路本地地址 fe80::/10 只在同一局域网有效，全球单播以 2 或 3 开头。</li>
+          <li>SLAAC 让主机自己算地址：路由器通告前缀，主机拼上接口标识即可，不用 DHCP 服务器记账。</li>
+          <li>过渡期主流是双栈：IPv4 和 IPv6 同时跑；做安全要两套协议都查，防火墙规则只写 IPv4 等于留后门。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m3c16-troubleshooting.html">← 上一章：第 16 章：网络故障排查方法</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m3c18-capstone.html">下一章：第 18 章：动手：综合实战——给一个小网络做安全体检 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

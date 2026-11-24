@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块三第 16 章：网络故障排查方法 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块三第 16 章：网络故障排查方法</h1>
+      <div class="meta"><span class="tag">计算机网络</span>2026-11-25 · 模块三</div>
+      <p>网络出问题的时候，最怕的不是问题本身，是不知道从哪开始查。瞎试一通，重启路由器、重装驱动、换根网线全来一遍，问题可能好了，也可能只是碰巧——下次再出，还得从头瞎试。这一章给一套固定的方法：一条排错链加一张排查清单，走到哪一步断了，问题就在哪一段。</p>
+      <h2>排错链：五步，哪一步断了问题就在哪一段</h2>
+      <p>沿用<a href="lesson-06-commands.html">第 6 课</a>的三条命令，展开成五步。顺序不能乱：每一步通了再往下一步走，断在哪一步，就只查那一段，别去动别的：</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="五步排错链流程图">
+          <defs>
+            <marker id="arr16a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="6" y="30" width="100" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="56" y="50" text-anchor="middle" font-size="12" fill="#1a1a2e">1 ipconfig</text>
+          <text x="56" y="68" text-anchor="middle" font-size="11" fill="#666">自己有地址吗</text>
+          <rect x="114" y="30" width="100" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="164" y="50" text-anchor="middle" font-size="12" fill="#1a1a2e">2 ping 网关</text>
+          <text x="164" y="68" text-anchor="middle" font-size="11" fill="#666">家里通吗</text>
+          <rect x="222" y="30" width="100" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="272" y="50" text-anchor="middle" font-size="12" fill="#1a1a2e">3 ping 8.8.8.8</text>
+          <text x="272" y="68" text-anchor="middle" font-size="11" fill="#666">能上外网吗</text>
+          <rect x="330" y="30" width="100" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="380" y="50" text-anchor="middle" font-size="12" fill="#1a1a2e">4 ping 域名</text>
+          <text x="380" y="68" text-anchor="middle" font-size="11" fill="#666">名字能解析吗</text>
+          <rect x="438" y="30" width="100" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="488" y="50" text-anchor="middle" font-size="12" fill="#1a1a2e">5 nslookup</text>
+          <text x="488" y="68" text-anchor="middle" font-size="11" fill="#666">DNS 本身好吗</text>
+          <line x1="106" y1="56" x2="112" y2="56" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr16a)"/>
+          <line x1="214" y1="56" x2="220" y2="56" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr16a)"/>
+          <line x1="322" y1="56" x2="328" y2="56" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr16a)"/>
+          <line x1="430" y1="56" x2="436" y2="56" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr16a)"/>
+          <text x="280" y="112" text-anchor="middle" font-size="12" fill="#666">第 1 步断了：查本机和 DHCP；第 2 步断了：查网线、Wi-Fi 和网关</text>
+          <text x="280" y="134" text-anchor="middle" font-size="12" fill="#666">第 3 步断了：查外网和路由；第 4、5 步断了：查 DNS</text>
+        </svg>
+        <figcaption>图：五步排错链——按顺序查，哪一步断了，问题就在哪一段</figcaption>
+      </figure>
+      <p><strong>第 1 步断了</strong>（ipconfig 看不到地址，或者地址是 169.254 开头）：本机根本没拿到地址。先看网线插紧了没有、Wi-Fi 连上没有，再看 DHCP 服务是不是正常——重启路由器是最常见的有效操作，因为它同时重启了 DHCP。</p>
+      <p><strong>第 2 步断了</strong>（ping 网关不通）：包连家门都出不去。网线、Wi-Fi、网卡驱动、网关地址配错，都在这个范围。先 ping 127.0.0.1：如果连自己都 ping 不通，问题在网卡或协议栈本身；自己通、网关不通，再看线缆和网关地址。</p>
+      <p><strong>第 3 步断了</strong>（ping 8.8.8.8 不通，但网关通）：家里通、外面不通。问题在路由器到外网那一段：宽带断了、路由器拨号失败、运营商线路故障。看一眼路由器上的指示灯（los 灯红了就是光纤断了），再打电话问运营商之前，先确认邻居家是不是也断了。</p>
+      <p><strong>第 4、5 步断了</strong>（ping IP 通、ping 域名不通，或者 nslookup 查不到）：路是通的，名字解析坏了。见下一节。</p>
+      <h2>往深讲：五种常见故障各长什么样</h2>
+      <p><strong>DNS 问题。</strong>症状最有迷惑性：QQ、微信能用，网页打不开——因为聊天软件直接连 IP，不走域名。判断方法：ping 8.8.8.8 通，ping example.org 报“找不到主机”，nslookup 也查不到。处理：换一个 DNS 服务器试试（比如把 DNS 改成 8.8.8.8），再查是不是本地 DNS 缓存脏了（<code>ipconfig /flushdns</code> 清掉重查）。</p>
+      <p><strong>网关问题。</strong>网关地址配错、网关设备挂了，症状是“全网都不通，但本机看着一切正常”。ipconfig 里看默认网关那一行：是 0.0.0.0 就是没配网关；地址对但 ping 不通，就是网关设备本身的问题。虚拟机实验里最常见的网关问题是：仅主机模式本来就没有网关，却有人硬给它配了一个。</p>
+      <p><strong>防火墙挡包。</strong>最容易误判的一类：路全通，某个服务就是连不上。ping 通不等于服务通——防火墙可以放行 ICMP、挡住 TCP 80 端口，这时候 ping 看着好好的，网页就是打不开。判断方法：换端口试、临时放行规则试，或者直接看防火墙日志。<a href="m3c14-wireshark.html">第 14 章</a>的抓包在这里最管用：只看到 SYN、没看到 SYN, ACK 回来，八成就是中间有防火墙把包吃了。</p>
+      <p><strong>MTU 问题。</strong>MTU 是链路上一个包最大能有多大，常见值是 1500。症状很怪：小网站能开，大文件、带图片的页面打不开——小包能过，大包在某个环节被丢了。判断方法：<code>ping -f -l 1472 example.org</code>（Windows）或 <code>ping -M do -s 1472 example.org</code>（Linux），从大到小试，看多大的包开始丢。VPN 和 PPPoE 拨号最容易出 MTU 问题，因为隧道头占了包里的空间。</p>
+      <p><strong>线缆和网卡问题。</strong>最底层、最容易被忽略。症状是“时好时坏”：ping 的延迟忽高忽低、丢包率一会儿 0% 一会儿 30%、网速一会儿正常一会儿掉到底。判断方法：换一根网线、换一个网口、换一块网卡，一个一个排除。抓包看到满屏 TCP 重传，十有八九就是物理层在丢包——包不是被挡了，是在路上碎了。</p>
+      <h2>排查清单：照着打勾</h2>
+      <table style="border-collapse: collapse; width: 100%; font-size: 14px;">
+        <tr><th style="border: 1px solid #1a1a2e; padding: 6px; text-align: left;">检查项</th><th style="border: 1px solid #1a1a2e; padding: 6px; text-align: left;">命令 / 动作</th><th style="border: 1px solid #1a1a2e; padding: 6px; text-align: left;">正常长什么样</th><th style="border: 1px solid #1a1a2e; padding: 6px; text-align: left;">不正常先查什么</th></tr>
+        <tr><td style="border: 1px solid #1a1a2e; padding: 6px;">本机地址</td><td style="border: 1px solid #1a1a2e; padding: 6px;"><code>ipconfig</code></td><td style="border: 1px solid #1a1a2e; padding: 6px;">有正常地址、网关、DNS</td><td style="border: 1px solid #1a1a2e; padding: 6px;">网线、Wi-Fi、DHCP</td></tr>
+        <tr><td style="border: 1px solid #1a1a2e; padding: 6px;">本机协议栈</td><td style="border: 1px solid #1a1a2e; padding: 6px;"><code>ping 127.0.0.1</code></td><td style="border: 1px solid #1a1a2e; padding: 6px;">通，延迟 &lt;1ms</td><td style="border: 1px solid #1a1a2e; padding: 6px;">网卡驱动、协议栈</td></tr>
+        <tr><td style="border: 1px solid #1a1a2e; padding: 6px;">到网关</td><td style="border: 1px solid #1a1a2e; padding: 6px;"><code>ping 网关地址</code></td><td style="border: 1px solid #1a1a2e; padding: 6px;">通，延迟个位数毫秒</td><td style="border: 1px solid #1a1a2e; padding: 6px;">线缆、网关地址、网关设备</td></tr>
+        <tr><td style="border: 1px solid #1a1a2e; padding: 6px;">到外网</td><td style="border: 1px solid #1a1a2e; padding: 6px;"><code>ping 8.8.8.8</code></td><td style="border: 1px solid #1a1a2e; padding: 6px;">通</td><td style="border: 1px solid #1a1a2e; padding: 6px;">路由器、宽带、运营商</td></tr>
+        <tr><td style="border: 1px solid #1a1a2e; padding: 6px;">域名解析</td><td style="border: 1px solid #1a1a2e; padding: 6px;"><code>ping example.org</code> / <code>nslookup example.org</code></td><td style="border: 1px solid #1a1a2e; padding: 6px;">能解析出 IP</td><td style="border: 1px solid #1a1a2e; padding: 6px;">DNS 服务器、本地缓存</td></tr>
+        <tr><td style="border: 1px solid #1a1a2e; padding: 6px;">服务端口</td><td style="border: 1px solid #1a1a2e; padding: 6px;"><code>telnet 目标地址 端口</code> 或抓包看握手</td><td style="border: 1px solid #1a1a2e; padding: 6px;">握手完成</td><td style="border: 1px solid #1a1a2e; padding: 6px;">防火墙、服务没启动</td></tr>
+        <tr><td style="border: 1px solid #1a1a2e; padding: 6px;">大包通过</td><td style="border: 1px solid #1a1a2e; padding: 6px;"><code>ping -f -l 1472 example.org</code></td><td style="border: 1px solid #1a1a2e; padding: 6px;">通</td><td style="border: 1px solid #1a1a2e; padding: 6px;">MTU、VPN、PPPoE</td></tr>
+        <tr><td style="border: 1px solid #1a1a2e; padding: 6px;">物理层稳定</td><td style="border: 1px solid #1a1a2e; padding: 6px;">连续 ping 看丢包率</td><td style="border: 1px solid #1a1a2e; padding: 6px;">丢包率 0%，延迟稳定</td><td style="border: 1px solid #1a1a2e; padding: 6px;">网线、网口、网卡</td></tr>
+      </table>
+      <div class="teacher-note"><strong>老师经验：</strong>远程修电脑，客户说的“上不了网”十次有八次不是一句话能定位的，我的办法永远是先让他把 ipconfig 和 ping 网关的结果念给我听——三分钟，问题在哪一段就清楚了，剩下的才是具体修。还有一条现场教训：一次客户说“网页打不开”，我让他重装浏览器、清缓存折腾了一小时，最后抓包一看：DNS 被劫持到了一个假地址，ping 域名解析出的 IP 根本不是网站的。从那以后我排错多了一条铁律：先看 nslookup 返回的 IP 对不对，再怀疑浏览器。排错不是比谁懂的命令多，是比谁先找到“断在哪一段”。</div>
+      <h2>动手做</h2>
+      <p>1. 在自己的电脑上把五步排错链完整跑一遍，把每一步的结果记下来——正常时候的结果，就是以后出问题时的对照组。<br>2. 在虚拟机实验里故意制造一次故障：把虚拟机 B 的 IP 改到另一个网段，再从 A ping 它，看第几步断了、报错长什么样；改回来，再故意把 B 的防火墙打开挡住 ICMP，看 ping 和实际连通性怎么不一样。<br>3. 在虚拟机里把 DNS 改成一个不存在的地址，再 ping example.org，看报错怎么变；改回来，用 <code>ipconfig /flushdns</code> 清一次缓存，再查一次。</p>
+      <h2>避坑</h2>
+      <p>排错不按顺序、东一榔头西一棒子，修好了也不知道为什么好；ping 不通别先下结论，先看报错长什么样——超时、不可达、找不到主机是三种不同的问题；ping 通不等于服务通，防火墙可以放行 ping、挡住业务端口；别一出问题就重装系统、重装驱动，先定位到段再动手；MTU 和物理层丢包最容易被误判成“网速慢”，大包和小包的表现不一样时，先怀疑它们。</p>
+      <p>排错链是模块三的收尾技能：从<a href="lesson-06-commands.html">第 6 课</a>的三条命令出发，经过<a href="m3c14-wireshark.html">第 14 章</a>的抓包验证，到这一章的完整方法，网络从“会用”变成了“会修”。下一站是<a href="m3c18-capstone.html">第 18 章综合实战</a>：给一个小网络做完整的安全体检——到时候排错链和抓包都会再上场，只不过问题从“网不通”变成了“网安不安全”。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>排错按五步链走：ipconfig → ping 网关 → ping 8.8.8.8 → ping 域名 → nslookup，哪一步断了问题就在哪一段。</li>
+          <li>ping IP 通、ping 域名不通是 DNS 问题；聊天软件能用、网页打不开也是 DNS 问题的典型信号。</li>
+          <li>ping 通不等于服务通，防火墙可以放行 ICMP、挡住业务端口，抓包看握手最可靠。</li>
+          <li>小包通、大包不通先查 MTU；时好时坏、丢包忽高忽低先查线缆和网卡。</li>
+          <li>正常时的排错结果要记下来，它就是以后出问题时的对照组。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m3c15-lan-lab.html">← 上一章：第 15 章：动手：搭一个局域网实验</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m3c17-ipv6.html">下一章：第 17 章：IPv6 入门 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

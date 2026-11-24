@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块三第 12 章：网络攻击：嗅探、欺骗、中间人与拒绝服务 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块三第 12 章：网络攻击：嗅探、欺骗、中间人与拒绝服务</h1>
+      <div class="meta"><span class="tag">计算机网络</span>2026-11-25 · 模块三</div>
+      <p>前面十一章讲的是网络怎么正常工作，这一章讲它怎么被打破。嗅探、欺骗、中间人、拒绝服务——这四类攻击的共同点是：它们利用的都是网络协议本身的设计假设，而不是什么高深的漏洞。ARP 假设“谁自称是谁就是谁”，DNS 假设“回答的人就是真的服务器”，TCP 假设“序号对上就是同一个人”。这一章以防御视角写：每种攻击讲清楚原理、怎么发现、怎么防。动手只在自己的实验环境（两台虚拟机之间）做，绝不碰真实网络。学攻击，是为了认出攻击、挡住攻击。</p>
+
+      <h2>嗅探：为什么同一网段能看到别人的包</h2>
+      <p>嗅探（sniffing）就是把网卡设成混杂模式，把经过的包都收下来看。网卡正常只收发给自己的包，混杂模式下它来者不拒——只要包经过它，它都收。这在早期的集线器（hub）网络里特别容易：集线器收到一个包，会把它广播给所有端口，同一网段的任何人都能看到别人的包。</p>
+      <p><strong>交换机时代为什么变难了？</strong>现在的网络用交换机代替了集线器，交换机记着每台设备的 MAC 地址在哪个端口（<a href="m3c2-physical.html">第 2 章</a>讲过 MAC 地址和以太网），收到包只发给目标所在的那个端口，别人收不到。所以在交换网络里，光开混杂模式已经看不到别人的包了——嗅探变难，但没有消失：攻击者会先用下面讲的 ARP 投毒把流量引到自己这里，再嗅探；或者直接接在流量必经的地方（比如镜像端口、网关）。</p>
+      <p><strong>怎么发现、怎么防？</strong>发现：抓包工具里出现大量不是发给本机的包，或者网卡被设成了混杂模式（Linux 下 <code>ip link</code> 能看到 PROMISC 标志），都要警惕。防：最根本的是加密——流量本身加密了（HTTPS、SSH），抓到包也看不懂内容；其次是交换机端口安全：限制每个端口能学的 MAC 地址数量，陌生设备插上来就告警或断网。嗅探防不住“有人能收到包”这个事实，只能让收到的包没有用。</p>
+
+      <h2>ARP 投毒：冒充网关，流量先过我手</h2>
+      <p>ARP 是把 IP 地址翻译成 MAC 地址的协议（<a href="m3c2-physical.html">第 2 章</a>）：你的电脑想给网关发包，先问一句“网关的 MAC 地址是多少”，谁回答就信谁。ARP 投毒就是攻击者不停地回答：“我就是网关，我的 MAC 地址是这个。”你的电脑信了，把本该发给网关的包全发给了攻击者；攻击者再转发给真网关，你完全感觉不到——只是你的流量先过了一遍攻击者的手，他想看就看、想改就改。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ARP 投毒中间人位置示意图">
+          <defs>
+            <marker id="arp-arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="30" width="120" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="58" text-anchor="middle" font-size="15" fill="#1a1a2e">你的电脑</text>
+          <text x="80" y="76" text-anchor="middle" font-size="12" fill="#666">受害者</text>
+          <rect x="220" y="30" width="120" height="52" rx="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="58" text-anchor="middle" font-size="15" fill="#1a1a2e">攻击者</text>
+          <text x="280" y="76" text-anchor="middle" font-size="12" fill="#666">冒充网关</text>
+          <rect x="420" y="30" width="120" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="480" y="58" text-anchor="middle" font-size="15" fill="#1a1a2e">网关</text>
+          <text x="480" y="76" text-anchor="middle" font-size="12" fill="#666">真网关</text>
+          <line x1="140" y1="56" x2="218" y2="56" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arp-arr)"/>
+          <text x="180" y="44" text-anchor="middle" font-size="12" fill="#666">发给网关的包</text>
+          <line x1="340" y1="56" x2="418" y2="56" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arp-arr)"/>
+          <text x="380" y="44" text-anchor="middle" font-size="12" fill="#666">转发出去</text>
+          <line x1="220" y1="140" x2="140" y2="92" stroke="#1a1a2e" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arp-arr)"/>
+          <text x="130" y="160" text-anchor="middle" font-size="12" fill="#666">假 ARP 回答：</text>
+          <text x="130" y="178" text-anchor="middle" font-size="12" fill="#666">“我就是网关”</text>
+          <rect x="150" y="195" width="260" height="28" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="280" y="213" text-anchor="middle" font-size="12" fill="#1a1a2e">你的电脑以为攻击者就是网关</text>
+        </svg>
+        <figcaption>图：ARP 投毒——攻击者冒充网关，流量先经过攻击者再出去</figcaption>
+      </figure>
+      <p><strong>怎么发现、怎么防？</strong>发现：查 ARP 表（Windows 用 <code>arp -a</code>，Linux 用 <code>ip neigh</code>），网关的 IP 对应的 MAC 地址突然变了，或者同一个 MAC 地址对应了好几个 IP，都是投毒的信号；网速突然变慢、证书报警，也要怀疑。防：网关的 IP 和 MAC 做静态 ARP 绑定（写死，不接受别人的回答）；交换机开动态 ARP 检测（DAI），只放行和 DHCP 记录对得上的 ARP 回答；内网分段，让攻击者够不着你的网段——分段的具体做法在<a href="m3c13-hardening.html">第 13 章</a>。</p>
+
+      <h2>DNS 投毒：把名字指到错的地址</h2>
+      <p>DNS 是把域名翻译成 IP 地址的查号台（<a href="m3c7-dns-http-tls.html">第 7 章</a>）：你输入一个域名，DNS 服务器告诉你它对应的 IP。DNS 投毒就是攻击者抢在真服务器前面，塞一个假的回答进缓存：“这个域名对应的 IP 是我这台服务器。”之后所有来查这个域名的人，都会被带到攻击者的服务器上——页面做得和真的一样，账号口令就交出去了。</p>
+      <p><strong>怎么发现、怎么防？</strong>发现：同一个域名在不同地方查到不同的 IP，或者浏览器突然报证书错误（假服务器拿不出真域名的证书），都要停下来核对。防：DNSSEC 给 DNS 回答加上签名，假的回答验签不过就直接丢掉；用可信的 DNS 服务器，别用随便搜来的公共 DNS；更重要的是，网站本身要用 HTTPS 并配好 HSTS——即使 DNS 被毒了，浏览器也会因为证书对不上而报警，而不是悄悄把你送过去。</p>
+
+      <h2>中间人（on-path）：站在路中间的人</h2>
+      <p>中间人攻击（也叫 on-path，以前叫 man-in-the-middle）不是一种具体的技术，而是一个位置：攻击者站在你和服务器之间，所有流量都经过他。ARP 投毒、DNS 投毒、假热点（<a href="m3c11-wireless.html">第 11 章</a>），都是为了抢到这个位置；抢到了位置之后，他可以只看（嗅探）、可以改（篡改内容、插广告、换下载链接），还可以直接冒充一方和另一方说话。</p>
+      <p><strong>怎么发现、怎么防？</strong>发现：证书报警是最直接的信号——浏览器说“证书有问题”，意思就是“对面自称是这个网站，但拿不出证据”，这时候绝不要点“继续访问”；网速异常、页面内容和平时不一样，也值得怀疑。防：HTTPS + HSTS 是最核心的一道墙：证书验不过，浏览器直接拦住；重要操作再叠加双因素认证，即使口令被中间人拿走，光有口令也登不进去；公共 Wi-Fi 上默认当成“路中间可能有人”，敏感操作等回家再做。</p>
+
+      <h2>DoS 与 DDoS：不偷东西，只让你用不了</h2>
+      <p>拒绝服务（DoS）不偷数据，它的目标就是让服务用不了：一台机器不停地发请求，把服务器的连接、带宽或 CPU 占满，正常用户就进不去了。分布式拒绝服务（DDoS）是升级版：成千上万台被控制的设备（肉鸡）同时发请求，流量大到单台服务器根本扛不住。常见的手法有 SYN 泛洪（只握手不完成，占满连接队列）、UDP 泛洪和 DNS 放大（借别人的服务器放大流量打你）。</p>
+      <p><strong>怎么发现、怎么防？</strong>发现：服务突然变慢或完全没响应，但服务器本身没宕机；连接数暴涨、大量来自同一批地址的半开连接，都是典型的信号。防：分三层想——限流（单个来源的请求超过阈值就挡掉）、WAF（Web 应用防火墙，挡掉明显恶意的请求模式）、上游清洗（流量大到超过自家带宽时，交给运营商或云服务商在半路清洗掉，只放干净的流量进来）。WAF 挡的是应用层的坏请求，限流挡的是量，清洗挡的是洪水，三者定位不同，要叠着用。个人和小网站最实际的一条：别把管理端口和数据库端口暴露到互联网，攻击面越小，被打中的地方越少。</p>
+
+      <h2>会话劫持：偷走“已经登录”的状态</h2>
+      <p>你登录网站后，服务器发一个会话凭证（通常是 Cookie 里的 session id）给你，之后每次请求带着它，服务器就认得你“已经登录了”。会话劫持就是攻击者偷走这个凭证——比如在没加密的 HTTP 下嗅探到它，或者用跨站脚本把它读出来——然后直接冒充你登录，改口令、转钱、发消息，全都不用知道你的口令。</p>
+      <p><strong>怎么发现、怎么防？</strong>发现：账号突然在异地登录、自己没做过的操作出现在记录里，都要立刻改口令并踢掉所有会话。防：会话 Cookie 必须设 Secure（只走 HTTPS）和 HttpOnly（JS 读不到），从源头上让嗅探和脚本偷不到它；登录后换发新的会话 id，登出时服务端销毁会话；重要操作（改口令、转账）要求重新验证身份。钓鱼邮件是偷会话凭证最常见的入口之一，<a href="lesson-12-phishing.html">第 12 课</a>讲过怎么认钓鱼链接——认不出的链接不点，是防会话劫持的第一步。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>现场排错，我见过最多的“中间人”其实是 ARP 投毒：客户说“网速突然变慢，打开网站总跳到奇怪的页面”，一查 ARP 表，网关的 MAC 地址变成了一台陌生电脑的。处理就三步：先断掉那台可疑设备的网，再把网关做静态绑定，最后查它是怎么进来的——十有八九是某台电脑中了木马，或者有人插了个来路不明的设备。还有一条实战经验：证书报警永远不要点“继续访问”，我见过太多人点了继续，账号就是这么丢的。报警就是浏览器在喊“对面不对劲”，信它。最后提醒一句：这些攻击手法只许在自己的两台虚拟机之间练，练的是“认出来”和“挡住”，不是“打出去”——在真实网络上对别人用，轻则封号，重则违法。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在自己的实验环境里做：准备两台虚拟机（A 和 B）在同一个虚拟网络里，A 上运行 <code>arp -a</code>（Windows）或 <code>ip neigh</code>（Linux），记下网关的 IP 和 MAC 地址；这是你的“正常值”。<br>2. 在 A 上反复查几次 ARP 表，对比网关的 MAC 地址变了没有；再故意重启一次虚拟机，看 ARP 表里的记录是不是重新学了一遍——理解“ARP 记录是学来的，所以才会被骗”。<br>3. 在自己的虚拟机里打开浏览器，访问一个 HTTPS 网站，点地址栏的锁图标，看证书是发给谁的、由谁签发的；再想一想：如果 DNS 被毒、你被带到假网站，证书这一步会怎么报警。<br>4. 在自己的 Linux 虚拟机里运行 <code>ss -tuln</code>（<a href="m3c10-ports.html">第 10 章</a>的方法），看本机开了哪些端口；对照想一想：如果这台虚拟机被打 DoS，哪个端口最先被占满。<br>5. 只看不动手：在自己的路由器管理页面里（只操作自己的路由器），找一找有没有 ARP 绑定、DHCP Snooping 这类选项——记下它们的名字和开关位置，留到<a href="m3c13-hardening.html">第 13 章</a>加固时再开。</p>
+
+      <h2>避坑</h2>
+      <p>所有动手只在自己的两台虚拟机之间做，绝不碰真实网络、绝不攻击别人的设备和 Wi-Fi；证书报警永远不要点“继续访问”，报警就是浏览器在说对面不对劲；别以为交换机让嗅探“不可能”了——ARP 投毒能把流量再引回来，加密才是最后的防线；WAF、限流、上游清洗定位不同，别指望只装一个就挡住所有 DoS；会话 Cookie 没设 Secure 和 HttpOnly，等于把登录状态明文放在桌上。</p>
+
+      <p>攻击的图景讲完了，下一章开始收网：怎么把一个网络一段一段隔开、把入口一个一个收紧——<a href="m3c13-hardening.html">第 13 章：网络加固：VPN、分段、NAC 与邮件认证</a>。那一章会把本章提到的 ARP 绑定、DNSSEC、HTTPS/HSTS、分段、限流、WAF 落到具体的配置上。再往后，<a href="../course.html#m6">模块六</a>会系统讲攻击手法，<a href="../course.html#m7">模块七</a>会系统讲防御体系——本章是那两个模块的预告：先认得攻击长什么样，再学怎么成体系地防。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>嗅探在交换机时代变难了，但 ARP 投毒能把流量引回来再嗅探，加密才是最后的防线。</li>
+          <li>ARP 投毒靠冒充网关截获流量，发现靠查 ARP 表，防御靠静态绑定和动态 ARP 检测。</li>
+          <li>DNS 投毒把域名指到错的地址，防御靠 DNSSEC、可信 DNS 服务器和 HTTPS + HSTS。</li>
+          <li>中间人是一个位置，不是某一种技术；证书报警就是浏览器在说对面不对劲，绝不要点继续访问。</li>
+          <li>DoS/DDoS 的目标是让服务用不了，防御分三层：限流、WAF、上游清洗，定位各不相同。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m3c11-wireless.html">← 上一章：第 11 章：无线网络安全：WPA2/WPA3</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m3c13-hardening.html">下一章：第 13 章：网络加固：VPN、分段、NAC 与邮件认证 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

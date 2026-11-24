@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块三第 14 章：动手：Wireshark 抓包 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块三第 14 章：动手：Wireshark 抓包</h1>
+      <div class="meta"><span class="tag">计算机网络</span>2026-11-25 · 模块三</div>
+      <p>前面十三章讲的包、握手、DNS、端口，全是纸上的东西。这一章把它们亲眼看一遍：Wireshark 是网络分析的标准工具，它把网卡上流过的每一个包都抓下来、拆开给你看。先立一条铁规矩：<strong>只抓自己的虚拟机流量</strong>——虚拟机之间互相 ping、访问自己搭的服务。抓别人的网络、抓真实网络上的流量，是偷窥别人的通信，绝对不做。</p>
+      <h2>装 Wireshark，选对网卡</h2>
+      <p>去 Wireshark 官网下载安装包，安装时勾上 Npcap（抓包用的驱动，没有它 Wireshark 抓不到包）。装好打开，主界面是一张网卡列表：以太网、Wi-Fi、虚拟机网卡都在上面。选哪张？看你要抓谁的流量——在虚拟机里抓，就选虚拟机的网卡；在宿主机上抓虚拟机之间的流量，选宿主机上那块连着虚拟机的网卡。选错网卡，抓到的要么是空的，要么是别人的流量。</p>
+      <p>点网卡名字旁边的蓝色鲨鱼鳍图标就开始抓，红色方块停止。刚开始抓，包会像瀑布一样刷屏，别慌：那是正常的网络背景噪音，第一件事永远是先过滤，再看。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Wireshark 界面分栏示意图">
+          <rect x="10" y="10" width="540" height="190" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="34" text-anchor="middle" font-size="14" fill="#1a1a2e">Wireshark 界面：上中下三栏</text>
+          <rect x="25" y="45" width="510" height="44" rx="6" fill="#ffffff" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="40" y="63" font-size="13" fill="#1a1a2e">包列表：每个包一行</text>
+          <text x="40" y="81" font-size="12" fill="#666">序号 · 时间 · 源地址 → 目标地址 · 协议 · 长度 · 信息</text>
+          <rect x="25" y="97" width="510" height="44" rx="6" fill="#ffffff" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="40" y="115" font-size="13" fill="#1a1a2e">包详情：选中包的逐层拆解</text>
+          <text x="40" y="133" font-size="12" fill="#666">以太网帧 → IP 头 → TCP/UDP 头 → 应用层数据，点开每一层看字段</text>
+          <rect x="25" y="149" width="510" height="38" rx="6" fill="#ffffff" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="40" y="165" font-size="13" fill="#1a1a2e">原始字节：这个包在网线上的真面目</text>
+          <text x="40" y="180" font-size="12" fill="#666">十六进制 + 对应的 ASCII，改没改过、藏没藏东西都在这里</text>
+        </svg>
+        <figcaption>图：Wireshark 界面分三栏——上面是包列表，中间是选中包的逐层拆解，下面是原始字节</figcaption>
+      </figure>
+      <h2>过滤：先缩小，再细看</h2>
+      <p>不设过滤，满屏都是噪音。顶部的过滤栏就是用来缩小范围的，常用的几个记下来：</p>
+      <ul>
+        <li><code>icmp</code>：只看 ping 的包。</li>
+        <li><code>tcp.port == 80</code>：只看走 80 端口的包（<a href="m3c10-ports.html">第 10 章</a>的端口表在这里就用上了）。</li>
+        <li><code>dns</code>：只看 DNS 查询。</li>
+        <li><code>ip.addr == 192.168.56.11</code>：只看和某台虚拟机有关的包（把地址换成你自己的虚拟机地址）。</li>
+        <li><code>tcp.flags.syn == 1</code>：只看带 SYN 标志的包，也就是握手的第一步。</li>
+      </ul>
+      <p>过滤栏变绿说明语法对了，变红说明写错了。还有一个细节：抓包时也可以设“捕获过滤器”，抓之前就只抓想要的，适合流量大的时候；初学先用显示过滤器就够了，抓全了再慢慢筛。</p>
+      <h2>读懂一次 TCP 三次握手</h2>
+      <p>让一台虚拟机去访问另一台虚拟机上搭的服务（比如一个简单的网页服务），过滤 <code>tcp</code>，你会看到握手的三步，跟<a href="m3c5-tcp-udp.html">第 5 章</a>讲的一模一样——只不过现在是真的包：</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TCP 三次握手包序列图">
+          <defs>
+            <marker id="arr14a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="30" width="120" height="50" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="54" text-anchor="middle" font-size="14" fill="#1a1a2e">虚拟机 A</text>
+          <text x="80" y="72" text-anchor="middle" font-size="12" fill="#666">发起方</text>
+          <rect x="420" y="30" width="120" height="50" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="480" y="54" text-anchor="middle" font-size="14" fill="#1a1a2e">虚拟机 B</text>
+          <text x="480" y="72" text-anchor="middle" font-size="12" fill="#666">服务方</text>
+          <line x1="140" y1="100" x2="418" y2="100" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr14a)"/>
+          <text x="280" y="92" text-anchor="middle" font-size="13" fill="#1a1a2e">① SYN：我想连你，序号是 x</text>
+          <line x1="420" y1="128" x2="142" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr14a)"/>
+          <text x="280" y="120" text-anchor="middle" font-size="13" fill="#1a1a2e">② SYN, ACK：行，我也想连你，收到你的 x 了</text>
+          <line x1="140" y1="156" x2="418" y2="156" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr14a)"/>
+          <text x="280" y="148" text-anchor="middle" font-size="13" fill="#1a1a2e">③ ACK：收到，连接建好了</text>
+          <text x="280" y="188" text-anchor="middle" font-size="12" fill="#666">三步之后才开始传数据；点开每个包，看 Flags 栏里的 SYN / ACK 是怎么置位的</text>
+        </svg>
+        <figcaption>图：一次 TCP 三次握手的包序列——三个包，三面旗，连接才算建好</figcaption>
+      </figure>
+      <p>点开第一个包的 TCP 层，看 Flags：只有 SYN 是 1，这就是“我要建连”。第二个包 SYN 和 ACK 都是 1，第三个包只有 ACK 是 1。三个包的序号（Sequence Number）是连起来的：第二个包的确认号（Acknowledgment Number）等于第一个包的序号加一——这就是 TCP“可靠”的底子：每个字节都有编号，丢了能发现，乱了能排好。</p>
+      <p><strong>握手出问题意味着什么？</strong>只看到 SYN、没看到 SYN, ACK 回来：对方没在监听这个端口，或者防火墙把包挡了，或者对方根本不在线。看到 SYN, ACK 之后没有第三个 ACK：发起方有问题，或者中间有设备把包丢了。看到一堆 RST（复位）：对方明确拒绝连接，端口没开是最常见的原因。</p>
+      <h2>读懂一次 DNS 查询</h2>
+      <p>过滤 <code>dns</code>，在虚拟机里 <code>nslookup example.org</code>，抓到的一般是两个包：一去一回。去的包是查询（Standard query），问“example.org 的地址是多少”；回的包是响应（Standard query response），带着答案回来。点开 DNS 层看：查询里有个 Transaction ID，响应里同一个 ID——靠这个把一问一答配成对。答案在 Answers 段里，A 记录就是那个 IP 地址。</p>
+      <p>再看传输层：DNS 查询走的是 UDP 53 端口（<a href="m3c7-dns-http-tls.html">第 7 章</a>讲过为什么 DNS 喜欢 UDP：一次问答就完事，没必要建连）。如果看到 DNS 走的是 TCP 53，也别慌——答案太长、一个 UDP 包塞不下的时候，DNS 会改走 TCP，这很正常。抓包时还有一个常见发现：你明明只查了一个域名，DNS 查询却有一串——那是系统在帮你补全、或者浏览器在预取，不是中毒。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>排错时我有一句口头禅：“别猜，抓包看。”用户说“网站打不开”，ping 也通、DNS 也对，猜半天没头绪，一抓包：三次握手卡在第二步，SYN, ACK 没回来——防火墙规则把回程包吃了。还有一次更典型：网页时好时坏，抓包一看满屏 TCP 重传（Retransmission），最后查到是网线接触不良，包丢了一小半。Wireshark 不会告诉你“问题是什么”，它只会把真相摊在你面前——看包的时候，先看有没有握手、再看有没有重传、最后看应用层回了什么，这三步能解决八成网络问题。</div>
+      <h2>动手做</h2>
+      <p>1. 在两台虚拟机之间互相 ping，过滤 <code>icmp</code>，数一数一次 ping 对应几个包，点开一个看：Echo 请求和 Echo 回复的源地址、目标地址是怎么互换的。<br>2. 在一台虚拟机上搭个最简单的网页服务（比如 <code>python3 -m http.server 8000</code>），另一台虚拟机用浏览器访问它，过滤 <code>tcp.port == 8000</code>，把三次握手的三个包找出来，逐个点开看 Flags 和序号。<br>3. 过滤 <code>dns</code>，在虚拟机里跑 <code>nslookup example.org</code>，找到一问一答两个包，对一下 Transaction ID 是不是同一个，答案里的 IP 和 nslookup 输出的对不对得上。<br>4. 把抓到的包存成一个 .pcapng 文件，下次排错直接打开接着看——抓包文件就是网络现场的“录像”。</p>
+      <h2>避坑</h2>
+      <p>只抓自己的虚拟机流量，绝不抓别人的网络、绝不在真实网络上练手；选错网卡抓到的全是噪音，开始抓之前先确认网卡选对了；不设过滤就直接看包，等于在瀑布里找一滴水，先过滤再细看；ping 不通别先怪 Wireshark，先看是不是防火墙把 ICMP 挡了；抓包文件里可能有密码、会话信息，别随手发给别人，自己的实验流量也要当敏感数据对待。</p>
+      <p>会抓包，网络就从“黑盒”变成了“透明盒”：<a href="m3c5-tcp-udp.html">第 5 章</a>的握手、<a href="m3c7-dns-http-tls.html">第 7 章</a>的 DNS、<a href="m3c10-ports.html">第 10 章</a>的端口，全都能亲眼验证。下一章把实验台再搭大一点：用两台虚拟机搭一个真正的局域网。而抓包这门手艺不会只用一次——到了<a href="m3c16-troubleshooting.html">第 16 章</a>排错，Wireshark 就是最后的“真相机器”：命令都查不出问题的时候，抓包看。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>Wireshark 只抓自己的虚拟机流量，界面分三栏：包列表、包详情、原始字节。</li>
+          <li>先过滤再细看：icmp、tcp.port、dns、ip.addr 是最常用的四个过滤器。</li>
+          <li>三次握手是三个包：SYN、SYN, ACK、ACK，序号和确认号连起来就是 TCP 可靠的底子。</li>
+          <li>一次 DNS 查询是一问一答两个包，靠 Transaction ID 配对，平时走 UDP 53 端口。</li>
+          <li>只看到 SYN 没回包、满屏重传、收到 RST，各自指向不同的故障位置。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m3c13-hardening.html">← 上一章：第 13 章：网络加固：VPN、分段、NAC 与邮件认证</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m3c15-lan-lab.html">下一章：第 15 章：动手：搭一个局域网实验 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

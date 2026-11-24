@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块三第 13 章：网络加固：VPN、分段、NAC 与邮件认证 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块三第 13 章：网络加固：VPN、分段、NAC 与邮件认证</h1>
+      <div class="meta"><span class="tag">计算机网络</span>2026-11-25 · 模块三</div>
+      <p>前面一章讲了攻击者怎么在路上动手：嗅探、欺骗、中间人、拒绝服务。这一章反过来：网络建好之后，怎么让它难攻一点。加固没有银弹，是四样东西叠在一起——路上的数据加密、网一段一段隔开、进网先验身份、邮件先验真假。每一招防的都是不同的事，缺一招，就留一个口子。</p>
+      <h2>VPN：一条加密的隧道</h2>
+      <p>VPN（虚拟专用网络）就是在公共网络上挖一条加密隧道：你的数据先加密，再穿过互联网，到对端再解密。路上有人抓包（<a href="m3c12-attacks.html">第 12 章</a>的嗅探），抓到的也只是一堆看不懂的密文。所以 VPN 防的是“路上被偷看、被改”——你人在外网，要连回公司内网，或者在不可信的网络（比如公共 Wi-Fi）上要传敏感数据的时候，用它。</p>
+      <p><strong>什么时候 VPN 没用？</strong>三件事它管不了。第一，隧道两端之外：数据在你自己电脑上是明文，在对方服务器上也是明文，VPN 只保中间那一段。第二，对端不可信：你连上一个来历不明的免费 VPN，等于把流量亲手交给它看——它就是中间人。第三，身份被盗：VPN 只认凭证不认人，账号密码泄露了，攻击者照样能穿过隧道进来。VPN 是加密通道，不是身份证明，也不是杀毒软件。</p>
+      <p>还有一点要分清：VPN 加密的是“整条路”，而 <a href="m3c7-dns-http-tls.html">第 7 章</a>的 TLS 加密的是“一次会话”。两个可以叠加：上了 VPN 再打开一个 HTTPS 网站，就是双层加密，坏一层还有一层。</p>
+      <h2>网络分段和 DMZ：把网一段一段隔开</h2>
+      <p>分段的意思是：别把所有设备放在同一个大网段里，而是按用途切开——办公电脑一段、服务器一段、访客 Wi-Fi 一段，段与段之间放防火墙，只放行必须过的流量。为什么？因为攻击很少一步到位：进了办公网的一台电脑，下一步就是“横向移动”，去摸同一网段里的服务器、数据库、其他电脑。如果网是扁平的、一通到底，攻下一台就等于攻下全网；如果分了段，每过一段都要再过一道防火墙、再拿一次权限，攻击者的路就被切成一段一段的，成本大涨。</p>
+      <p>DMZ（隔离区）是分段里最经典的一块：专门放必须对外露面的服务器，比如网站服务器。它的位置在“外网”和“内网”之间——外网能访问 DMZ 里的网站，内网能访问 DMZ，但外网不能直接碰内网。这样就算网站服务器被攻破了，攻击者也还隔着一堵墙，没法直接摸到内网的数据库。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="分段前后的网络对比图">
+          <defs>
+            <marker id="arr13a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <text x="20" y="22" font-size="14" fill="#1a1a2e">分段前：一个扁平大网段，攻下一台就等于全网</text>
+          <rect x="20" y="32" width="520" height="66" rx="8" fill="#fff1f2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="40" y="58" font-size="13" fill="#1a1a2e">办公电脑</text>
+          <text x="170" y="58" font-size="13" fill="#1a1a2e">网站服务器</text>
+          <text x="300" y="58" font-size="13" fill="#1a1a2e">数据库</text>
+          <text x="420" y="58" font-size="13" fill="#1a1a2e">访客 Wi-Fi</text>
+          <text x="40" y="82" font-size="12" fill="#666">之间没有任何墙，横向移动畅通无阻</text>
+          <text x="20" y="132" font-size="14" fill="#1a1a2e">分段后：按用途切开，段与段之间只放行必须的流量</text>
+          <rect x="20" y="142" width="150" height="66" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="168" text-anchor="middle" font-size="13" fill="#1a1a2e">办公网</text>
+          <text x="95" y="188" text-anchor="middle" font-size="12" fill="#666">员工电脑</text>
+          <rect x="205" y="142" width="150" height="66" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="168" text-anchor="middle" font-size="13" fill="#1a1a2e">DMZ 隔离区</text>
+          <text x="280" y="188" text-anchor="middle" font-size="12" fill="#666">对外网站服务器</text>
+          <rect x="390" y="142" width="150" height="66" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="168" text-anchor="middle" font-size="13" fill="#1a1a2e">服务器网</text>
+          <text x="465" y="188" text-anchor="middle" font-size="12" fill="#666">数据库，只对内开放</text>
+          <line x1="170" y1="175" x2="203" y2="175" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr13a)"/>
+          <line x1="355" y1="175" x2="388" y2="175" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr13a)"/>
+          <text x="186" y="160" text-anchor="middle" font-size="11" fill="#666">防火墙</text>
+          <text x="371" y="160" text-anchor="middle" font-size="11" fill="#666">防火墙</text>
+          <text x="280" y="238" text-anchor="middle" font-size="12" fill="#666">外网只能碰到 DMZ，碰不到内网；每过一段都要再过一道墙</text>
+          <text x="280" y="262" text-anchor="middle" font-size="12" fill="#666">访客 Wi-Fi 单独一段，只能上网，不能碰办公网和服务器网</text>
+        </svg>
+        <figcaption>图：分段前后的网络对比——扁平网络一破全破，分段之后攻击者每前进一步都要再过一道墙</figcaption>
+      </figure>
+      <p>分段的依据是“最小权限”：一段里的设备只能访问它工作必须访问的东西。访客 Wi-Fi 能上网就够了，没理由碰办公电脑；办公电脑能访问 DMZ 的网站，没理由直连数据库。规则越少、越严，横向移动越难。当然，分段不是切得越碎越好——切得太碎，正常业务也被墙挡住，管理员天天开例外，墙就形同虚设了。</p>
+      <h2>NAC 与 802.1X：设备入网先验身份</h2>
+      <p>分段管的是“网段之间”，NAC（网络准入控制）管的是“进网那一刻”。它的逻辑很简单：任何设备想连上网络，先证明自己是谁——用户账号对不对、设备合不合规（系统有没有打补丁、有没有装杀毒软件），验过了才放行，验不过就扔进隔离区或者直接拒绝。这就好比公司大门刷卡：没卡、卡过期了，进不来。</p>
+      <p>802.1X 是实现这套逻辑最常用的协议，跑在有线和无线网络的入口处：设备插上网线或连上 Wi-Fi，先由交换机或无线接入点拦住，问一句“你是谁”，再把答案交给认证服务器核对，通过了端口才打开。注意它验的是“设备和用户”，不是“流量内容”——一台已经入网的设备发恶意流量，802.1X 不管，那是防火墙和分段的事。</p>
+      <p><strong>什么时候 NAC 最管用？</strong>插一根网线就能进内网的地方、有外人能碰到的网口、访客设备要临时上网的场景。没有 NAC 的网络，等于大门不上锁：谁把网线一插，谁就是“内部人员”，<a href="m3c12-attacks.html">第 12 章</a>的 ARP 欺骗之类攻击，第一步就是这么进来的。</p>
+      <h2>邮件认证：SPF、DKIM、DMARC 各防什么</h2>
+      <p>邮件天生没有身份验证：任何人都能把发件人写成别人，这是钓鱼邮件（<a href="lesson-12-phishing.html">第 12 课</a>）能冒充公司、冒充银行的根子。三个协议各补一块：</p>
+      <ul>
+        <li><strong>SPF（发件人策略框架）</strong>：域名主人在 DNS 里公布一张“允许替我发邮件的服务器”名单。收件方一查：这封自称来自这个域名的邮件，是不是名单上的服务器发来的？不是，就可疑。防的是“冒用域名发信”。</li>
+        <li><strong>DKIM（域名密钥识别邮件）</strong>：发件服务器用私钥给邮件内容签个名，收件方用 DNS 里公布的公钥验签。签名对不上，说明邮件在路上被改过。防的是“邮件内容被篡改”。</li>
+        <li><strong>DMARC（基于域名的邮件认证、报告与一致性）</strong>：站在 SPF 和 DKIM 上面定规矩：前面两项检查没通过的邮件，收件方该怎么处理——直接拒收、放进垃圾邮件，还是只记录不管；并且把结果汇报给域名主人。防的是“检查了却没人执行”。</li>
+      </ul>
+      <p>一句话记：SPF 管“谁发的”，DKIM 管“改没改过”，DMARC 管“不过关怎么办”。三个都配齐，冒充你的域名发钓鱼邮件就难得多；只配一个，口子还在。反过来，作为收件方也要明白：这三个协议只能证明“这封邮件确实来自那个域名”，证明不了“那个域名是好人”——攻击者完全可以用自己注册的真域名、配齐三个协议来发钓鱼邮件，照样通过检查。所以收到邮件，先看域名本身对不对，再看认证过没过。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我处理过不止一次“内网一台电脑中招，全网跟着遭殃”的现场，回头看全是扁平网络的锅：一台办公电脑被钓鱼邮件钓到，攻击者顺着同一网段半小时就摸到了服务器。事后补救最管用的两件事，一是把服务器单独分段、只开必须的端口，二是把邮件认证配齐——很多钓鱼邮件冒充的正是公司自己的域名，SPF 加 DMARC 拒收策略一上，这类冒充直接在收件方就被拦了，连用户眼前都到不了。还有一条血泪教训：分段规则写完一定要测“正常业务还能不能跑”，我见过分段一上、财务系统先断了的，最后管理员被迫开了个“全通”例外，墙等于白砌。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里打开 <code>nslookup -type=txt example.org</code>，看一个真实域名的 TXT 记录长什么样——SPF 记录就是一条以 <code>v=spf1</code> 开头的 TXT 记录。example.org 这一条是 <code>v=spf1 -all</code>，意思是“不授权任何服务器替它发信”，重点是认出 <code>v=spf1</code> 这个开头和 <code>-all</code> 的含义。<br>2. 在自己的电脑上画一张家里网络的分段草图：路由器、电脑、手机、访客 Wi-Fi 各在哪一段？如果现在全在一个网段，标出你最想隔开的两样东西。<br>3. 查一查你用的 VPN（如果有的话）用的是什么协议，问自己一句：它保护的是哪一段路？哪一段路它保护不了？</p>
+      <h2>避坑</h2>
+      <p>别把 VPN 当成“上网就安全”：它只加密隧道中间那一段，两端和身份被盗它都不管；别用来源不明的免费 VPN，那等于把流量交给陌生人看；分段切完不测试等于没切——正常业务被挡住，管理员迟早会开“全通”例外；SPF、DKIM、DMARC 要三个配齐才算数，只配一个，冒充照样能过；邮件认证只能证明“确实来自那个域名”，证明不了“那个域名是好人”，收到邮件先核对域名本身。</p>
+      <p>网络加固是模块三的收尾思路：从<a href="m3c3-ip.html">第 3 章</a>的 IP、<a href="m3c4-subnetting.html">第 4 章</a>的子网划分，到<a href="m3c12-attacks.html">第 12 章</a>的攻击，再到这一章的防守，整条线就串起来了——知道包怎么走，才知道攻击从哪来；知道攻击从哪来，才知道墙该砌在哪。往后在<a href="../course.html#m6">模块六：网络安全基础</a>里，这些会变成防火墙、入侵检测一整套体系的实操；到了<a href="../course.html#m7">模块七：Web 安全与渗透测试</a>，你会反过来从攻击者的角度，再验一遍这些墙到底挡不挡得住。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>VPN 是一条加密隧道，防路上被偷看、被改，但它不管两端安全、管不了身份被盗，更不能用来源不明的免费 VPN。</li>
+          <li>网络分段按用途把网切开、段间放防火墙，DMZ 专门放对外服务器，目的是让横向移动每一步都多一道墙。</li>
+          <li>NAC/802.1X 在设备入网那一刻验身份，验的是设备和用户，不管入网之后发什么流量。</li>
+          <li>SPF 管“谁发的”，DKIM 管“改没改过”，DMARC 管“不过关怎么办”，三个配齐才算数。</li>
+          <li>邮件认证只能证明邮件确实来自那个域名，证明不了那个域名是好人，收件先核对域名本身。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m3c12-attacks.html">← 上一章：第 12 章：网络攻击：嗅探、欺骗、中间人与拒绝服务</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m3c14-wireshark.html">下一章：第 14 章：动手：Wireshark 抓包 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

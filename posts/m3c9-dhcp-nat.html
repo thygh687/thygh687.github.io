@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块三第 9 章：常见网络服务：DHCP、NAT · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块三第 9 章：常见网络服务：DHCP、NAT</h1>
+      <div class="meta"><span class="tag">计算机网络</span>2026-11-25 · 模块三</div>
+      <p>你连上 Wi-Fi，不用输任何东西就能上网——地址、网关、DNS 全是自动拿到的。背后是两个最常见的网络服务在干活：DHCP 负责发地址，NAT 负责让一整个内网共用一个公网地址上网。这一章把它们拆开：地址是怎么发下来的，地址池耗尽会怎样，家用路由器背后为什么能藏一整个内网。学完这一章，<a href="lesson-06-commands.html">第 6 课</a>里 ipconfig 输出的那几行，你就知道每一行是谁给的。</p>
+
+      <h2>DHCP：地址不是配出来的，是领来的</h2>
+      <p>DHCP（动态主机配置协议）干的事很简单：新设备连上网络，问一句“谁能给我个地址”，DHCP 服务器就从地址池里挑一个没人用的发给它，顺带把子网掩码、默认网关、DNS 服务器一起给齐。没有 DHCP，每台设备都要人手工配地址——配错一个数字就上不了网，公司里几百台电脑根本配不过来。所以 DHCP 是每个局域网的标配：家里的路由器、公司的网络、虚拟机的虚拟网卡，后面都站着一个 DHCP 服务器。</p>
+      <p>注意一个关键点：DHCP 发的不只是地址，而是一整套“上网需要的配置”。<a href="lesson-06-commands.html">第 6 课</a>里 ipconfig 输出的 IPv4 地址、子网掩码、默认网关、DNS 服务器，四行全是 DHCP 一次性发下来的。这就是为什么 ipconfig 里地址变成 169.254.x.x 开头时，第一反应应该是“DHCP 没配上”，而不是“网坏了”——地址是领的，领不到，电脑就自己编一个 169.254 的临时地址顶着，当然上不了网。</p>
+
+      <h2>DHCP 四步：发现、提供、请求、确认</h2>
+      <p>一台新设备拿到地址要走四步，合起来叫 DORA。记住这四步，排错时你就知道卡在哪一步了。</p>
+      <p><strong>发现（Discover）：</strong>新设备刚连上网，连自己的地址都没有，只能用广播喊一嗓子：“有没有 DHCP 服务器？我要个地址！”广播的目标地址是 255.255.255.255，同一网段里的所有设备都听得见。设备这时候的源地址是 0.0.0.0——因为它还没有地址。</p>
+      <p><strong>提供（Offer）：</strong>DHCP 服务器听到喊声，从地址池里挑一个空闲地址，回一句：“这个地址给你用，租期是这么久，网关和 DNS 是这些。”注意，服务器这一步只是“提供”，地址还没真正给出去，只是先占个位。</p>
+      <p><strong>请求（Request）：</strong>设备收到提供（如果有好几个服务器都回了，它挑一个，通常是先到的那个），再广播一句：“我就要这个地址了，大家都知道一下。”用广播而不是单播，是为了让其他提供了地址的服务器知道“不用留了，把那个地址放回池子里”。</p>
+      <p><strong>确认（Acknowledge）：</strong>被选中的服务器最后确认：“好，这个地址归你，租期从现在开始算。”到这一步，设备才真正拥有了这个地址，可以上网了。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DHCP 四步时序图">
+          <defs>
+            <marker id="dhcp-arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="20" width="130" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="85" y="49" text-anchor="middle" font-size="16" fill="#1a1a2e">你的电脑</text>
+          <rect x="410" y="20" width="130" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="475" y="49" text-anchor="middle" font-size="16" fill="#1a1a2e">DHCP 服务器</text>
+          <line x1="85" y1="68" x2="85" y2="195" stroke="#1a1a2e" stroke-width="1" stroke-dasharray="4 4"/>
+          <line x1="475" y1="68" x2="475" y2="195" stroke="#1a1a2e" stroke-width="1" stroke-dasharray="4 4"/>
+          <line x1="150" y1="90" x2="408" y2="90" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#dhcp-arr)"/>
+          <text x="280" y="80" text-anchor="middle" font-size="13" fill="#1a1a2e">1 发现：我要个地址</text>
+          <line x1="410" y1="120" x2="152" y2="120" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#dhcp-arr)"/>
+          <text x="280" y="110" text-anchor="middle" font-size="13" fill="#1a1a2e">2 提供：这个地址给你</text>
+          <line x1="150" y1="150" x2="408" y2="150" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#dhcp-arr)"/>
+          <text x="280" y="140" text-anchor="middle" font-size="13" fill="#1a1a2e">3 请求：我就要这个</text>
+          <line x1="410" y1="180" x2="152" y2="180" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#dhcp-arr)"/>
+          <text x="280" y="170" text-anchor="middle" font-size="13" fill="#1a1a2e">4 确认：地址归你了</text>
+          <text x="280" y="205" text-anchor="middle" font-size="12" fill="#666">前两步是广播，后两步也用广播让其他服务器知道结果</text>
+        </svg>
+        <figcaption>图：DHCP 四步（DORA）——发现、提供、请求、确认，走完才算真正拿到地址</figcaption>
+      </figure>
+      <p><strong>什么时候会重新走这四步？</strong>刚开机连上网时、从一个 Wi-Fi 换到另一个时、租期快到了要续租时。续租不用从头来：租期过半时设备会悄悄找原来的服务器续一下，续上了就继续用，什么都不用你管。只有续租失败（比如服务器不在了），设备才会重新广播发现。</p>
+
+      <h2>租期：地址是租的，不是买的</h2>
+      <p>DHCP 发的地址有个租期（lease time），比如 24 小时、8 小时，甚至只有 1 小时。租期一到，地址就收回地址池，别人可以用。为什么要租而不是永久给？因为设备来来去去：手机连上 Wi-Fi 一会儿就走了，永久占着地址，地址池迟早被占满。租期就是“用多久算多久，不用就还回去”的规矩。</p>
+      <p><strong>租期出问题意味着什么？</strong>租期太短，设备要频繁续租，网络里全是续租的包；租期太长，走了的设备还占着地址，新设备拿不到地址。家里路由器默认租期一般是 24 小时，够用；人流量大的地方（比如咖啡店、会场）租期会设得很短，几个小时甚至 1 小时，就是为了让地址快点流转回来。</p>
+
+      <h2>地址池耗尽：新设备拿不到地址</h2>
+      <p>地址池就是服务器手里能发的地址总数。家用路由器默认的池子通常只有几十到一百多个地址（比如 192.168.1.100 到 192.168.1.200）。池子里的地址全租出去了、且租期都没到，新连进来的设备就拿不到地址——DHCP 服务器无地址可发，设备只能拿到一个 169.254.x.x 的临时地址，上不了网。</p>
+      <p><strong>怎么认出是地址池耗尽？</strong>症状很有特点：已经连上的设备都好好的，只有新连进来的设备上不了网，而且它的 ipconfig 显示 169.254 开头。这时候别重启路由器先——先看是不是池子太小：家里设备越来越多（手机、平板、电视、摄像头、智能家居），一百多个地址真不够用时，要么扩大地址池，要么缩短租期让地址流转快一点。还有一种可能：有人在捣乱，故意不停地向 DHCP 服务器要地址，把池子占满——这叫 DHCP 耗尽攻击，防御靠交换机的 DHCP Snooping，只认受信任的 DHCP 服务器发来的包，<a href="m3c13-hardening.html">第 13 章</a>讲网络加固时会再提到它。</p>
+      <p>还有一种常见的“拿不到地址”不是池子满了，而是根本没连上 DHCP 服务器：网线没插好、Wi-Fi 信号太差、或者中间隔了一个不转发广播的路由器——DHCP 的发现用的是广播，广播过不了路由器，所以不同网段要靠 DHCP 中继（relay）把请求转发过去。症状都一样（169.254 开头），但原因在链路和位置，不在池子。</p>
+
+      <h2>NAT：一个公网地址，全家一起上网</h2>
+      <p>公网 IPv4 地址早就分完了，一家几口人、每人几台设备，不可能每台都分一个公网地址。NAT（网络地址转换）就是解决这个问题的：家里的路由器对外只有一个公网地址，对内却是一个 192.168.1.x 的内网；内网设备上网时，路由器把包的源地址改成自己的公网地址再发出去，收到回包时再改回来，送回正确的内网设备。</p>
+      <p>路由器怎么知道回包该给谁？靠一张 NAT 转换表：它记下“内网这台设备的这个端口，对应出去的那个端口”。这就是端口地址转换（PAT，也是最常见的 NAT 形式）：多台内网设备共用一个公网 IP，靠不同的源端口号区分。你的手机用公网地址的 50001 端口上网，平板用 50002，路由器按端口号分回包，谁也不会拿错。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="NAT 地址转换示意图">
+          <defs>
+            <marker id="nat-arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="30" width="130" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="85" y="59" text-anchor="middle" font-size="15" fill="#1a1a2e">手机</text>
+          <text x="85" y="79" text-anchor="middle" font-size="12" fill="#666">192.168.1.10</text>
+          <rect x="20" y="110" width="130" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="85" y="139" text-anchor="middle" font-size="15" fill="#1a1a2e">电脑</text>
+          <text x="85" y="159" text-anchor="middle" font-size="12" fill="#666">192.168.1.11</text>
+          <rect x="230" y="70" width="120" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="290" y="95" text-anchor="middle" font-size="15" fill="#1a1a2e">路由器 / NAT</text>
+          <text x="290" y="115" text-anchor="middle" font-size="12" fill="#666">公网 203.0.113.5</text>
+          <rect x="430" y="70" width="110" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="485" y="95" text-anchor="middle" font-size="15" fill="#1a1a2e">互联网</text>
+          <text x="485" y="115" text-anchor="middle" font-size="12" fill="#666">网站服务器</text>
+          <line x1="150" y1="54" x2="228" y2="82" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#nat-arr)"/>
+          <line x1="150" y1="134" x2="228" y2="108" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#nat-arr)"/>
+          <line x1="350" y1="100" x2="428" y2="100" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#nat-arr)"/>
+          <text x="190" y="42" text-anchor="middle" font-size="12" fill="#666">源 192.168.1.10</text>
+          <text x="390" y="82" text-anchor="middle" font-size="12" fill="#666">改成 203.0.113.5</text>
+          <text x="280" y="195" text-anchor="middle" font-size="13" fill="#1a1a2e">回包按 NAT 表里的端口号，分回正确的内网设备</text>
+        </svg>
+        <figcaption>图：NAT 把内网地址换成路由器的公网地址再发出去，回包按端口号分回来</figcaption>
+      </figure>
+      <p><strong>为什么家用路由器背后是一整个内网？</strong>因为内网地址（192.168.x.x、10.x.x.x、172.16.x.x）是私有地址，互联网上的路由器根本不转发它们——它们只在局域网内部有效。没有 NAT，内网设备发出去的包带着一个互联网不认的源地址，回包根本回不来。NAT 就是内网和互联网之间的翻译：出去时换成公网地址，回来时再换回去。所以你家所有设备在外人看来都只有一个地址——路由器的公网地址。</p>
+      <p><strong>NAT 是防火墙吗？</strong>不是，但它顺带挡住了很多事：外网的人想直接连你家里的某台电脑，连不上——因为 NAT 表里没有对应的记录，回包不知道给谁，只有内网先发起的连接才能建立回路。想从外网主动访问内网的某台设备（比如家里的存储），要专门做端口映射：告诉路由器“公网地址的某个端口收到的包，转给内网这台设备的这个端口”。端口映射是把门打开一条缝，映射出去的端口就暴露在互联网上了，<a href="m3c13-hardening.html">第 13 章</a>会讲什么时候该开、怎么开才安全。</p>
+      <p>还有一点要分清：NAT 解决的是“地址不够用”，不是“地址规划”。<a href="m3c3-ip.html">第 3 章</a>的子网和路由讲的是包怎么找到路，NAT 讲的是包的地址在半路被改写——两件事发生在不同的地方，别混成一个概念。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>修电脑时遇到“能上 QQ 打不开网页”或者“有些网站能上、有些不能”，我先看 ipconfig：地址是 169.254 开头就是 DHCP 的问题；地址正常但网关不对，就是 DHCP 发错了配置。还有一种经典场面：客户说“昨天还好好的，今天全家都没网”，到现场一看是有人把路由器恢复出厂了，DHCP 地址池变回默认，家里的摄像头和打印机全拿不到固定地址。排错先问一句：地址是谁发的？发了没有？发对了没有？这三个问题答完，一半的“断网”就定位了。另外提醒一句：公司里私自接一个小路由器，它的 DHCP 会和公司的 DHCP 打架——两个服务器同时发地址，设备随机拿到一个，拿到错的那个就上不了网，这种“时好时坏”最难查，先问一句“最近有没有人新接设备”。</div>
+
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里打开终端（Linux 虚拟机）或命令提示符（Windows 虚拟机），运行 <code>ipconfig</code>（Windows）或 <code>ip addr</code>（Linux），记下自己的 IPv4 地址、子网掩码、默认网关和 DNS 服务器。<br>2. 看租期：Windows 运行 <code>ipconfig /all</code>，找到“租约获得时间”和“租约过期时间”，算一算租期是多久；Linux 虚拟机可以看 <code>/var/lib/dhcp/dhclient.leases</code> 文件里的 lease 记录（不同系统路径可能不同，找不到就用 ip addr 的结果对照）。<br>3. 释放再重新拿一次地址：Windows 运行 <code>ipconfig /release</code> 再运行 <code>ipconfig /renew</code>，看地址变了没有、租期是不是重新开始算了；Linux 运行 <code>sudo dhclient -r</code> 再运行 <code>sudo dhclient</code>。做之前先记下原来的地址，对比一下。<br>4. 看网关是谁：运行 <code>ping</code> 网关地址（比如 <code>ping 192.168.1.1</code>），再对照第 1 步的网关，确认你拿到的网关就是虚拟机的出口；然后在虚拟机里打开浏览器访问 example.org，能打开就说明 DHCP 发的整套配置加 NAT 转发全是通的。<br>5. 只看不动手：登录自己家路由器的管理页面（只看自己的路由器），找到 DHCP 设置页，看一眼地址池的范围（从几到几）和租期是多久，对照本章想一想：家里有多少设备？池子够不够用？</p>
+
+      <h2>避坑</h2>
+      <p>地址变成 169.254.x.x，先查 DHCP（网线、Wi-Fi、路由器），别急着重装网卡驱动；ipconfig /release 之后没及时 renew 会断网，操作前先记下原地址；不要在同一个局域网里开两个 DHCP 服务器（比如私自接路由器），设备会随机拿到错的配置，时好时坏最难查；端口映射是把内网服务暴露到互联网，开之前先想清楚有没有必要，<a href="m3c13-hardening.html">第 13 章</a>会讲怎么收紧；别把 NAT 当防火墙用——它只是顺带挡住了主动入站，内网设备主动连出去的恶意连接它可不管。</p>
+
+      <p>DHCP 和 NAT 一个管“进门先领个地址”，一个管“出门共用一个地址”，合起来就是一台设备上网的完整起点。下一章把视角从“地址”换成“端口”：地址找到电脑，端口找到电脑里的具体服务——<a href="m3c10-ports.html">第 10 章：常用端口与协议速查</a>，一张表把最常见的端口、协议和风险一次查清楚。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>DHCP 发的不只是地址，而是一整套上网配置：地址、子网掩码、网关、DNS。</li>
+          <li>拿地址要走四步：发现、提供、请求、确认（DORA），租期过半时会悄悄续租。</li>
+          <li>地址池耗尽时新设备拿不到地址，只能得到 169.254 开头的临时地址，上不了网。</li>
+          <li>NAT 让一整个内网共用一个公网地址上网，靠端口号把回包分给正确的内网设备。</li>
+          <li>NAT 不是防火墙：它只挡住了外网主动发起的连接，端口映射会把内网服务暴露出去。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m3c8-http2-quic.html">← 上一章：第 8 章：HTTP/2、HTTP/3 与 QUIC</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m3c10-ports.html">下一章：第 10 章：常用端口与协议速查 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

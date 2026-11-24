@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块三第 15 章：动手：搭一个局域网实验 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块三第 15 章：动手：搭一个局域网实验</h1>
+      <div class="meta"><span class="tag">计算机网络</span>2026-11-25 · 模块三</div>
+      <p>学网络最怕只看书：地址、网关、子网这些概念，不亲手配一次，永远是别人的东西。这一章搭一个最小的局域网：两台虚拟机加一台宿主机，全程只在自己的电脑上做，不碰真实网络。搭完你会发现，前面学的 IP、DHCP、NAT、ping，全在这一个小实验里对上了号。</p>
+      <h2>先分清虚拟机的三种网络模式</h2>
+      <p>虚拟机软件给虚拟网卡提供了三种接法，选哪种，取决于你想让虚拟机“连到哪”：</p>
+      <ul>
+        <li><strong>NAT 模式</strong>：虚拟机藏在宿主机后面上网，对外只看到宿主机的地址。优点是能上网、不用配地址；缺点是外面连不进来，虚拟机之间默认也互相看不到（要看各软件的具体实现）。适合：虚拟机只要能上网下载、更新，不需要别人连它。</li>
+        <li><strong>桥接模式</strong>：虚拟机像一台真电脑一样直接挂在真实局域网上，从真实路由器拿地址。优点是和真机没区别，别人能直接连它；缺点是占用真实网络的一个地址，换了地方（比如换个 Wi-Fi）地址就变了，而且它真的连进了真实网络。适合：要让别人访问你的虚拟机服务的时候。</li>
+        <li><strong>仅主机模式</strong>：虚拟机只和宿主机、以及同一模式下的其他虚拟机连通，上不了外网。优点是完全隔离，最干净的实验环境；缺点是没外网，装软件要提前准备好。适合：做安全实验、抓包、搭攻击靶机——流量出不去，也进不来，练手最安全。</li>
+      </ul>
+      <p>这一章的实验用<strong>仅主机模式</strong>：两台虚拟机互相能通、都能连宿主机，但都上不了外网。安全实验的默认选择就是它——练手的流量永远只在自己的电脑里打转。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="两台虚拟机加宿主机的局域网拓扑图">
+          <defs>
+            <marker id="arr15a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="200" y="14" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="38" text-anchor="middle" font-size="14" fill="#1a1a2e">宿主机</text>
+          <text x="280" y="57" text-anchor="middle" font-size="12" fill="#666">192.168.56.1</text>
+          <rect x="30" y="150" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="110" y="174" text-anchor="middle" font-size="14" fill="#1a1a2e">虚拟机 A</text>
+          <text x="110" y="193" text-anchor="middle" font-size="12" fill="#666">192.168.56.11</text>
+          <rect x="370" y="150" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="450" y="174" text-anchor="middle" font-size="14" fill="#1a1a2e">虚拟机 B</text>
+          <text x="450" y="193" text-anchor="middle" font-size="12" fill="#666">192.168.56.12</text>
+          <line x1="240" y1="66" x2="130" y2="148" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr15a)"/>
+          <line x1="320" y1="66" x2="430" y2="148" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr15a)"/>
+          <line x1="190" y1="176" x2="368" y2="176" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr15a)"/>
+          <text x="280" y="100" text-anchor="middle" font-size="12" fill="#666">仅主机模式：三台机器在同一个小网段里</text>
+          <text x="280" y="120" text-anchor="middle" font-size="12" fill="#666">192.168.56.0/24，没有网关，没有外网</text>
+          <text x="280" y="228" text-anchor="middle" font-size="12" fill="#666">A ping B、B ping A、宿主机 ping 任意一台，都应该通</text>
+        </svg>
+        <figcaption>图：两台虚拟机 + 宿主机的拓扑——仅主机模式下三台机器同处 192.168.56.0/24 网段，流量不出这台电脑</figcaption>
+      </figure>
+      <h2>配静态 IP：给每台机器一个固定门牌号</h2>
+      <p>仅主机模式下没有 DHCP 发地址（<a href="m3c9-dhcp-nat.html">第 9 章</a>讲过 DHCP 是自动发地址的服务），所以地址要手配，而且要配在同一个网段里：宿主机 192.168.56.1，虚拟机 A 192.168.56.11，虚拟机 B 192.168.56.12，子网掩码都是 255.255.255.0，网关留空——这个小网段里没有要“出去”的路，网关本来就不存在。</p>
+      <p>Linux 虚拟机里配地址的办法（<a href="lesson-10-linux-network.html">第 10 课</a>讲过网络命令）：</p>
+      <p><code>sudo ip addr add 192.168.56.11/24 dev eth0</code>（把 eth0 换成你自己的网卡名，用 <code>ip addr</code> 先看一眼）</p>
+      <p><strong>为什么是静态 IP，不是 DHCP？</strong>因为实验要的是“固定”：地址一变，昨天写好的笔记、脚本、抓包过滤全得改。真实网络里服务器也一样用静态地址，只有普通上网的电脑才用 DHCP 自动拿。还有一个好处：手配一次，子网掩码、网段这些概念就从纸面落到了手上——配错一位数，ping 就不通，错得明明白白。</p>
+      <h2>互相 ping，再传个文件</h2>
+      <p>地址配好，先在虚拟机 A 上 <code>ping 192.168.56.12</code>，再在 B 上 <code>ping 192.168.56.11</code>，宿主机上两个都 ping 一遍。三组都通，这个小局域网就算通了。通了之后传个文件，验证“通了”不只是 ping 得通、数据也能走：</p>
+      <p>在虚拟机 B 上进到一个空目录，跑 <code>python3 -m http.server 8000</code>，再在虚拟机 A 的浏览器里打开 <code>http://192.168.56.12:8000</code>，能看到 B 的目录列表，点一个文件能下载下来——文件传输就通了。或者用 <code>scp</code> 传一个文件过去，效果一样。关键是：文件走的不是互联网，是你电脑里这条仅主机的小路。</p>
+      <p><strong>不通意味着什么？</strong>ping 不通先别急着改地址，按<a href="lesson-06-commands.html">第 6 课</a>的思路从近到远查：先 <code>ip addr</code> 看自己的地址配上没有，再 ping 自己（127.0.0.1 和自己的地址），再 ping 对方。如果 ping 自己通、ping 对方不通，最常见的两个原因：地址不在同一网段（比如一个配了 56 段、一个配了 1 段），或者防火墙把 ICMP 挡了。完整的排查方法在<a href="m3c16-troubleshooting.html">第 16 章</a>。</p>
+      <h2>抓包验证：亲眼看包在走</h2>
+      <p>最后一步，把<a href="m3c14-wireshark.html">第 14 章</a>的 Wireshark 接上来：在宿主机上抓仅主机的那块网卡，过滤 <code>icmp</code>，再从 A ping 一次 B——包列表里会出现一去一回的 Echo 请求和回复，源地址和目标地址就是你刚配的两个地址。再过滤 <code>tcp.port == 8000</code>，重新下载一次文件，看三次握手和数据包。这一刻，前面学的分层、地址、端口、握手，全在一张抓包里同时出现了。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我自己的实验环境永远是仅主机模式起手，再按需加一张 NAT 网卡。只给实验网卡开外网、靶机网卡保持隔离，是安全实验最基本的习惯——我见过有人在桥接模式下搭了个有弱口令的靶机，第二天就被人从外网扫到了。还有一条：虚拟机快照是实验的“后悔药”，搭好这个局域网先打一个快照，之后不管玩坏什么，一键就能回到这个能通的状态。学网络最怕的不是配错，是配错了不敢重来。</div>
+      <h2>动手做</h2>
+      <p>1. 按 <a href="lesson-07-linux-vm.html">第 7 课</a>的方法再克隆或新建一台虚拟机，两台都设成仅主机模式。<br>2. 给三台机器配静态 IP（宿主机 .1、A .11、B .12，掩码 255.255.255.0），互相 ping 三组，全部通了才算完。<br>3. 在 B 上跑 <code>python3 -m http.server 8000</code>，在 A 的浏览器里打开 <code>http://192.168.56.12:8000</code>，下载一个文件下来。<br>4. 用 Wireshark 抓一次 ping 和一次文件下载，对一下包里的地址是不是你配的那三个。<br>5. 搭好之后立刻给两台虚拟机各打一个快照，名字就叫“局域网已通”。</p>
+      <h2>避坑</h2>
+      <p>做安全实验默认用仅主机模式，别用桥接把靶机挂进真实网络；配静态 IP 先确认三台在同一网段，掩码错一位就全不通；网关留空是正常的，这个小网段本来就没有出口；ping 不通先查自己的地址和防火墙，别急着改对方的配置；搭好能通的环境立刻打快照，别等玩坏了才后悔。</p>
+      <p>这个小局域网就是你往后所有实验的“家”：<a href="m3c14-wireshark.html">第 14 章</a>的抓包、<a href="m3c16-troubleshooting.html">第 16 章</a>的排错，都会在这里练。到了<a href="m3c18-capstone.html">第 18 章综合实战</a>，你要给这个小网络做一次完整的安全体检——分段合不合理、端口开得对不对、服务有没有弱口令，到时候就拿今天搭好的这两台虚拟机当体检对象。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>NAT 让虚拟机藏在宿主机后面上网，桥接让它像真电脑挂进真实局域网，仅主机只连宿主机和同模式虚拟机，最适合安全实验。</li>
+          <li>仅主机模式下没有 DHCP，地址要手配静态 IP，三台机器必须在同一网段，网关留空。</li>
+          <li>局域网通不通分两步验：互相 ping 通，再传文件通，ping 通不等于数据能走。</li>
+          <li>抓包能亲眼验证：ping 的包、文件传输的握手，源地址和目标地址就是刚配的那几个。</li>
+          <li>搭好能通的环境立刻打快照，实验玩坏了能一键回到能通的状态。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m3c14-wireshark.html">← 上一章：第 14 章：动手：Wireshark 抓包</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m3c16-troubleshooting.html">下一章：第 16 章：网络故障排查方法 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

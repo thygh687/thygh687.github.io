@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块三第 1 章：分层：OSI 与 TCP/IP · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块三第 1 章：分层：OSI 与 TCP/IP</h1>
+      <div class="meta"><span class="tag">计算机网络</span>2026-11-25 · 模块三</div>
+      <p>上不了网的时候，你最怕的是什么？不是“上不了网”这四个字，而是不知道问题出在哪一环：是网线松了，还是地址没拿到，还是网站本身挂了。网络之所以能被排错、能被防御、能被一代代升级，全靠一个设计：分层。把一个“让两台电脑说话”的大问题，拆成一层一层的小问题，每层只干一件事、只跟上下两层打交道。这一章先把这张分层地图铺开，后面 17 章就是在这张地图上一个格子一个格子往深里走。</p>
+      <h2>为什么要分层：三个理由</h2>
+      <p><strong>第一，各层独立演进。</strong>换网线、从有线换成 Wi-Fi、从 IPv4 换成 IPv6，都不用重写浏览器和网站——因为它们在不同的层。物理层换了，应用层毫无感觉。没有分层，每换一次底层技术，全世界所有软件都得重写。</p>
+      <p><strong>第二，定位故障有章可循。</strong>出了问题先问：断在哪一层？网线没插好是物理层，拿不到地址是网络层，网站打不开可能是应用层。排错不再是“到处乱试”，而是沿着层一层一层往上查——<a href="lesson-06-commands.html">第 6 课</a>那条“ipconfig → ping 网关 → ping 外网 → ping 域名”的排错链，本质上就是从下往上爬层。</p>
+      <p><strong>第三，协议可以替换。</strong>同一层里，旧协议可以被新协议换掉，别的层不用动。HTTP/1.1 换成 HTTP/2、再换成 HTTP/3，下面的 TCP、IP、网线一概不用改——只要接口还对得上。安全的意义也在这里：每一层都有自己的攻击面和防护手段，防火墙、加密、认证各守各的层。</p>
+      <h2>OSI 七层：每层干什么</h2>
+      <p>OSI 是国际标准组织画的参考模型，分七层，从上到下是：<strong>应用层、表示层、会话层、传输层、网络层、数据链路层、物理层</strong>。记住每层一句话：</p>
+      <ul>
+        <li><strong>应用层（第 7 层）：</strong>给用户用的协议，HTTP、DNS、SMTP 都住在这里。你在浏览器里敲网址、发邮件，都是这一层的事。</li>
+        <li><strong>表示层（第 6 层）：</strong>数据的“翻译和包装”——字符编码、压缩、加密。HTTPS 的加密、图片的压缩，都算这一层的工作。</li>
+        <li><strong>会话层（第 5 层）：</strong>管“对话”本身：建立、维持、断开一次会话，谁先说话、断了怎么恢复。</li>
+        <li><strong>传输层（第 4 层）：</strong>端到端的送达：TCP 保证可靠送达，UDP 只管快。端口号是这一层的地址——第 5 章会细讲。</li>
+        <li><strong>网络层（第 3 层）：</strong>跨网寻路：IP 地址、路由。数据包从一个网到另一个网怎么走，是这一层决定的。</li>
+        <li><strong>数据链路层（第 2 层）：</strong>同一个网里点对点送达：MAC 地址、交换机、以太网。下一章就讲它。</li>
+        <li><strong>物理层（第 1 层）：</strong>最底下：网线、光纤、无线电信号，0 和 1 怎么变成电信号、光信号。</li>
+      </ul>
+      <p>OSI 七层是个“教科书模型”——现实里跑的互联网并不严格按它分。表示层和会话层在实际协议里常常并进应用层，几乎没有独立的协议。所以学 OSI 是为了有一张完整的地图、一个共同的语言：排错时说“问题在三层”还是“问题在七层”，全行业都听得懂。</p>
+      <h2>TCP/IP 四层：现实中真正跑的模型</h2>
+      <p>互联网实际用的是 TCP/IP 四层模型：<strong>应用层、传输层、网际层、网络接口层</strong>。对应关系很简单：TCP/IP 的应用层 = OSI 的应用层 + 表示层 + 会话层；传输层 = OSI 传输层；网际层 = OSI 网络层；网络接口层 = OSI 数据链路层 + 物理层。</p>
+      <p>为什么现实只用四层？因为够用了。OSI 的上三层分得太细，实际开发中常常合在一起写；下两层也常常由网卡和驱动一起包办。记住这句话：<strong>OSI 用来定位和讨论，TCP/IP 用来干活</strong>。以后看到抓包工具、防火墙规则、安全设备，写的都是 TCP/IP 四层。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OSI 七层与 TCP/IP 四层对照图">
+          <defs>
+            <marker id="m3c1-arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <text x="140" y="22" text-anchor="middle" font-size="14" fill="#1a1a2e">OSI 七层</text>
+          <text x="420" y="22" text-anchor="middle" font-size="14" fill="#1a1a2e">TCP/IP 四层</text>
+          <rect x="40" y="32" width="200" height="26" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="50" text-anchor="middle" font-size="13" fill="#1a1a2e">7 应用层</text>
+          <rect x="40" y="62" width="200" height="26" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="80" text-anchor="middle" font-size="13" fill="#1a1a2e">6 表示层</text>
+          <rect x="40" y="92" width="200" height="26" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="110" text-anchor="middle" font-size="13" fill="#1a1a2e">5 会话层</text>
+          <rect x="320" y="32" width="200" height="86" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="68" text-anchor="middle" font-size="13" fill="#1a1a2e">应用层</text>
+          <text x="420" y="88" text-anchor="middle" font-size="12" fill="#666">HTTP / DNS / SMTP</text>
+          <rect x="40" y="122" width="200" height="26" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="140" text-anchor="middle" font-size="13" fill="#1a1a2e">4 传输层</text>
+          <rect x="320" y="122" width="200" height="26" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="140" text-anchor="middle" font-size="13" fill="#1a1a2e">传输层</text>
+          <text x="300" y="140" text-anchor="middle" font-size="12" fill="#666">TCP / UDP</text>
+          <rect x="40" y="152" width="200" height="26" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="170" text-anchor="middle" font-size="13" fill="#1a1a2e">3 网络层</text>
+          <rect x="320" y="152" width="200" height="26" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="170" text-anchor="middle" font-size="13" fill="#1a1a2e">网际层</text>
+          <text x="300" y="170" text-anchor="middle" font-size="12" fill="#666">IP</text>
+          <rect x="40" y="182" width="200" height="26" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="200" text-anchor="middle" font-size="13" fill="#1a1a2e">2 数据链路层</text>
+          <rect x="40" y="212" width="200" height="26" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="230" text-anchor="middle" font-size="13" fill="#1a1a2e">1 物理层</text>
+          <rect x="320" y="182" width="200" height="56" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="208" text-anchor="middle" font-size="13" fill="#1a1a2e">网络接口层</text>
+          <text x="420" y="228" text-anchor="middle" font-size="12" fill="#666">以太网 / Wi-Fi</text>
+          <line x1="245" y1="75" x2="315" y2="75" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#m3c1-arr)"/>
+          <line x1="245" y1="135" x2="315" y2="135" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#m3c1-arr)"/>
+          <line x1="245" y1="165" x2="315" y2="165" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#m3c1-arr)"/>
+          <line x1="245" y1="210" x2="315" y2="210" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#m3c1-arr)"/>
+        </svg>
+        <figcaption>图：OSI 七层与 TCP/IP 四层的对应关系——OSI 用来定位，TCP/IP 用来干活</figcaption>
+      </figure>
+      <h2>封包与解包：数据是怎么一层层包起来的</h2>
+      <p>你在浏览器里打开一个网页，数据从应用层往下走，每经过一层就被包上一层“信封”：应用层的数据到了传输层，TCP 给它加上一个 TCP 头（源端口、目标端口）；到了网络层，IP 再包上一个 IP 头（源地址、目标地址）；到了数据链路层，以太网又包上一个帧头和帧尾（源 MAC、目标 MAC）。这个过程叫<strong>封装</strong>。对方收到之后反过来：每往上一层，就拆掉一层信封，叫<strong>解包</strong>。每一层只看自己的信封、只干自己的事——IP 层不关心端口，TCP 层不关心 MAC 地址。</p>
+      <p>打个比方：你要寄一份文件，先装进信封写上收件人（应用层），再装进快递袋贴上面单（传输层），再交给物流中心分拣（网络层），最后装车运走（链路层和物理层）。收件人拆包时一层层拆，每层只认自己的那张单子。安全上这意味着：<strong>攻击可以发生在任何一层</strong>——改 IP 头是网络层攻击，改 TCP 头是传输层攻击，伪造网页内容是应用层攻击。防御也要分层：防火墙守网络层和传输层，TLS 守应用层。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="封包过程图">
+          <defs>
+            <marker id="m3c1-arr2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <text x="280" y="18" text-anchor="middle" font-size="14" fill="#1a1a2e">发送方：每往下一层，就包一层信封（封装）</text>
+          <rect x="30" y="34" width="110" height="40" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="85" y="59" text-anchor="middle" font-size="13" fill="#1a1a2e">应用数据</text>
+          <rect x="170" y="34" width="120" height="40" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="230" y="51" text-anchor="middle" font-size="12" fill="#1a1a2e">TCP 头</text>
+          <text x="230" y="68" text-anchor="middle" font-size="12" fill="#1a1a2e">应用数据</text>
+          <rect x="320" y="34" width="130" height="40" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="385" y="51" text-anchor="middle" font-size="12" fill="#1a1a2e">IP 头</text>
+          <text x="385" y="68" text-anchor="middle" font-size="12" fill="#1a1a2e">TCP 头 + 数据</text>
+          <rect x="30" y="104" width="470" height="40" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="265" y="121" text-anchor="middle" font-size="12" fill="#1a1a2e">以太网帧头　IP 头　TCP 头　应用数据　帧尾</text>
+          <text x="265" y="138" text-anchor="middle" font-size="12" fill="#666">最终上网线的样子：一个完整的以太网帧</text>
+          <line x1="140" y1="54" x2="168" y2="54" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#m3c1-arr2)"/>
+          <line x1="290" y1="54" x2="318" y2="54" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#m3c1-arr2)"/>
+          <line x1="385" y1="76" x2="385" y2="102" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#m3c1-arr2)"/>
+          <text x="280" y="178" text-anchor="middle" font-size="13" fill="#1a1a2e">接收方反过来：每往上一层，拆掉一层信封（解包）</text>
+        </svg>
+        <figcaption>图：封包——数据往下走一层包一层；解包——收到后一层拆一层</figcaption>
+      </figure>
+      <h2>出错意味着什么：分层排错的第一张表</h2>
+      <p>上不了网时，先别急着重启一切，先按层问一圈：网线/ Wi-Fi 信号正常吗（物理层）？网卡拿到 MAC 地址、能和交换机说话吗（链路层）？拿到 IP 地址和网关了吗（网络层）？能 ping 通网关、ping 通外网吗（网络层 + 传输层）？域名能解析、网页能打开吗（应用层）？<strong>哪一层先断，问题就在哪一层</strong>。这张表现在看起来抽象，后面每一章都会往里面填上具体的命令和真实报错——模块学完，你看到报错第一反应就是“这是哪一层”。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>修电脑时我最怕的不是“没网”，是用户一句“昨天还好好的”。我第一件事永远是分层：先看网线灯亮不亮、Wi-Fi 图标在不在（物理层），再看 ipconfig 有没有地址（网络层），最后才看浏览器。十次里有七次问题在下面两层——网线松了、DHCP 没拿到地址、网关配错了。还有一条血的教训：别一上来就重装驱动、重装系统。分层排错的意义就是让你从最便宜的一层开始查，查到哪层断了再动手，省下的全是时间。安全工作也一样：一次入侵事件复盘，先标出攻击者走到哪一层——是骗过了应用层，还是直接在网络层横着走——定位错了层，补丁就打错地方。</div>
+      <h2>动手做</h2>
+      <p>1. 在自己的电脑上打开浏览器访问 example.org，然后在命令行里跑 <code>ping example.org</code>：这次访问走过了全部四层——想一想，浏览器是应用层，ping 是网络层，它们用的层有什么不同？<br>2. 故意关掉 Wi-Fi 或拔掉网线，再跑一次 <code>ping example.org</code>，记下报错；对比<a href="lesson-06-commands.html">第 6 课</a>里三种报错的样子，判断这次断的是哪一层。<br>3. 在虚拟机里跑 <code>ipconfig</code>（Windows）或 <code>ip a</code>（Linux），把自己的 IP 地址、子网掩码、默认网关抄下来：下一章开始，你要知道它们分别属于哪一层。</p>
+      <h2>避坑</h2>
+      <p>别把 OSI 七层当成真实网络的构造图——真实互联网跑的是 TCP/IP 四层，OSI 是用来定位和交流的地图；别死记硬背七层的名字，先记住每层“干什么、出了问题长什么样”；别以为层与层之间是“谁管谁”——每层只跟上下两层打交道，跨层的问题要一层一层查；排错别从最上面开始，先从最便宜的物理层查起；别在真实网络上抓别人的包练手，所有实验只在自己的电脑和虚拟机里做。</p>
+      <p>预备课里你已经摸过这张地图的边角：<a href="lesson-03-network.html">第 3 课</a>讲过 IP 地址、网关和 DNS，<a href="lesson-05-http.html">第 5 课</a>走过一次网站打开的完整过程——那一次其实就是数据从应用层一路封装到底层、再一路解包上来的全过程。接下来我们从最底下开始，一层一层往上爬：下一章先看最底下的两层——物理层和数据链路层，网线里跑的到底是什么；再往后，<a href="m3c3-ip.html">第 3 章</a>讲 IP 怎么跨网寻路，<a href="m3c7-dns-http-tls.html">第 7 章</a>再回到应用层，把 DNS、HTTP 和 TLS 一次讲透。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>分层的三个好处：各层独立演进、定位故障有章可循、协议可以替换。</li>
+          <li>OSI 七层是定位和交流用的地图，TCP/IP 四层是互联网真正跑的模型。</li>
+          <li>发送时数据每往下一层就包一层信封（封装），接收时每往上一层就拆一层（解包）。</li>
+          <li>每一层只看自己的信封、只干自己的事，攻击和防御也都发生在具体的某一层。</li>
+          <li>排错先问“断在哪一层”，哪一层先断，问题就在哪一层。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="summary-module2.html">← 上一站：模块二小结</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m3c2-physical.html">下一章：第 2 章：物理层与数据链路层 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>
