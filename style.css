@@ -1,4 +1,4 @@
-/* 个人博客样式：简洁、干净，无外部字体和 CDN */
+/* 网络安全手记：简洁、干净，无外部字体和 CDN */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
@@ -7,31 +7,111 @@ body {
 a { color: #1a73e8; text-decoration: none; }
 a:hover { text-decoration: underline; }
 .wrap { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+.wrap-wide { max-width: 960px; margin: 0 auto; padding: 0 20px; }
 
-/* 页眉 */
-header.site { border-bottom: 1px solid #eee; padding: 28px 0 20px; }
-header.site .name { font-size: 26px; font-weight: 700; color: #111; }
+/* 顶栏 */
+header.site {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  padding: 18px 0 14px; border-bottom: 1px solid #eee;
+}
+header.site .name { font-size: 22px; font-weight: 700; }
 header.site .name a { color: #111; }
 header.site .name a:hover { text-decoration: none; }
-header.site .desc { color: #888; font-size: 15px; margin-top: 4px; }
-nav { margin-top: 14px; }
-nav a { color: #555; margin-right: 20px; font-size: 15px; }
-nav a.active { color: #111; font-weight: 600; }
+header.site .desc { order: 3; flex-basis: 100%; color: #888; font-size: 14px; margin-top: 2px; }
+header.site nav { margin-left: auto; display: flex; gap: 22px; }
+header.site nav a { color: #555; font-size: 15px; }
+header.site nav a.active { color: #111; font-weight: 600; }
 
-/* 文章列表 */
-.post-list { list-style: none; padding: 8px 0 40px; }
-.post-list li { padding: 22px 0; border-bottom: 1px solid #f0f0f0; }
-.post-list .date { color: #999; font-size: 14px; }
-.post-list h2 { font-size: 21px; margin: 4px 0 6px; line-height: 1.5; }
-.post-list h2 a { color: #111; }
-.post-list .excerpt { color: #666; font-size: 15px; }
+/* 首页大横幅 */
+.hero { background: #0f172a; color: #fff; padding: 64px 0 60px; }
+.hero h1 { font-size: 38px; line-height: 1.4; margin-bottom: 12px; }
+.hero .tagline { color: #cbd5e1; font-size: 18px; margin-bottom: 20px; }
+.hero .status {
+  display: inline-block; background: #1e293b; border: 1px solid #334155;
+  color: #93c5fd; font-size: 14px; padding: 4px 12px; border-radius: 20px;
+  margin-bottom: 26px;
+}
+.hero .actions { display: flex; gap: 14px; flex-wrap: wrap; }
+.btn {
+  display: inline-block; padding: 10px 22px; border-radius: 8px;
+  font-size: 16px; line-height: 1.5;
+}
+.btn:hover { text-decoration: none; }
+.btn-primary { background: #2563eb; color: #fff; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-ghost { border: 1px solid #64748b; color: #e2e8f0; }
+.btn-ghost:hover { border-color: #94a3b8; }
+
+/* 首页分区 */
+.section { padding: 44px 0 8px; }
+.section-title {
+  font-size: 21px; margin-bottom: 20px; padding-left: 12px;
+  border-left: 4px solid #2563eb; line-height: 1.4;
+}
+.section-title span { color: #888; font-size: 15px; font-weight: 400; margin-left: 8px; }
+
+/* 置顶文章 */
+.featured {
+  border: 1px solid #e5e7eb; border-left: 4px solid #2563eb;
+  border-radius: 12px; padding: 28px; background: #f8fafc;
+}
+.featured .label { color: #2563eb; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.featured h2 { font-size: 24px; line-height: 1.5; margin-bottom: 8px; }
+.featured h2 a { color: #111; }
+.featured .excerpt { color: #555; margin-bottom: 14px; }
+.meta { color: #999; font-size: 14px; }
+.meta .tag {
+  display: inline-block; background: #e8f0fe; color: #1a73e8;
+  font-size: 13px; padding: 1px 10px; border-radius: 12px; margin-right: 8px;
+}
+
+/* 文章卡片网格 */
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.card {
+  border: 1px solid #e5e7eb; border-radius: 12px; padding: 22px;
+  display: flex; flex-direction: column;
+}
+.card:hover { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); }
+.card h3 { font-size: 18px; line-height: 1.55; margin: 10px 0 8px; }
+.card h3 a { color: #111; }
+.card .excerpt { color: #666; font-size: 15px; flex: 1; margin-bottom: 14px; }
+.card .meta { border-top: 1px solid #f0f0f0; padding-top: 12px; }
+
+/* 学习路线 */
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.step { border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; }
+.step .num {
+  width: 30px; height: 30px; border-radius: 50%; background: #2563eb;
+  color: #fff; font-size: 15px; font-weight: 700; text-align: center;
+  line-height: 30px; margin-bottom: 12px;
+}
+.step.done .num { background: #16a34a; }
+.step h3 { font-size: 16px; line-height: 1.5; margin-bottom: 6px; }
+.step p { color: #666; font-size: 14px; margin-bottom: 12px; }
+.pill {
+  display: inline-block; font-size: 13px; padding: 1px 10px; border-radius: 12px;
+}
+.pill-doing { background: #dcfce7; color: #15803d; }
+.pill-todo { background: #f1f5f9; color: #64748b; }
+
+/* 关于卡片 */
+.about-card {
+  border: 1px solid #e5e7eb; border-radius: 12px; padding: 28px;
+  background: #f8fafc; display: flex; gap: 24px; align-items: center;
+  flex-wrap: wrap;
+}
+.about-card p { flex: 1; min-width: 240px; color: #444; }
+.about-card .btn { flex-shrink: 0; }
 
 /* 文章页 */
 article { padding: 32px 0 48px; }
 article h1 { font-size: 26px; line-height: 1.5; margin-bottom: 6px; }
-article .meta { color: #999; font-size: 14px; margin-bottom: 24px; }
+article .meta { margin-bottom: 24px; }
 article p { margin-bottom: 18px; }
 article h2 { font-size: 20px; margin: 28px 0 12px; }
+article code {
+  background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 15px;
+}
 .back { display: inline-block; margin-top: 8px; color: #555; font-size: 15px; }
 
 /* 关于页 */
@@ -40,10 +120,22 @@ article h2 { font-size: 20px; margin: 28px 0 12px; }
 .about p { margin-bottom: 18px; color: #444; }
 
 /* 页脚 */
-footer.site { border-top: 1px solid #eee; padding: 20px 0 40px; color: #aaa; font-size: 14px; text-align: center; }
+footer.site {
+  border-top: 1px solid #eee; margin-top: 48px; padding: 24px 0 40px;
+  color: #aaa; font-size: 14px; text-align: center; line-height: 2;
+}
+footer.site a { color: #888; }
 
+@media (max-width: 900px) {
+  .cards { grid-template-columns: 1fr 1fr; }
+  .steps { grid-template-columns: 1fr 1fr; }
+}
 @media (max-width: 600px) {
   body { font-size: 16px; }
-  header.site .name { font-size: 22px; }
+  .hero { padding: 44px 0 40px; }
+  .hero h1 { font-size: 28px; }
+  .cards { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; }
+  .featured h2 { font-size: 20px; }
   article h1, .about h1 { font-size: 22px; }
 }
