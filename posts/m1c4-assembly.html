@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 4 章：汇编入门 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 4 章：汇编入门</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-24 · 模块一</div>
+      <p>汇编是离机器最近的语言：一条汇编指令，基本对应一条机器指令。看懂汇编，就等于能直接读懂 CPU 在干什么。</p>
+      <h2>几个基本动作</h2>
+      <p><code>MOV</code> 是搬数据，把一个值放进寄存器；<code>ADD</code> 是加法；<code>CMP</code> 是比较两个值；<code>JMP</code> 是跳转，跳到别处去执行。这几个加起来，就能写出循环和判断。</p>
+      <h2>一个例子</h2>
+      <p>把 5 和 3 加起来：</p>
+      <p><code>MOV AX, 5</code>：把 5 放进寄存器 AX。<br><code>ADD AX, 3</code>：AX 加上 3，现在 AX 里是 8。<br><code>MOV BX, AX</code>：把 AX 的值复制到 BX，现在 BX 也是 8。</p>
+      <h2>为什么安全要学这个</h2>
+      <p>以后学到漏洞和逆向的时候，都要看汇编：缓冲区溢出就是改了本该返回的地址，逆向就是把机器码还原成能读懂的意思。现在不用背，先混个脸熟，知道它长什么样、怎么读。</p>
+      <h2>动手做</h2>
+      <p>纸上练习：<code>MOV AX, 10</code>、<code>ADD AX, 5</code>、<code>ADD AX, 2</code>，三步之后 AX 是多少？（答案：17。）再想一想，如果中间加一句 <code>MOV BX, AX</code>，BX 是多少？</p>
+      <div class="lesson-nav">
+        <a href="m1c3-memory.html">← 上一章：第 3 章：存储器：内存、缓存、硬盘</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m1c5-io.html">下一章：第 5 章：总线与输入输出 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -156,6 +156,11 @@ footer.site a { color: #888; }
 }
 .lesson-list li a { font-size: 17px; }
 .lesson-list li span { color: #888; font-size: 14px; text-align: right; flex-shrink: 0; }
+.lesson-list .lesson-title { font-size: 17px; }
+
+/* 视频讲解 */
+.video-note { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin: 18px 0; font-size: 15px; }
+.video-note a { font-weight: 600; }
 
 /* 课与课之间的导航 */
 .lesson-nav {

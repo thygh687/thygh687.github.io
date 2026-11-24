@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 2 章：CPU 是怎么执行指令的 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 2 章：CPU 是怎么执行指令的</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-24 · 模块一</div>
+      <p>CPU 的工作就是一个循环，不停重复四个步骤：取指、译码、执行、写回。</p>
+      <h2>四个步骤</h2>
+      <p>取指：从内存里把下一条指令拿来。译码：看懂这条指令是要干什么。执行：让相应的部件去干活，比如让 ALU 做加法。写回：把结果存回寄存器。然后立刻开始下一条。</p>
+      <h2>关键部件</h2>
+      <p>程序计数器记着下一条指令在内存的哪个地址；寄存器是 CPU 手头的小抽屉，放正在用的数据；ALU 负责算数和逻辑；控制单元是指挥，负责把指令翻译成各个部件的动作信号。</p>
+      <h2>时钟和主频</h2>
+      <p>CPU 靠时钟来卡节奏，每跳一下往前走一步。主频比如 3GHz，就是每秒跳 30 亿下。主频越高一般越快，但不是唯一决定速度的：一次能干多少活、缓存够不够大，同样重要。</p>
+      <h2>指令就是二进制数</h2>
+      <p>一条指令本身也是一串 0 和 1，前几位是操作码（干什么，比如加法），后面是操作数（对谁干，比如哪两个寄存器）。程序就是一长串这样的指令。</p>
+      <div class="video-note">视频讲解：<a href="https://youtube.com/watch?v=GtVDTp826DE">CPU Architecture Explained</a>（YouTube，英文，可开自动字幕，约 8 分钟，讲 ALU、寄存器、控制单元和指令周期）</div>
+      <h2>动手做</h2>
+      <p>打开任务管理器 → 性能 → CPU，看自己的 CPU 型号、主频是多少。再打开一个程序，看 CPU 占用率的变化。</p>
+      <div class="lesson-nav">
+        <a href="m1c1-binary.html">← 上一章：第 1 章：二进制与数据表示</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m1c3-memory.html">下一章：第 3 章：存储器：内存、缓存、硬盘 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

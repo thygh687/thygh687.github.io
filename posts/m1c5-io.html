@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 5 章：总线与输入输出 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 5 章：总线与输入输出</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-24 · 模块一</div>
+      <p>CPU、内存、硬盘、显卡之间要传数据，走的都是总线。总线就是电脑里的路，路越宽、一次能运的东西越多。</p>
+      <h2>输入输出设备</h2>
+      <p>键盘、鼠标、显示器、网卡、硬盘都是输入输出设备。CPU 通过端口跟它们打交道：往端口写数据就是发命令，从端口读数据就是收结果。</p>
+      <h2>中断</h2>
+      <p>设备有事的时候会打断 CPU 一下：比如你敲了一个键，键盘就发个中断，CPU 停下手里的活，先处理这个按键，再回去继续。中断让 CPU 不用一直盯着设备问“有事吗”，有事设备自己会说。</p>
+      <h2>DMA</h2>
+      <p>大块数据搬运（比如从硬盘读一个大文件）不用 CPU 一点一点盯着，DMA 控制器直接在内存和硬盘之间搬，搬完告诉 CPU 一声就行。省下来的 CPU 时间可以干别的。</p>
+      <h2>动手做</h2>
+      <p>右键“此电脑” → 管理 → 设备管理器，看一眼自己电脑的设备：处理器、磁盘驱动器、网络适配器都在。再打开任务管理器 → 性能 → 磁盘，复制一个大文件，看读写速度的变化。</p>
+      <div class="lesson-nav">
+        <a href="m1c4-assembly.html">← 上一章：第 4 章：汇编入门</a>
+        <a href="../course.html">课程目录</a>
+        <a href="../course.html#m2">下一模块：操作系统（待写）→</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

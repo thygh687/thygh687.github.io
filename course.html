@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>课程目录 · 网络安全手记</title>
-<meta name="description" content="从零开始学网络安全：系统入门课程，点开就能学">
+<meta name="description" content="从小白到网络安全工程师的完整路线：专业课程框架，文字讲解加动手练习">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -24,13 +24,29 @@
     <div class="wrap-wide">
       <section class="section">
         <h1 style="font-size: 28px; margin-bottom: 8px;">课程目录</h1>
-        <p style="color: #666; margin-bottom: 8px;">从零开始的系统入门课，共 16 课，分四个阶段。每一课先讲一个概念，再给一个动手做的步骤，点开就能学。</p>
-        <p style="color: #666;">顺序是按学习顺序排的，建议从第 1 课开始往下学。</p>
+        <p style="color: #666; margin-bottom: 8px;">从小白到网络安全工程师的完整路线，按专业课程框架排：先打基础（组成原理、操作系统、网络、编程），再学安全核心，最后实战与进阶。由浅入深，顺序建议从预备课开始往下学。</p>
+        <p style="color: #666;">每课都有文字讲解和一个动手做的步骤，需要看演示的地方会附视频链接。内容比较多，一批一批写，写完的先上线，标“已上线”的点开就能学。</p>
       </section>
 
-      <section class="course-stage" id="stage1">
-        <h2>阶段一：计算机与网络基础 <span>6 课 · 进行中</span></h2>
-        <p>先把地基打牢：计算机是怎么工作的，网络是怎么连起来的。阶段导读：<a href="posts/week1-basics.html">第一周：计算机与网络基础</a></p>
+      <section class="section" id="levels">
+        <h2 class="section-title">学习目标与等级 <span>学到哪一步，算哪一级</span></h2>
+        <p style="color: #666; margin-bottom: 16px;">每学完一部分，就升一级。每一级都写清楚了学完什么、会什么、怎么自测，走到哪心里有数。</p>
+        <h3>第 1 级 · 入门</h3>
+        <p><strong>学完：</strong>预备课 16 课。<br><strong>会什么：</strong>讲清楚计算机、网络、DNS、HTTP 是怎么回事；会用 ping、ipconfig、nslookup；会在虚拟机里用 Linux 基本命令；知道密码、钓鱼、恶意软件、防火墙这些安全常识。<br><strong>自测：</strong>不看笔记讲出 DNS 全过程；独立装好一台 Ubuntu 虚拟机并联网。</p>
+        <h3>第 2 级 · 基础扎实</h3>
+        <p><strong>学完：</strong>模块一～四（组成原理、操作系统、网络、编程）。<br><strong>会什么：</strong>讲清楚 CPU 取指执行、进程线程、内存管理、TCP/IP 各层；会写 Python 小工具。<br><strong>自测：</strong>写出一个端口扫描器；讲出三次握手为什么是三次。</p>
+        <h3>第 3 级 · 小成</h3>
+        <p><strong>学完：</strong>模块五～七（数据库与密码学、网络安全基础、Web 安全与渗透测试）。<br><strong>会什么：</strong>在合法靶场里找到并利用 SQL 注入、XSS 等常见漏洞；看懂加密和证书；能做一次完整的渗透测试并写报告。<br><strong>自测：</strong>打通一个靶场（如 DVWA）的全部基础漏洞；独立写一份渗透测试报告。</p>
+        <h3>第 4 级 · 独当一面</h3>
+        <p><strong>学完：</strong>模块八（安全运营与应急响应）。<br><strong>会什么：</strong>看日志分析入侵，按流程做应急响应。<br><strong>自测：</strong>分析一次模拟入侵并写出事件报告。</p>
+        <h3>第 5 级 · 准工程师</h3>
+        <p><strong>学完：</strong>模块九（进阶与新趋势）。<br><strong>会什么：</strong>能逆向简单程序，云和容器安全有概念，知道零信任和 AI 安全。<br><strong>自测：</strong>尝试考 CompTIA Security+ 或 CISP，或投初级安全岗位、实习。</p>
+        <p style="color: #666; margin-top: 16px;">再往上是真正的工程师：选一个方向深入（渗透测试、蓝队、安全开发、取证），加实际工作经验。这一步靠工作积累，博客只能送到门口。</p>
+      </section>
+
+      <section class="course-stage" id="prep">
+        <h2>预备课：系统入门 <span>16 课 · 已上线</span></h2>
+        <p>先把最基础的概念过一遍，再进专业课。</p>
         <ol class="lesson-list">
           <li><a href="posts/lesson-01-computer.html">第 1 课：计算机是怎么工作的</a><span>CPU、内存、硬盘、操作系统</span></li>
           <li><a href="posts/lesson-02-files-processes.html">第 2 课：文件、进程与权限</a><span>文件、路径、进程、管理员权限</span></li>
@@ -38,37 +54,128 @@
           <li><a href="posts/dns-basics.html">第 4 课：DNS 是怎么回事</a><span>网址怎么变成 IP 地址</span></li>
           <li><a href="posts/lesson-05-http.html">第 5 课：网站是怎么打开的</a><span>HTTP 请求、状态码、HTTPS</span></li>
           <li><a href="posts/lesson-06-commands.html">第 6 课：动手：ping、ipconfig、nslookup</a><span>三个最常用的网络命令</span></li>
-        </ol>
-      </section>
-
-      <section class="course-stage" id="stage2">
-        <h2>阶段二：Linux 与虚拟机 <span>4 课</span></h2>
-        <p>很多安全工具生在 Linux 上。先在虚拟机里练，不动主力系统。</p>
-        <ol class="lesson-list">
           <li><a href="posts/lesson-07-linux-vm.html">第 7 课：为什么学 Linux：先装个虚拟机</a><span>VirtualBox + Ubuntu</span></li>
           <li><a href="posts/lesson-08-linux-commands.html">第 8 课：Linux 常用命令</a><span>ls、cd、cp、grep 这些天天用的</span></li>
           <li><a href="posts/lesson-09-linux-permissions.html">第 9 课：文件权限与用户管理</a><span>rwx、chmod、sudo</span></li>
           <li><a href="posts/lesson-10-linux-network.html">第 10 课：Linux 下的网络命令</a><span>curl、ss、ip 命令</span></li>
-        </ol>
-      </section>
-
-      <section class="course-stage" id="stage3">
-        <h2>阶段三：网络安全基础 <span>5 课</span></h2>
-        <p>安全真正开始的地方：账号、钓鱼、恶意软件、加密、防火墙。</p>
-        <ol class="lesson-list">
           <li><a href="posts/lesson-11-passwords.html">第 11 课：密码与账号安全</a><span>强密码、密码管理器、双因素</span></li>
           <li><a href="posts/lesson-12-phishing.html">第 12 课：认出钓鱼：社会工程学</a><span>钓鱼邮件的四个特征</span></li>
           <li><a href="posts/lesson-13-malware.html">第 13 课：恶意软件与防护</a><span>病毒、木马、勒索软件、备份</span></li>
           <li><a href="posts/lesson-14-encryption.html">第 14 课：加密基础</a><span>对称、非对称、HTTPS、证书、哈希</span></li>
           <li><a href="posts/lesson-15-firewall.html">第 15 课：防火墙与端口</a><span>门卫、服务入口、只开需要的</span></li>
+          <li><a href="posts/lesson-16-directions.html">第 16 课：基础打牢后，四个方向怎么选</a><span>渗透测试、蓝队、取证、安全开发</span></li>
         </ol>
       </section>
 
-      <section class="course-stage" id="stage4">
-        <h2>阶段四：选择方向深入 <span>1 课</span></h2>
-        <p>基础打牢之后，再决定往哪个方向专精。</p>
+      <section class="course-stage" id="m1">
+        <h2>模块一：计算机组成原理 <span>5 章 · 已上线</span></h2>
+        <p>电脑最底层的样子：数据怎么表示，指令怎么执行，东西存在哪。</p>
         <ol class="lesson-list">
-          <li><a href="posts/lesson-16-directions.html">第 16 课：基础打牢后，四个方向怎么选</a><span>渗透测试、蓝队、取证、安全开发</span></li>
+          <li><a href="posts/m1c1-binary.html">第 1 章：二进制与数据表示</a><span>0 和 1 怎么表示数字和文字</span></li>
+          <li><a href="posts/m1c2-cpu.html">第 2 章：CPU 是怎么执行指令的</a><span>取指、译码、执行、写回</span></li>
+          <li><a href="posts/m1c3-memory.html">第 3 章：存储器：内存、缓存、硬盘</a><span>存储金字塔，快与大的取舍</span></li>
+          <li><a href="posts/m1c4-assembly.html">第 4 章：汇编入门</a><span>离机器最近的语言</span></li>
+          <li><a href="posts/m1c5-io.html">第 5 章：总线与输入输出</a><span>数据怎么在电脑里跑，中断是什么</span></li>
+        </ol>
+      </section>
+
+      <section class="course-stage" id="m2">
+        <h2>模块二：计算机操作系统 <span>6 章 · 待写</span></h2>
+        <p>操作系统是大管家：管进程、管线程、管内存、管文件。</p>
+        <ol class="lesson-list">
+          <li><span class="lesson-title">第 1 章：操作系统是干什么的</span><span>管硬件、管进程、给程序提供服务</span></li>
+          <li><span class="lesson-title">第 2 章：进程</span><span>程序跑起来就是进程，资源分配的基本单位</span></li>
+          <li><span class="lesson-title">第 3 章：线程</span><span>同一进程里并行干活的执行单位</span></li>
+          <li><span class="lesson-title">第 4 章：并发：锁、死锁与竞态条件</span><span>多线程的麻烦从哪来</span></li>
+          <li><span class="lesson-title">第 5 章：内存管理：虚拟内存与分页</span><span>程序以为自己独占内存</span></li>
+          <li><span class="lesson-title">第 6 章：文件系统与权限</span><span>文件怎么存，谁能动</span></li>
+        </ol>
+      </section>
+
+      <section class="course-stage" id="m3">
+        <h2>模块三：计算机网络 <span>7 章 · 待写</span></h2>
+        <p>从网线到网页，数据是怎么跨过半个地球找到你的。</p>
+        <ol class="lesson-list">
+          <li><span class="lesson-title">第 1 章：分层：OSI 与 TCP/IP</span><span>七层、四层，每层干什么</span></li>
+          <li><span class="lesson-title">第 2 章：物理层与数据链路层</span><span>网线、MAC 地址、以太网</span></li>
+          <li><span class="lesson-title">第 3 章：IP、子网与路由</span><span>数据包怎么找到路</span></li>
+          <li><span class="lesson-title">第 4 章：TCP 与 UDP</span><span>三次握手、四次挥手、可靠与快速</span></li>
+          <li><span class="lesson-title">第 5 章：DNS、HTTP 与 TLS</span><span>应用层三大件</span></li>
+          <li><span class="lesson-title">第 6 章：动手：Wireshark 抓包</span><span>亲眼看数据包长什么样</span></li>
+          <li><span class="lesson-title">第 7 章：动手：搭一个局域网实验</span><span>两台虚拟机互相 ping</span></li>
+        </ol>
+      </section>
+
+      <section class="course-stage" id="m4">
+        <h2>模块四：编程基础 <span>6 章 · 待写</span></h2>
+        <p>安全工程师必须会写代码：先 Python，再 C，写出自己的小工具。</p>
+        <ol class="lesson-list">
+          <li><span class="lesson-title">第 1 章：编程是怎么回事</span><span>变量、判断、循环、函数</span></li>
+          <li><span class="lesson-title">第 2 章：Python 入门</span><span>写第一个安全小工具</span></li>
+          <li><span class="lesson-title">第 3 章：数据结构</span><span>列表、字典、集合，什么时候用哪个</span></li>
+          <li><span class="lesson-title">第 4 章：C 语言：指针与内存</span><span>直接碰内存的语言</span></li>
+          <li><span class="lesson-title">第 5 章：动手：写一个端口扫描器</span><span>socket 的第一次实战</span></li>
+          <li><span class="lesson-title">第 6 章：动手：写一个密码强度检查器</span><span>字符串处理练手</span></li>
+        </ol>
+      </section>
+
+      <section class="course-stage" id="m5">
+        <h2>模块五：数据库与密码学 <span>5 章 · 待写</span></h2>
+        <p>数据存在哪、怎么查，以及怎么保证数据不被偷看、不被改。</p>
+        <ol class="lesson-list">
+          <li><span class="lesson-title">第 1 章：SQL 基础</span><span>增删改查</span></li>
+          <li><span class="lesson-title">第 2 章：动手：建一个数据库</span><span>装一个，建表插数据</span></li>
+          <li><span class="lesson-title">第 3 章：SQL 注入是怎么发生的</span><span>拼接字符串的代价</span></li>
+          <li><span class="lesson-title">第 4 章：对称与非对称加密</span><span>两把钥匙的故事</span></li>
+          <li><span class="lesson-title">第 5 章：哈希、签名与证书</span><span>指纹、签名、信任链</span></li>
+        </ol>
+      </section>
+
+      <section class="course-stage" id="m6">
+        <h2>模块六：网络安全基础 <span>5 章 · 待写</span></h2>
+        <p>安全真正开始的地方：攻击者怎么想，防御从哪里下手。</p>
+        <ol class="lesson-list">
+          <li><span class="lesson-title">第 1 章：威胁建模</span><span>攻击者会怎么想</span></li>
+          <li><span class="lesson-title">第 2 章：钓鱼与社会工程学</span><span>骗人的技术</span></li>
+          <li><span class="lesson-title">第 3 章：恶意软件全家福</span><span>病毒、木马、勒索软件</span></li>
+          <li><span class="lesson-title">第 4 章：防火墙与入侵检测</span><span>门卫与哨兵</span></li>
+          <li><span class="lesson-title">第 5 章：动手：给电脑做一次安全检查</span><span>从头到尾查一遍</span></li>
+        </ol>
+      </section>
+
+      <section class="course-stage" id="m7">
+        <h2>模块七：Web 安全与渗透测试 <span>6 章 · 待写</span></h2>
+        <p>网站是怎么被攻破的，以及怎么合法地去找漏洞。</p>
+        <ol class="lesson-list">
+          <li><span class="lesson-title">第 1 章：Web 工作原理深入</span><span>请求、响应、会话、Cookie</span></li>
+          <li><span class="lesson-title">第 2 章：SQL 注入实战</span><span>从原理到利用</span></li>
+          <li><span class="lesson-title">第 3 章：XSS 跨站脚本</span><span>让别人的浏览器替你干活</span></li>
+          <li><span class="lesson-title">第 4 章：CSRF 与 SSRF</span><span>借刀杀人的两种方式</span></li>
+          <li><span class="lesson-title">第 5 章：信息收集与扫描</span><span>动手之前的侦察</span></li>
+          <li><span class="lesson-title">第 6 章：提权、后渗透与报告</span><span>拿到权限之后干什么</span></li>
+        </ol>
+      </section>
+
+      <section class="course-stage" id="m8">
+        <h2>模块八：安全运营与应急响应 <span>4 章 · 待写</span></h2>
+        <p>蓝队的工作：盯着、发现、出事之后怎么办。</p>
+        <ol class="lesson-list">
+          <li><span class="lesson-title">第 1 章：SOC 是干什么的</span><span>7×24 小时盯着屏幕的人</span></li>
+          <li><span class="lesson-title">第 2 章：SIEM 与日志分析</span><span>日志会说话</span></li>
+          <li><span class="lesson-title">第 3 章：应急响应流程</span><span>出事之后的标准动作</span></li>
+          <li><span class="lesson-title">第 4 章：动手：分析一次模拟入侵</span><span>对着日志破案</span></li>
+        </ol>
+      </section>
+
+      <section class="course-stage" id="m9">
+        <h2>模块九：进阶与新趋势 <span>5 章 · 待写</span></h2>
+        <p>跟上时代：逆向、云、容器、零信任、AI 时代的新攻防。</p>
+        <ol class="lesson-list">
+          <li><span class="lesson-title">第 1 章：汇编与缓冲区溢出</span><span>漏洞是怎么发生的</span></li>
+          <li><span class="lesson-title">第 2 章：逆向入门</span><span>看懂别人写的程序</span></li>
+          <li><span class="lesson-title">第 3 章：云安全基础</span><span>云上的责任分界线</span></li>
+          <li><span class="lesson-title">第 4 章：容器安全</span><span>镜像、隔离与逃逸</span></li>
+          <li><span class="lesson-title">第 5 章：零信任与 AI 时代的安全</span><span>新的攻防形态</span></li>
         </ol>
       </section>
     </div>

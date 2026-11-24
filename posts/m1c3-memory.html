@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 3 章：存储器：内存、缓存、硬盘 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 3 章：存储器：内存、缓存、硬盘</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-24 · 模块一</div>
+      <p>存储器是个金字塔：越靠近 CPU 越快、越小、越贵；越远离越慢、越大、越便宜。电脑就是在这个取舍里工作的。</p>
+      <h2>寄存器：最快最小</h2>
+      <p>在 CPU 里面，容量只有几十个字节，速度最快，放正在算的数据。</p>
+      <h2>缓存：CPU 身边的小抄</h2>
+      <p>常用的东西放这里，省得老跑内存去拿。缓存分 L1、L2、L3，离 CPU 越近越快越小。</p>
+      <h2>内存：工作台</h2>
+      <p>正在运行的程序和数据都在内存里。断电就清空。内存越大，能同时摊开的东西越多，电脑越不容易卡。</p>
+      <h2>硬盘：仓库</h2>
+      <p>长期保存文件的地方，断电也不丢。机械硬盘便宜、容量大；SSD 没有机械部件，快得多，系统盘用 SSD 体验差很多。</p>
+      <h2>动手做</h2>
+      <p>打开任务管理器 → 性能，看内存是多大的、用掉多少。再看磁盘那一栏，确认自己的硬盘是 SSD 还是 HDD。</p>
+      <div class="lesson-nav">
+        <a href="m1c2-cpu.html">← 上一章：第 2 章：CPU 是怎么执行指令的</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m1c4-assembly.html">下一章：第 4 章：汇编入门 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>
