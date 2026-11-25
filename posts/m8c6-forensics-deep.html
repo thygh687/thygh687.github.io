@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块八第 6 章：数字取证深入 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块八第 6 章：数字取证深入</h1>
+      <div class="meta"><span class="tag">安全运营与应急响应</span>2026-11-25 · 模块八</div>
+      <p>第 5 章我们破了一次案，靠的是日志。但日志只能告诉你“发生了什么”，有时候你需要知道得更多：攻击者到底在内存里跑了什么程序？他偷走的文件是什么？他删掉的东西还能找回来吗？这些问题要靠<strong>数字取证（Digital Forensics）</strong>来回答。取证和日志分析的区别在于：日志分析是为了“快速处置”，取证是为了“把事实钉死”——证据要完整、要可信、要经得起质疑，甚至要能上法庭。</p>
+      <p>取证的第一原则是：<strong>不要破坏证据</strong>。第 4 章讲过，应急现场最常见的错误就是一上来就关机——关机一按，内存里的东西全没了。所以取证的第一步永远是“保全”，而不是“调查”。本章讲三个核心概念：证据链、易失性顺序，和内存取证工具 Volatility。</p>
+
+      <h2>证据链：证据从哪来、谁动过，都要留痕</h2>
+      <p><strong>证据链（Chain of Custody）</strong>就是一份“证据的旅行记录”：这块硬盘（或这份内存镜像、这份日志）是什么时候、从哪台机器上、由谁取下来的，之后谁动过它、做了什么操作、存在哪里。为什么要这么较真？因为证据的价值取决于它的可信度：如果说不清证据从哪来、中间有没有被改过，那它在法庭上、在管理层面前、在保险理赔时，都可能不被采信。证据链的做法很具体：取证时给原始证据算一个哈希值（比如 SHA-256），之后每次复制、分析都对照这个哈希——哈希对不上，说明证据被动过；分析永远在<strong>副本</strong>上做，原始证据封存不动；每一次交接都要签字记录时间、人员和操作。</p>
+      <p>对初学者来说，证据链可以从一个小习惯开始：调查时开一个取证笔记本，记下每一步“几点、谁、做了什么、结果是什么、文件存在哪、哈希值是多少”。第 5 章练习里让你记的“时间、事件 ID、来源、原文”，就是证据链的雏形。习惯养成了，以后做正式取证就不会手忙脚乱。</p>
+
+      <h2>易失性顺序：先抓最容易消失的东西</h2>
+      <p>电脑里的数据，按“消失的速度”排个队，这就叫<strong>易失性顺序（Order of Volatility）</strong>。排在最前面的，消失得最快，要最先抓：<strong>内存（RAM）</strong>——一断电就没了，里面有正在运行的进程、解密后的密码、网络连接；<strong>网络连接状态</strong>——谁连着谁，关机就断了；<strong>正在运行的进程和服务</strong>——关机就没了；<strong>登录的会话</strong>；再往后是<strong>磁盘上的临时文件、日志</strong>；最稳定的是<strong>磁盘镜像和备份</strong>。所以取证现场的顺序是反直觉的：不是先关机“保平安”，而是先抓内存、再看网络和进程、最后才考虑关机做磁盘镜像。记住一句口诀：<strong>越容易消失的，越先取</strong>。</p>
+      <p>抓内存的工具很多，Windows 上常用的是把内存完整导出成一个文件（内存镜像），这个文件可能有几个 GB，里面装着关机前那一刻电脑的全部“活”的状态。导出内存镜像本身也要小心：运行取证工具会在内存里留下一点痕迹，这是不可避免的，但要记录下来——“我几点、用什么工具、导出了内存镜像”，这条记录本身就是证据链的一部分。</p>
+
+      <h2>Volatility：内存里的侦探</h2>
+      <p>拿到内存镜像之后，怎么看？最常用的开源工具是 <strong>Volatility</strong>。它能从一堆看似乱码的内存数据里，把“活”的信息还原出来：当时运行着哪些进程（<code>pslist</code>）、哪些进程是伪装的（比如名字叫 svchost.exe 但路径不对）、网络连接是哪些（<code>netscan</code>）、有没有注入到别的进程里的恶意代码（<code>malfind</code>）、命令行历史里敲过什么命令（<code>cmdline</code>）。对初学者来说，先掌握三个命令就够了：<code>pslist</code> 看进程列表，找“名字眼熟但路径陌生”的进程；<code>netscan</code> 看网络连接，找“连向境外陌生 IP”的连接；<code>malfind</code> 找内存里可疑的代码注入。Volatility 是命令行工具，跑在你自己的实验环境里——拿第 5 章实验的虚拟机内存镜像来练，是最好的上手方式。</p>
+      <p>一个经典的内存取证故事：某次调查中，磁盘上什么都没找到——恶意程序是“无文件”的，只活在内存里，关机就消失。但分析师在内存镜像里用 Volatility 找到了它：一个伪装成系统进程的程序，正在往外传数据。没有内存镜像，这个案子就破不了。这就是为什么“先抓内存”不是一句口号，而是取证的生死线。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="易失性顺序与取证流程图：从内存到磁盘按消失速度排序取证">
+          <rect x="20" y="30" width="520" height="44" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="57" text-anchor="middle" font-size="14" fill="#1a1a2e">易失性顺序：越容易消失，越先取</text>
+          <rect x="20" y="100" width="95" height="60" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="67" y="125" text-anchor="middle" font-size="12" fill="#1a1a2e">1. 内存</text>
+          <text x="67" y="143" text-anchor="middle" font-size="11" fill="#666">断电即失</text>
+          <rect x="130" y="100" width="95" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="177" y="125" text-anchor="middle" font-size="12" fill="#1a1a2e">2. 网络连接</text>
+          <text x="177" y="143" text-anchor="middle" font-size="11" fill="#666">关机即断</text>
+          <rect x="240" y="100" width="95" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="287" y="125" text-anchor="middle" font-size="12" fill="#1a1a2e">3. 进程</text>
+          <text x="287" y="143" text-anchor="middle" font-size="11" fill="#666">关机即无</text>
+          <rect x="350" y="100" width="95" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="397" y="125" text-anchor="middle" font-size="12" fill="#1a1a2e">4. 日志</text>
+          <text x="397" y="143" text-anchor="middle" font-size="11" fill="#666">可能被清</text>
+          <rect x="460" y="100" width="80" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="500" y="125" text-anchor="middle" font-size="12" fill="#1a1a2e">5. 磁盘</text>
+          <text x="500" y="143" text-anchor="middle" font-size="11" fill="#666">最稳定</text>
+          <rect x="20" y="200" width="250" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="223" text-anchor="middle" font-size="12" fill="#1a1a2e">证据链：取证 → 算哈希 → 封存原件</text>
+          <text x="145" y="242" text-anchor="middle" font-size="11" fill="#666">分析永远在副本上做</text>
+          <rect x="290" y="200" width="250" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="223" text-anchor="middle" font-size="12" fill="#1a1a2e">Volatility：pslist / netscan / malfind</text>
+          <text x="415" y="242" text-anchor="middle" font-size="11" fill="#666">从内存镜像里还原进程与连接</text>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">先抓内存，再看网络和进程，最后做磁盘镜像</text>
+        </svg>
+        <figcaption>图：易失性顺序与取证流程——先抓最容易消失的内存，证据链全程留痕，Volatility 分析内存镜像</figcaption>
+      </figure>
+
+      <h2>磁盘取证：删掉的东西不一定没了</h2>
+      <p>除了内存，磁盘取证也有两个初学者要知道的概念。第一，<strong>删除不等于消失</strong>：删文件通常只是把“索引”划掉，数据本身还留在磁盘上，直到被新数据覆盖——所以取证时常能恢复被删的文件，但前提是“别再往这块盘里写东西”，每写一次都可能覆盖掉要恢复的数据。第二，<strong>时间戳</strong>：每个文件都有创建、修改、访问三个时间，攻击者改了文件、偷了文件，时间戳里会留下痕迹；但时间戳也可以被伪造，所以要和日志互相印证。磁盘取证的实操工具很多，初学者先理解这两个概念就够了，工具可以随着练习慢慢学。</p>
+
+      <h2>取证工具箱：先认识几样工具</h2>
+      <p>取证工具分三类，初学者先认名字、知道各管什么就够了。<strong>磁盘取证工具</strong>（比如 FTK Imager、Autopsy）用来做磁盘镜像、恢复被删文件、分析文件系统；<strong>内存取证工具</strong>就是本章讲的 Volatility，专门分析内存镜像；<strong>网络取证工具</strong>（比如 Wireshark，<a href="m3c14-wireshark.html">模块三第 14 章</a>学过）用来分析抓到的网络流量包。三类工具对应三类证据：磁盘、内存、网络，合起来就是一台机器的完整画像。</p>
+      <p>用工具之前要先确认两件事：工具来源可靠（从官方渠道获取，核对哈希值），以及你在副本上操作（第 6 章的证据链要求）。工具本身不会告诉你“这是不是攻击”，它只会把数据摆出来——判断永远是人做的。初学者最容易犯的错误是“工具跑出什么就信什么”：工具显示一个进程“可疑”，可能只是因为它不认识这个正常的软件；工具没报东西，也不等于机器就是干净的。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我第一次参与取证，最大的震撼是“慢”——日志分析讲究快，取证讲究慢。现场有人催“赶紧把机器恢复了让业务先跑起来”，取证负责人顶住压力，先花了两个小时做内存镜像和磁盘镜像——后来证明，这两个小时救了整个案子：攻击者偷数据的证据全在内存镜像里，机器一恢复就全没了。所以取证的第一课不是技术，是定力：该保全的时候，谁催都不能跳过保全。还有一个细节：取证工具本身也要干净——用你自己的、来源可靠的工具盘，别随手从网上下载一个“取证工具”，谁知道它自己是不是带毒的。工具的哈希值也要记进证据链。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：给虚拟机打快照，然后打开任务管理器，记下当前运行的进程列表（名字和路径），再对照“名字眼熟、路径陌生”的标准，找找有没有可疑进程——这是 pslist 的人工版。<br>2. 在虚拟机里用 PowerShell 看一次当前网络连接（<code>Get-NetTCPConnection</code>），记下正在连接的远程 IP，再想想：哪些连接是你认识的，哪些不认识。<br>3. 写一份你自己的“取证现场清单”：按易失性顺序列出 5 步（内存 → 网络 → 进程 → 日志 → 磁盘），每步写一句话“做什么、用什么工具”。<br>4. 在虚拟机里删一个测试文件，再用系统自带的恢复手段（回收站、以前的版本）试着找回来，体会“删除不等于消失”——注意：这只是概念练习，不要装来路不明的恢复软件。</p>
+      <h2>避坑</h2>
+      <p>别一上来就关机：关机先毁内存证据，按易失性顺序先抓内存；别在原件上分析：先算哈希、封存原件，只在副本上动手；别跳过证据链：每一步都要记录时间、人员、操作和哈希值，说不清来源的证据等于没有证据；别在被调查的机器上装来路不明的工具：取证工具本身也要来源可靠、哈希可查；别在真实案件、真实系统上练手：所有取证练习只在你自己的虚拟机里做。</p>
+      <p>第 5 章我们学会了“破案”，这一章学会了“把证据钉死”：证据链保可信，易失性顺序保先后，Volatility 让我们能看进内存里。破案和取证，都是为了回答“到底发生了什么”；但还有一类问题是“下一次还会不会发生、攻击者是谁、从哪来”——那是威胁情报的事。下一章讲<a href="m8c7-threat-intel-deep.html">威胁情报深入——IOC、TTP、情报生命周期</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>数字取证的目标是把事实钉死：证据要完整、可信、经得起质疑；第一原则是不要破坏证据。</li>
+          <li>证据链是证据的旅行记录：取证时间、人员、操作、哈希值全程留痕，分析永远在副本上做。</li>
+          <li>易失性顺序：内存 → 网络连接 → 进程 → 日志 → 磁盘，越容易消失的越先取，绝不先关机。</li>
+          <li>Volatility 是内存取证的常用开源工具：pslist 看进程、netscan 看连接、malfind 找代码注入。</li>
+          <li>删除不等于消失：删文件只是划掉索引，数据还在盘上——所以取证前别再往盘里写东西。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m8c5-simulated-intrusion-lab.html">← 上一章：第 5 章：动手：分析一次模拟入侵</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m8c7-threat-intel-deep.html">下一章：第 7 章：威胁情报深入 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

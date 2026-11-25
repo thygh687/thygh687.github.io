@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块九第 19 章：Kubernetes 安全深入：RBAC、Pod 安全与运行时 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块九第 19 章：Kubernetes 安全深入：RBAC、Pod 安全与运行时</h1>
+      <div class="meta"><span class="tag">进阶与新趋势</span>2026-11-25 · 模块九</div>
+      <p><a href="m9c6-kubernetes-security.html">第 6 章</a>我们认识了容器与 Kubernetes 的编排层面：镜像、隔离与逃逸，编排器是怎么指
+      挥一群容器的。这一章钻进去讲三件事：RBAC（谁能动什么）、Pod
+      安全（容器能干什么）、运行时（容器跑起来之后怎么盯着）。三件事管的是三个不同的问题，缺一个，集群就有一个方向
+      是敞着的。</p>
+      <p>先建立一张心智图：Kubernetes 集群分两层——<strong>控制面</strong>（API Server 这些管事的组件）和<strong>工作面</strong>（跑业
+      务容器的节点和 Pod）。RBAC 管的是“谁能跟控制面说话”；Pod
+      安全管的是“容器在节点上能干什么”；运行时管的是“容器跑起来之后有没有干坏事”。练习只在你自己的实验环境
+      里做：本地搭一个 minikube 或 kind 单节点集群，绝不在真实集群上练手。</p>
+
+      <h2>RBAC：谁能动什么，都要写下来</h2>
+      <p>Kubernetes 的访问控制叫<strong>RBAC</strong>（基于角色的访问控制），由四件东西组成：<strong>Role</strong>（一个命名空间里的权限，
+      比如“能读这个命名空间的 Pod”）、<strong>ClusterRole</strong>（整个集群范围的权限）、<strong>RoleBinding</strong>（把 Role
+       发给谁）和<strong>ClusterRoleBinding</strong>（把 ClusterRole 发给谁）。“发给谁”的对象可以是用户、用户组，或者<strong>服务账号（
+      ServiceAccount）</strong>——每个 Pod 跑起来的时候，都会带着一个服务账号的身份去跟 API Server 说话。最小权限在这里的意思是：每个服务账号只拿它干活必
+      需的权限——一个只读数据的
+      Pod，不应该拿到删除 Pod 的权限。</p>
+      <p>RBAC 最常见的翻车有三个。第一，<strong>默认服务账号权限过大</strong>：新建的命名空间自带一个 default 服务账号，有人图方便直接给它绑个高权限角色，从此这
+      个命名空间里的所有 Pod 都有了高权限。第二，<strong>滥用 cluster-admin</strong>：这是集群里的“超级管理员”角色，绑给谁，谁就能干一切——调试的时候绑一个
+      ，调完忘了收回来，是最常见的遗留问题。第三，<strong>匿名访问没关</strong>：API Server 的匿名用户默认没什么权限，但一旦有人误配了绑定，匿名用户也能读到集群信息。
+      检查 RBAC 的习惯是：定期跑一遍“谁绑了什么”——<code>kubectl get rolebindings,clusterrolebindings --all-namespaces
+      </code>，把绑了高权限角色的账号一个一个问过去：它真的需要吗？</p>
+
+      <h2>Pod 安全：容器能干什么，也要管住</h2>
+      <p>RBAC 管的是“人能不能动集群”，Pod 安全管的是“容器在节点上能干什么”。容器默认并不像想象中那么隔离：一个以 root
+      身份运行、又拿到过高权限的容器，是有机会逃
+      出隔离、碰到宿主机的。管 Pod 安全有两个层次。第一个层次是<strong>Pod Security Standards</strong>：官方给的三档基线——Privileged（几乎
+      不管，留给系统组件）、Baseline（拦掉最常见的危险配置）、Restricted（最严，强制非
+      root、只读文件系统等）。给业务命名空间贴上 Baseline 或 Res
+      tricted 的标签，不合规的 Pod 就建不起来。第二个层次是<strong>securityContext</strong>：写在每个 Pod 定义里的安全配置，比如<code>ru
+      nAsNonRoot: true</code>（不许用 root 跑）、<code>readOnlyRootFilesystem: true</code>（根文件系统只读，恶意软件写不进来
+      ）、<code>allowPrivilegeEscalation: false</code>（不许提权）、<code>capabilities.drop: ["ALL"]</code>（把
+       Linux 能力全 drop 掉，只加回必需的几个）。</p>
+      <p>这里要理解一个关键概念：容器逃逸的本质，是容器拿到了本不该拿的宿主机能力。最危险的三类配置是：<strong>privileged: true</strong>（特权容器，几乎等于宿
+      主机 root）、<strong>hostPath 挂载</strong>（把宿主机的目录挂进容器，容器就能读写宿主机文件）、<strong>hostNetwork / hostPID</strong>
+      （和宿主机共用网络或进程空间）。这三类配置，业务容器几乎永远不应该用——看到它们出现在业务 Pod 的定义里，就要打个问号。</p>
+
+      <h2>运行时：容器跑起来之后怎么盯着</h2>
+      <p>RBAC 和 Pod 安全都是“事前”的管控，运行时安全是“事中”的盯梢：容器跑起来之后，它实际在干什么？有没有超出它该干的事？运行时防护分三层。第一层是<strong>镜像扫描</strong>
+      ：容器跑起来之前，先扫一遍镜像里有没有已知漏洞——第 12 章的依赖扫描在这里又用上了，只不过扫描对象从代码依赖变成了镜像层。第二层是<strong>网络策略（NetworkPolicy）
+      </strong>：默认情况下，一个命名空间里的 Pod 能跟集群里所有 Pod 说话；网络策略就是给 Pod 之间画“允许通话清单”——前端 Pod 只能连后端 Pod，后端 Pod
+ 
+           只能连数据库，别的都不许。第三层是<strong>运行时检测</strong>：用 Falco 这类工具监听容器的系统调用，一旦发现容器在做它不该做的事（比如突然开了一个
+   
+         shell、突然去读宿主机的敏感文件），立刻告警。运行时检测的价值在于：前面两层都拦不住的攻击，在这里还能被看见。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kubernetes三层防护图：RBAC管谁能动集群，Pod安全管容器能干什么，运行时管跑起来之后的行为">
+          <rect x="130" y="10" width="300" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="37" text-anchor="middle" font-size="15" fill="#1a1a2e">Kubernetes 集群</text>
+          <rect x="30" y="80" width="150" height="80" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="105" y="104" text-anchor="middle" font-size="13" fill="#1a1a2e">RBAC</text>
+          <text x="105" y="124" text-anchor="middle" font-size="11" fill="#666">谁能动什么</text>
+          <text x="105" y="142" text-anchor="middle" font-size="11" fill="#666">Role / 绑定 / 服务账号</text>
+          <rect x="205" y="80" width="150" height="80" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="104" text-anchor="middle" font-size="13" fill="#1a1a2e">Pod 安全</text>
+          <text x="280" y="124" text-anchor="middle" font-size="11" fill="#666">容器能干什么</text>
+          <text x="280" y="142" text-anchor="middle" font-size="11" fill="#666">三档基线 + 安全上下文</text>
+          <rect x="380" y="80" width="150" height="80" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="455" y="104" text-anchor="middle" font-size="13" fill="#1a1a2e">运行时</text>
+          <text x="455" y="124" text-anchor="middle" font-size="11" fill="#666">跑起来之后盯着</text>
+          <text x="455" y="142" text-anchor="middle" font-size="11" fill="#666">镜像扫描、网络策略、检测</text>
+          <rect x="30" y="190" width="500" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="212" text-anchor="middle" font-size="13" fill="#1a1a2e">最危险的三类配置：特权容器、hostPath 挂载、hostNetwork / hostPID</text>
+          <text x="280" y="232" text-anchor="middle" font-size="11" fill="#666">业务容器几乎永远不应该用，看到就要打问号</text>
+          <rect x="130" y="270" width="300" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="295" text-anchor="middle" font-size="13" fill="#1a1a2e">事前管控 + 事中盯梢，缺一个就敞一个方向</text>
+        </svg>
+        <figcaption>图：Kubernetes 的三层防护——RBAC、Pod 安全、运行时，各管一个方向</figcaption>
+      </figure>
+
+      <h2>一次集群安全检查的顺序</h2>
+      <p>接手一个不熟悉的集群，从哪里开始查？按这个顺序走，不容易漏。第一步，<strong>查绑定</strong>：跑一遍“谁绑了什么”，重点看 cluster-admin 和其他高权限角
+      色绑给了谁——绑定出问题比配置出问题更危险，因为一个有高权限的服务账号，等于攻击者直接拿到了集群的钥匙。第二步，<strong>查配置</strong>：扫一遍所有 Pod 的定义，找特权
+      容器、hostPath 挂载、hostNetwork 这些危险配置，再看命名空间贴的是哪档 Pod Security 基线。</p>
+      <p>第三步，<strong>查网络</strong>：看哪些命名空间没有 NetworkPolicy——没有策略的地方，Pod 之间默认全通，等于没设防。第四步，<strong>查运行时
+      </strong>：镜像扫过没有、运行时检测开着没有、最近有没有告警。查完四步，写一张清单：发现了什么、严重程度、建议怎么修、谁负责修——清单的格式和模块六第 23
+      章的评估报
+      告是一样的，方法通用，换个战场照样能用。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我第一次接手 Kubernetes 集群安全检查，跑完“谁绑了什么”就出了一身汗：三个业务命名空间的 default 服务账号，全都绑着 cluster-admin——原因是当初有人调试图方便，调完忘了收。这件事让我养成了一个习惯：检查集群安全，先看绑定，再看配置；绑定是“谁能干什么”，配置是“容器能干什么”，绑定出问题比配置出问题更危险，因为一个有 cluster-admin 权限的 Pod，等于攻击者直接拿到了集群的钥匙。还有一句：Pod Security Standards 的三档基线，别一上来就给业务命名空间贴最严的 Restricted——业务 Pod 会成批建不起来，开发团队会立刻来找你。正确做法是先贴 Baseline 跑两周，把不合规的 Pod 一个一个修掉，再往 Restricted 走。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的实验环境里：用 minikube 或 kind 在本地搭一个单节点实验集群，确认<code>kubectl get nodes</code>能看到它；绝不在真实集群
+      上练手。<br>2. 查 RBAC：在实验集群里跑<code>kubectl get rolebindings,clusterrolebindings --all-namespaces</code>
+      ，列出哪些账号绑了高权限角色；再新建一个服务账号，只给它“读某一个命名空间 Pod”的 Role，验证它读得了 Pod、删不掉 Pod。<br>3. 试 Pod 安全：给一个实验命名空间贴
+      上 Baseline 的 Pod Security 标签，先部署一个合规的 Pod（非 root、只读文件系统），再部署一个特权 Pod（<code>privileged: true</code>
+      ），观察哪一个被拦下来、报错信息是什么。<br>4. 画网络策略：写一条 NetworkPolicy，只允许前端 Pod 访问后端 Pod 的指定端口，然后从一个“不相干”的 Pod
+  
+          里试着连后端，确认连不上；把“默认全通、策略收紧”前后的差别记下来。<br>5. 把三层防护写成一张检查清单：RBAC 查什么、Pod 安全查什么、运行时查什么，每项后面写一句“怎
+      么查”，留着以后检查任何集群都能用。</p>
+      <h2>避坑</h2>
+      <p>别给 default 服务账号绑高权限：每个服务账号只拿干活必需的权限；别把 cluster-admin 当调试工具：调完必须收回，定期检查谁还绑着它；别让业务 Pod
+      
+      用特权配置：特权容器、hostPath 挂载、hostNetwork/hostPID，业务容器几乎永远不应该用；别一上来就贴最严基线：先 Baseline 跑两周、修掉不合规的
+     
+       Pod，再往 Restricted 走；别只做事前管控：镜像扫描、网络策略、运行时检测三层都要有，前面拦不住的，后面要能看见。</p>
+      <p>这一章讲的是 Kubernetes 的三层防护：RBAC 管谁能动集群，Pod 安全管容器在节点上能干什么，运行时管容器跑起来之后有没有干坏事。它接上了<a href="m9c5-container-security.html">
+      第 5 章</a>的容器安全和第 6 章的编排层面：那时你知道了容器和编排器是什么，现在你能亲手给一个集群上三道锁。下一章（<a href="m9c20-ai-security-deep.html">
+      第 20 章</a>）我们进入模块九最新的战场：AI 安全——OWASP LLM Top 10，十种风险一个一个过。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>RBAC 由 Role、ClusterRole、RoleBinding、ClusterRoleBinding 组成，服务账号是 Pod 跟 API Server
+     
+               说话的身份；最小权限是每条绑定的必问题。</li>
+          <li>RBAC 的常见翻车：default 服务账号权限过大、滥用 cluster-admin、匿名访问误配；定期检查“谁绑了什么”。</li>
+          <li>Pod 安全分两层：Pod Security Standards 三档基线（Privileged、Baseline、Restricted）和每个 Pod 的
+       
+             securityContext。</li>
+          <li>最危险的三类配置：特权容器、hostPath 挂载、hostNetwork/hostPID，业务容器几乎永远不应该用。</li>
+          <li>运行时安全是事中的盯梢：镜像扫描、网络策略、运行时检测（如 Falco），前面拦不住的攻击在这里要能被看见。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m9c18-cloud-deep-three-clouds.html">← 上一章：第 18 章：云安全深入：三大云的身份、存储与日志</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m9c20-ai-security-deep.html">下一章：第 20 章：AI 安全深入：OWASP LLM Top 10 逐条过 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

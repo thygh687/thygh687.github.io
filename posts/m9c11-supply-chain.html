@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块九第 11 章：供应链安全 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块九第 11 章：供应链安全</h1>
+      <div class="meta"><span class="tag">进阶与新趋势</span>2026-11-25 · 模块九</div>
+<p>你写的每一行代码、装的每一个软件，背后都站着一长串“别人”：你用的开源库是谁写的、从哪下载的、有没有被人动过手脚；你装的软件是谁签名的、更新是从哪来的。现代软件几乎没有“从零写起”的——一个普通应用可能依赖几百个第三方包。
+      供应链安全问的就是：<strong>你用的东西，从作者到你手里的这一路，可信吗？</strong></p>
+<p>攻击者早就想明白了：直接攻你的系统很难，但攻进你信任的“上游”——一个流行的开源包、一次软件更新——就能顺着信任链一次攻进成千上万个下游。这类攻击叫供应链攻击，
+它的可怕之处在于：受害者什么都没做错，
+      只是正常地更新了一下软件。</p>
+
+      <h2>供应链攻击的三种套路</h2>
+<p><strong>第一，污染上游包。</strong>攻击者设法往一个流行的开源包里塞恶意代码：盗用维护者的账号、接管无人维护的包、或者干脆发布一个名字极像正版包的“冒牌包”（比如把 
+<code>requests</code>
+写成 <code>requsets</code>，等你打错字）。你的项目一引用这个包，恶意代码就跟着进了你的应用。这和<a href="m6c4-phishing-deep.html">模块六第
+      4 章</a>钓鱼里“冒牌网站”的套路一模一样，只是冒牌的对象从网站变成了软件包。</p>
+<p><strong>第二，污染构建与发布环节。</strong>代码本身没问题，但在编译、打包、签名的环节被动了手脚，或者更新服务器被入侵，推送了一个带后门的“官方更新”。
+历史上最著名的案例就是通过一次正常的软件更新，
+      把后门发给了上万家机构——用户看到的是“官方更新”，防毒软件看到的是“有签名的正常程序”，几乎没有防线能拦住它。</p>
+<p><strong>第三，依赖传递。</strong>你直接依赖的包可能只有十几个，但每个包又依赖别的包，层层展开就是几百个。你审计了直接依赖，没审计“依赖的依赖”——恶意代码常常就藏在深层依赖里。
+      这就是为什么只看“我的项目用了什么”不够，还得摸清“它们又用了什么”——下一章的 SBOM 就是干这个的。</p>
+
+      <h2>防守的基本功：来源、锁定、签名</h2>
+<p>防守供应链有三件基本功。第一，<strong>来源可信</strong>：只从官方仓库、官方渠道获取软件包和更新，绝不从聊天群、网盘、来路不明的网站下载安装包；
+新引入一个依赖之前，先看一眼它的维护状态——最近更新是什么时候、
+维护者是谁、有没有已知漏洞。第二，<strong>版本锁定</strong>：用锁定文件（lockfile）把每个依赖的精确版本钉死，并校验哈希值——这样“下次安装拿到的是不是同一个包”是可以验证的，
+不会被悄悄换掉。第三，<strong>签名验证</strong>：软件发布者用私钥签名、你用公钥验签，签名对不上就拒绝安装。<a href="m5c7-hash-signature-cert.html">模块五第
+      7 章</a>讲的哈希与签名，在这里就是供应链的“封条”：封条完好，不代表东西一定没问题，但封条破了，一定有问题。</p>
+<p>除此之外还要做两件事：定期做依赖扫描（有新漏洞爆出来时，第一时间知道自己的项目受不受影响），以及给关键依赖准备“断供预案”——一个包突然被下架、被投毒，你有没有替代方案、
+能不能快速换掉。这些平时看起来是“额外工作”，
+      出事那天就是救命的东西。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="软件供应链图：从开源包作者到你的应用的信任链">
+<rect x="30" y="24" width="150" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="105" y="48" text-anchor="middle" font-size="13" fill="#1a1a2e">开源包作者</text>
+          <text x="105" y="68" text-anchor="middle" font-size="11" fill="#666">写代码、发版本</text>
+<rect x="205" y="24" width="150" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="48" text-anchor="middle" font-size="13" fill="#1a1a2e">仓库与构建</text>
+          <text x="280" y="68" text-anchor="middle" font-size="11" fill="#666">打包、签名、发布</text>
+<rect x="380" y="24" width="150" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="455" y="48" text-anchor="middle" font-size="13" fill="#1a1a2e">你的应用</text>
+          <text x="455" y="68" text-anchor="middle" font-size="11" fill="#666">引用几百个包</text>
+<rect x="40" y="120" width="480" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">攻击点：污染包 · 冒牌包 · 污染构建 · 污染更新</text>
+          <text x="280" y="162" text-anchor="middle" font-size="11" fill="#666">攻进上游一次，就能顺着信任链攻进上万个下游</text>
+<rect x="40" y="200" width="150" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="115" y="224" text-anchor="middle" font-size="13" fill="#1a1a2e">来源可信</text>
+          <text x="115" y="244" text-anchor="middle" font-size="11" fill="#666">只走官方渠道</text>
+<rect x="205" y="200" width="150" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="224" text-anchor="middle" font-size="13" fill="#1a1a2e">版本锁定 + 哈希</text>
+          <text x="280" y="244" text-anchor="middle" font-size="11" fill="#666">钉死版本，校验一致</text>
+<rect x="370" y="200" width="150" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="445" y="224" text-anchor="middle" font-size="13" fill="#1a1a2e">签名验证</text>
+          <text x="445" y="244" text-anchor="middle" font-size="11" fill="#666">封条破了就拒收</text>
+          <text x="280" y="296" text-anchor="middle" font-size="12" fill="#666">你没做错任何事，只是正常更新了一下软件——也可能中招</text>
+          <text x="280" y="320" text-anchor="middle" font-size="12" fill="#666">所以要先摸清家底：下一章讲 SBOM 与依赖扫描</text>
+        </svg>
+        <figcaption>图：软件供应链信任链——攻击者污染上游一次，就能顺着信任链攻进上万个下游</figcaption>
+      </figure>
+
+
+      <h2>一次依赖投毒事件的复盘</h2>
+<p>公开报道过的供应链事件里，有一个典型剧本：一个广受欢迎的开源包，维护者账号被盗，攻击者用这个账号发布了一个带恶意代码的新版本。下游的项目在日常更新时自动拉到了这个版本，
+恶意代码就跟着进了成千上万个应用。</p>
+<p>事件被发现后，各方的反应速度决定了损失大小：反应快的团队，因为有锁定文件和依赖扫描，几小时内就确认了自己有没有中招、影响面多大；反应慢的团队，花了好几天才摸清自己用了哪个版本。
+修复的动作也类似：
+先把恶意版本钉死、回滚到干净版本，再全量扫描确认。</p>
+<p>教训同样是三条：锁定文件 + 哈希校验是第一道防线，它让“被悄悄换掉”变得可以发现；依赖扫描要自动化，出事当天就要能回答“我们受不受影响”；关键依赖要有替代方案，
+一个包出问题，不能让整个项目停摆。</p>
+<div class="teacher-note"><strong>老师经验：</strong>我审计项目依赖，第一件事就是跑一遍依赖扫描，看有多少个已知漏洞、
+多少个包已经两年没人维护。有一回，一个项目用了
+400 多个包，其中 30 多个带高危漏洞，团队却完全不知道——因为他们只在项目刚开始时检查过一次，之后就再也没看过。我的规矩是：依赖扫描要进持续集成（CI），
+      每次提交代码都自动扫一次，有新的高危漏洞就告警；
+另外，引入新依赖要像“招人”一样谨慎——看维护状态、看下载量、看最近有没有可疑的版本变动。一个只有一个人维护、突然换了维护者、又突然发了个大版本的包，我一定会多看两眼。
+      </div>
+
+      <h2>动手做</h2>
+<p>1. 只在自己的虚拟机或实验环境里做：挑一个你自己的练习项目（比如<a href="m4c2-python-intro.html">模块四</a>里写过的 
+Python 小程序），列出它直接依赖的包，
+再用依赖树工具展开，看它间接依赖了多少个包——把“几百个包”这个数字亲眼看到。<br>2. 给这个项目跑一次开源依赖扫描（比如 pip-audit、npm audit 
+      或 OSV-Scanner）
+，记下扫出的漏洞数量和最高严重程度，挑一个高危的查它的 CVE 编号和修复版本。<br>3. 检查项目的锁定文件：确认每个依赖的版本和哈希都被钉死了；再故意改动一个包的版本，
+      看锁定文件和扫描结果如何变化。
+      <br>4. 写一份“新依赖引入检查单”：维护状态、最近更新、已知漏洞、替代方案——以后每加一个依赖都过一遍这张单子。</p>
+      <h2>避坑</h2>
+<p>别从聊天群、网盘、来路不明的网站下载安装包：只走官方仓库和官方渠道；别打错包名：冒牌包就等着你手滑，装之前核对包名和作者；别只扫一次依赖：新漏洞每天都在出，
+扫描要自动化、要定期；别忽略深层依赖：
+恶意代码常藏在“依赖的依赖”里；别把签名当摆设：签名对不上就拒绝安装，不要“先装了再说”；别对无人维护的包视而不见：长期没人维护的包，出问题也没人修，要评估替换。
+      </p>
+<p>这一章把<a href="m5c7-hash-signature-cert.html">模块五的哈希与签名</a>和<a href="m6c8-cve-cvss.html">模块六的 
+CVE 与
+CVSS</a>连进了软件的“身世”：你用的每一个包，都有作者、有来源、有历史，信任要一层一层验证。下一章我们把“摸清家底”做成一张正式的清单——<a href="m9c12-supply-chain-deep.html">第
+      12 章：供应链深入：SBOM 与依赖扫描</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>供应链攻击攻的是你信任的上游：污染开源包、冒牌包、污染构建与发布、一次“官方更新”就能波及上万个下游。</li>
+          <li>依赖会层层传递：直接依赖只有十几个，深层依赖可能有几百个，恶意代码常藏在深层依赖里。</li>
+          <li>防守三件基本功：来源可信（只走官方渠道）、版本锁定 + 哈希校验、签名验证（封条破了就拒收）。</li>
+          <li>依赖扫描要自动化、定期做，新漏洞爆出时第一时间知道自己受不受影响。</li>
+          <li>引入新依赖要像招人一样谨慎：看维护状态、看已知漏洞、准备好断供预案。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m9c10-ics-iot-intro.html">← 上一章：第 10 章：工控与物联网安全入门</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m9c12-supply-chain-deep.html">下一章：第 12 章：供应链深入：SBOM 与依赖扫描 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

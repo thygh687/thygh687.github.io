@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块九第 18 章：云安全深入：三大云的身份、存储与日志 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块九第 18 章：云安全深入：三大云的身份、存储与日志</h1>
+      <div class="meta"><span class="tag">进阶与新趋势</span>2026-11-25 · 模块九</div>
+      <p><a href="m9c3-cloud-basics.html">第 3 章</a>讲过云上的责任分界线，<a href="m9c4-cloud-deep.html">第 4 章</a>
+      讲了云 IAM 的通用原理、最常见的错误配置和 CSPM 是怎么扫出这些问题的。这一章不重复那些通用内容，只讲一件事：三大云平台——AWS、Azure、Google
+      Cloud
+      ——各自的身份、存储和日志服务，名字不一样、默认行为不一样、坑也不一样。同一个“别让存储桶公开”的道理，在三个云上翻车的方式各不相同。</p>
+      <p>先说一句重要的前提：本章所有例子都只用来说清楚概念，练习只在你自己的实验环境里做——用各家云的免费套餐或文档里的截图来对照，绝不在真实云账号、真实生产数据上练手。</p>
+
+      <h2>AWS：IAM、S3 与 CloudTrail</h2>
+      <p>AWS 的身份体系叫<strong>IAM</strong>：用户、用户组、角色（Role）和策略（Policy）四件套。AWS 最有特色的概念是角色——一段程序、一台虚拟机想要访问
+       AWS
+      资源，不用把密钥写进代码里，而是“扮演”一个角色，临时拿到权限，用完就过期。这是 AWS 上最应该养成的习惯：能扮演角色，就别发长期密钥。AWS 的坑也最出名：<strong>
+      S3 存储桶公开</strong>。S3 的权限有两层——桶策略和对象 ACL，两层里任何一层说“公开”，东西就公开了；历史上大量数据泄露，都是有人只改了一层、以为另一层还锁着。AWS
+ 
+           后来加了“阻止公开访问”的总开关，默认就是开着的——但总开关可以被关掉，关掉它的人往往不知道自己关掉了什么。日志方面，<strong>CloudTrail</strong>记录“
+      谁对 AWS 做了什么操作”，但它默认只记 90 天的事件历史，想长期保存、想收到异常操作的告警，得主动把日志送到 S3 并配上告警规则——默认状态下的
+      CloudTrail，
+      是“记了但没人看”的状态。</p>
+
+      <h2>Azure：Entra ID、Blob 存储与 Monitor</h2>
+      <p>Azure 的身份体系叫<strong>Microsoft Entra ID</strong>（以前叫 Azure AD）：它是微软云的账号中枢，管登录、管多因素认证、管条件访问。E
+      ntra ID 最有特色的功能是<strong>条件访问</strong>：可以定规则说“管理员账号只能从公司网络登录”“从没见过的国家登录必须再验证一次”——这就是零信任里“每次访问都重
+      新评估”的落地。但它的坑也在这里：条件访问的规则是“满足条件才放行”，规则写错一个字（比如把某个管理员组排除在外），就等于给攻击者留了后门。存储方面，<strong>Blob 存储</strong>
+      的坑和 S3 很像但名字不同：容器可以设成“允许匿名读取”，一旦设错，整个容器里的文件都能被直接下载；更隐蔽的是<strong>SAS 令牌</strong>——一段带签名的临时链接，本意
+      是“只分享这一个文件、只给两小时”，但有人图方便生成了“整个容器、永不过期”的 SAS 链接发出去，就等于把钥匙贴在了门口。日志方面，<strong>Azure Monitor 和活动日志
+      </strong>记录管理操作，但默认保留期很短，想长期留存得主动送到 Log Analytics 工作区——和 AWS 一样，默认只记、不告警。</p>
+
+      <h2>Google Cloud：IAM、Cloud Storage 与 Audit Logs</h2>
+      <p>Google Cloud 的身份体系直接就叫<strong>Cloud IAM</strong>：它以“成员—角色—资源”三元组授权，特色是角色分得特别细，而且有个容易踩的坑——<strong>
+      基本角色</strong>（Owner、Editor、Viewer）权限大得吓人：一个项目的 Editor 几乎能改项目里的一切，新手图方便给人
+      Editor，就等于给了半个管
+      理员。正确做法是用预定义角色里最小的那个，不够再自己定自定义角色。存储方面，<strong>Cloud Storage</strong>的坑在“统一访问控制”上：一个桶可以在“统一”和“细
+      粒度”两种模式之间切换，模式一换，之前按单个对象设的权限就可能失效或被覆盖——很多人是在出了问题之后才发现模式被换过。日志方面，<strong>Cloud Audit Logs</strong>
+      默认开启管理活动日志，但“数据访问日志”（谁读了哪个文件）默认是关着的——想看到“谁下载了这份数据”，得主动打开，而且它产生的数据量很大，账单也会跟着涨，所以开之前要先想好保留多久、存到哪
+      里。</p>
+
+      <h2>三朵云的对照：名字不同，坑相通</h2>
+      <p>把三朵云并排看，规律就清楚了。身份上：AWS 用角色、Azure 用条件访问、GCP 用细粒度角色——名字不同，但道理一样：<strong>最小权限 + 短期凭证 + 管理员开多因素
+      认证</strong>，走到哪朵云都适用。存储上：S3、Blob、Cloud Storage 各有一个“公开”开关，各有一个“临时分享链接”（预签名 URL、SAS 令牌、签名
+     
+       URL）——分享链接的过期时间和范围，是三朵云共同的翻车点。日志上：三家默认都是“记一部分、留不久、不告警”——<strong>日志要主动配置保留和告警，否则出事了才发现关键时间段的日志
+      已经没了</strong>。最后记住跨云的教训：同时用两朵云以上的团队，最容易在“以为这朵云的默认行为和那朵云一样”上翻车——换一朵云，先读它的默认行为，再动手。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="三大云平台身份存储日志对照图：AWS、Azure、Google Cloud各三行">
+          <rect x="20" y="20" width="160" height="44" rx="8" fill="#ff9900" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="47" text-anchor="middle" font-size="14" fill="#ffffff">AWS</text>
+          <rect x="200" y="20" width="160" height="44" rx="8" fill="#0078d4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="47" text-anchor="middle" font-size="14" fill="#ffffff">Azure</text>
+          <rect x="380" y="20" width="160" height="44" rx="8" fill="#4285f4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="47" text-anchor="middle" font-size="14" fill="#ffffff">Google Cloud</text>
+          <rect x="20" y="90" width="160" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">IAM：角色 + 策略</text>
+          <text x="100" y="134" text-anchor="middle" font-size="11" fill="#666">能扮演角色就别发密钥</text>
+          <rect x="200" y="90" width="160" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">Entra ID：条件访问</text>
+          <text x="280" y="134" text-anchor="middle" font-size="11" fill="#666">规则写错等于留后门</text>
+          <rect x="380" y="90" width="160" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">Cloud IAM：细粒度角色</text>
+          <text x="460" y="134" text-anchor="middle" font-size="11" fill="#666">别图方便给 Editor</text>
+          <rect x="20" y="170" width="160" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="194" text-anchor="middle" font-size="13" fill="#1a1a2e">S3：两层权限</text>
+          <text x="100" y="214" text-anchor="middle" font-size="11" fill="#666">桶策略和 ACL 任一公开即公开</text>
+          <rect x="200" y="170" width="160" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="194" text-anchor="middle" font-size="13" fill="#1a1a2e">Blob：匿名读取 + SAS</text>
+          <text x="280" y="214" text-anchor="middle" font-size="11" fill="#666">SAS 别给整个容器、永不过期</text>
+          <rect x="380" y="170" width="160" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="194" text-anchor="middle" font-size="13" fill="#1a1a2e">Cloud Storage：两种模式</text>
+          <text x="460" y="214" text-anchor="middle" font-size="11" fill="#666">模式一换，对象权限可能失效</text>
+          <rect x="20" y="250" width="160" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="274" text-anchor="middle" font-size="13" fill="#1a1a2e">CloudTrail</text>
+          <text x="100" y="294" text-anchor="middle" font-size="11" fill="#666">默认只留 90 天</text>
+          <rect x="200" y="250" width="160" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="274" text-anchor="middle" font-size="13" fill="#1a1a2e">Monitor / 活动日志</text>
+          <text x="280" y="294" text-anchor="middle" font-size="11" fill="#666">默认保留期短</text>
+          <rect x="380" y="250" width="160" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="274" text-anchor="middle" font-size="13" fill="#1a1a2e">Cloud Audit Logs</text>
+          <text x="460" y="294" text-anchor="middle" font-size="11" fill="#666">数据访问日志默认关闭</text>
+        </svg>
+        <figcaption>图：三大云的身份、存储与日志对照——名字不同，坑相通</figcaption>
+      </figure>
+
+      <h2>多云管理的三个习惯</h2>
+      <p>很多团队不是主动选了多云，是不知不觉就变成多云的：一个部门用 AWS，一个项目用 Azure，还有一个历史遗留系统在 Google Cloud
+      上。多云不可怕，可怕的是每
+      朵云各管各的。第一个习惯是<strong>统一的资产清单</strong>：三朵云上分别有哪些账号、哪些存储桶、哪些数据库，记在一张表里，每月对一次账——不知道有什么，就没法保护什么。第二
+      个习惯是<strong>统一的日志入口</strong>：三家的日志都送到同一个地方保存和分析，出事的时候不用三处翻找，时间线能对上。</p>
+      <p>第三个习惯是<strong>统一的检查节奏</strong>：每月做一次“公开访问检查”——三朵云的存储桶一个一个看，有没有公开的、有没有分享链接过期没收回的；每季度做一次“权限检查
+      ”——哪些账号绑了高权限角色、哪些长期密钥三个月没换过。检查不用复杂，贵在固定节奏：云环境变化很快，今天合规的配置，下个月可能就被某个新功能改掉了。最后记住一句话：多云管理的核心不是“会用
+      三朵云”，是“用同一套标准管三朵云”。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我见过最贵的云事故，不是黑客技术多高明，而是有人把 S3 桶设成公开之后，三个月都没人发现——备份文件、客户数据全在公网上，搜索引擎都能搜到。事后复盘，所有人都说“以为另一层权限还锁着”。所以我的习惯是：任何一个存储桶上线之前，先用云厂商自己的“公开访问检查”扫一遍，再用一个没登录的浏览器直接访问一次——你自己能打开，别人也能打开。还有一句：三朵云的日志都有一个共同点——默认状态是“记了但没人看”。我接手过的每个云环境，第一件事都是确认两件事：日志留多久、异常操作有没有告警。这两件事没配好，等于监控摄像头装了却没人看屏幕。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的实验环境里：对照本章的三张对照表，默写出 AWS、Azure、Google Cloud 各自的身份服务、存储服务和日志服务叫什么，不看书，写完再对照纠错。<br>2
+      . 读三家云官方文档里关于“阻止公开访问”的说明（只读文档，不动真实账号）：S3 的阻止公开访问总开关、Blob 的匿名访问设置、Cloud Storage
+      的统一访问控制，各
+      写一句话说明它们默认是开还是关。<br>3. 画一张你自己的对照表：三行是三朵云，三列是身份、存储、日志，每个格子写两行——“这个服务叫什么”和“最容易踩的坑是什么”；画完之后问自己：如果
+      只能记住每朵云一个坑，你记哪一个。<br>4. 假设你要给一家同时用 AWS 和 Azure 的小公司写三条云安全规则，只写三条，你会写哪三条？把理由写在每条后面——答案没有标准，但每条都
+      要能对应到本章讲过的一个具体坑。</p>
+      <h2>避坑</h2>
+      <p>别把一朵云的默认行为套到另一朵云上：换一朵云，先读它的默认行为，再动手；别只改一层存储权限：S3 的桶策略和对象 ACL、Cloud Storage
+      的两种模式，任何一层
+      公开都等于公开；别把分享链接设成“整个容器、永不过期”：预签名 URL、SAS 令牌、签名 URL
+      都要限定范围和时间；别以为日志默认就够用：三家的日志默认都留不久、不告警，保
+      留期和告警要主动配置；别在真实云账号上练手：对照文档和免费套餐学习，真实生产数据碰都不要碰。</p>
+      <p>这一章讲的是三大云各自的身份、存储和日志：AWS 的 IAM 角色与 S3 两层权限、Azure 的 Entra ID 条件访问与 Blob 的 SAS 令牌、Google Clou
+      d
+      的细粒度角色与 Cloud Storage 的两种模式——名字不同，但坑相通：最小权限、关好公开开关、日志要主动配保留和告警。它接上了<a href="m9c4-cloud-deep.html">
+      第 4 章</a>的通用原理：那一章讲 IAM 为什么会配错、错误配置长什么样，这一章讲错在三个具体平台上长什么样。下一章（<a href="m9c19-kubernetes-deep.html">
+      第 19 章</a>）我们从云平台钻进云上的编排层：Kubernetes 的 RBAC、Pod 安全与运行时，一个都不能松。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>AWS：IAM 用角色代替长期密钥；S3 有桶策略和对象 ACL 两层权限，任一公开即公开；CloudTrail 默认只留 90 天。</li>
+          <li>Azure：Entra ID 的条件访问规则写错等于留后门；Blob 的匿名读取和 SAS 令牌要限定范围与时间；活动日志默认保留期短。</li>
+          <li>Google Cloud：别图方便给基本角色 Editor；Cloud Storage 的统一与细粒度两种模式切换会改写对象权限；数据访问日志默认关闭。</li>
+          <li>三朵云的共同规律：最小权限 + 短期凭证 + 管理员开多因素认证；日志要主动配置保留期和告警。</li>
+          <li>跨云最容易翻车的地方，是以为这朵云的默认行为和那朵云一样——换云先读默认行为。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m9c17-binary-exploitation.html">← 上一章：第 17 章：二进制利用深入：格式化字符串、堆与 ROP</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m9c19-kubernetes-deep.html">下一章：第 19 章：Kubernetes 安全深入：RBAC、Pod 安全与运行时 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

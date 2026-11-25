@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 19 章：活动目录攻击 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 19 章：活动目录攻击</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>上一章（<a href="m7c18-ad-basics.html">第 18 章</a>）我们画好了活动目录的骨架：域、域控、OU、组、GPO、Kerberos 三步拿票。这一章开始拆楼：攻击者拿到一个普通域账号之后，是怎么一步步爬到域控的。先说清楚边界：本章所有手法只在你自己的 lab.local 实验环境里演示和理解，绝不在真实公司的域、真实网络上尝试——未经授权的域内攻击是违法行为，第 28 章会把法律边界讲透。学这一章的目的，是为了第 20 章的防御：你不知道攻击者怎么爬，就不知道该在哪里设防。</p>
+      <p>攻击 AD 有一条经典路线，记住它的四个台阶：<strong>立足 → 发现 → 提权 → 拿下域控</strong>。立足，就是先拿到域里的一个落脚点：一个普通域账号、一台普通客户端的权限。发现，就是摸清域的结构：有哪些用户、哪些组、谁是管理员、哪条路能通向域控。提权，就是从普通用户爬到本地管理员、再爬到域管理员。拿下域控，就是拿到整个域的最高权限。这一章讲前三个台阶里最常用的手法，拿下域控的终极手法留到第 21 章进阶。</p>
+
+      <h2>票据攻击：偷通行证、伪造通行证</h2>
+      <p>Kerberos 的票据是 AD 世界的通行证，攻击者围绕票据发明了三种经典手法。第一种是<strong>票据窃取（Pass-the-Ticket）</strong>：从一台已被控制的电脑内存里，把别人的有效票据“借”出来用——不需要知道密码，有票就能进门。这就是为什么内存里不能留高权限账号的票据，第 20 章的防御会从这里下手。第二种是<strong>Kerberoasting（烤票据）</strong>：攻击者向域控申请一张服务票据，这张票据是用服务账号的密码加密的；拿到票据后离线慢慢猜密码——猜的过程不产生网络流量，域控根本看不到。防御的关键是服务账号要用长而随机的密码（按 NIST SP 800-63B Rev.4，单独使用的密码至少 15 位），并且定期更换。第三种是<strong>AS-REP Roasting</strong>：针对那些“不需要预认证”的账号，攻击者直接向域控要一张票据，同样离线猜密码。三种手法的共同点：<strong>攻击者偷的不是密码本身，而是能离线猜密码的东西</strong>。</p>
+
+      <h2>哈希传递：密码的“指纹”也能当密码用</h2>
+      <p>Windows 验证身份时，用的不是密码明文，而是密码算出来的哈希值——可以理解成密码的“指纹”。正常流程是：你输密码，系统算出哈希，拿哈希去和域控存的哈希比对。<strong>哈希传递（Pass-the-Hash）</strong>的漏洞在于：如果攻击者从内存里偷到了某个账号的哈希，他可以直接拿着哈希去验证，跳过“输密码、算哈希”这一步——系统只认哈希，不认你到底知不知道密码。换句话说，哈希泄露了，就等于密码泄露了。这就是为什么第 16 章讲的内存安全、第 20 章讲的凭据保护如此重要：哈希一旦进了内存，就成了攻击者的目标。防御哈希传递的核心思路只有一条：<strong>别让高权限账号的哈希出现在普通电脑的内存里</strong>——域管理员绝不在普通客户端上登录。</p>
+
+      <h2>BloodHound：把域画成一张攻击地图</h2>
+      <p>BloodHound 是 AD 攻击里最有名的工具，它做的事情其实很简单：先通过 LDAP 把整个域的结构读出来——谁属于哪个组、谁能登录哪台电脑、谁对哪个 OU 有管理权；再把这些关系画成一张图，自动算出“从你现在的位置，到域管理员最短要走几步”。举个例子：你在客户端 1 上是个普通用户，但 BloodHound 发现，客户端 1 上有个本地管理员组里躺着一个服务账号，这个服务账号又能登录另一台服务器，而那台服务器上有域管理员登录过的痕迹——三步，就到域控了。没有这张图，攻击者要在几百台电脑的域里盲人摸象；有了这张图，路一下子就清楚了。防御者同样要用 BloodHound——第 20 章会讲，定期用它给自己的域“体检”，把那些“普通用户三步就能到域管理员”的路径提前堵死。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="活动目录攻击四台阶与三种票据手法图">
+          <rect x="20" y="20" width="120" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="42" text-anchor="middle" font-size="13" fill="#1a1a2e">1. 立足</text>
+          <text x="80" y="60" text-anchor="middle" font-size="11" fill="#666">一个普通域账号</text>
+          <rect x="150" y="20" width="120" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="210" y="42" text-anchor="middle" font-size="13" fill="#1a1a2e">2. 发现</text>
+          <text x="210" y="60" text-anchor="middle" font-size="11" fill="#666">摸清域的结构</text>
+          <rect x="280" y="20" width="120" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="340" y="42" text-anchor="middle" font-size="13" fill="#1a1a2e">3. 提权</text>
+          <text x="340" y="60" text-anchor="middle" font-size="11" fill="#666">爬到域管理员</text>
+          <rect x="410" y="20" width="130" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="475" y="42" text-anchor="middle" font-size="13" fill="#1a1a2e">4. 拿下域控</text>
+          <text x="475" y="60" text-anchor="middle" font-size="11" fill="#666">整个域的最高权限</text>
+          <rect x="20" y="120" width="160" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">票据窃取</text>
+          <text x="100" y="160" text-anchor="middle" font-size="11" fill="#666">借别人的有效票据用</text>
+          <rect x="200" y="120" width="160" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">Kerberoasting</text>
+          <text x="280" y="160" text-anchor="middle" font-size="11" fill="#666">拿服务票据离线猜密码</text>
+          <rect x="380" y="120" width="160" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">哈希传递</text>
+          <text x="460" y="160" text-anchor="middle" font-size="11" fill="#666">拿哈希当密码用</text>
+          <rect x="140" y="220" width="280" height="56" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="244" text-anchor="middle" font-size="14" fill="#1a1a2e">BloodHound：把域画成攻击地图</text>
+          <text x="280" y="264" text-anchor="middle" font-size="11" fill="#666">从立足点到域管理员，最短走几步</text>
+          <text x="280" y="312" text-anchor="middle" font-size="12" fill="#666">偷的不是密码，是能离线猜密码的东西</text>
+        </svg>
+        <figcaption>图：AD 攻击的四个台阶与三种票据手法，BloodHound 负责算出最短路径</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我第一次用 BloodHound 给一个真实环境（授权测试）画图时，吓了一跳：一个实习生账号，离域管理员只隔三步——实习生能登录一台旧服务器，那台服务器的本地管理员组里有个多年没人用的服务账号，那个服务账号又能登录一台域管理员经常登录的电脑。没有一张图，谁也想不到这条路。防御 AD 的第一课就是：攻击路径不是攻击者“想出来”的，是域的结构“长出来”的——权限给得越乱，路就越多。所以第 20 章的防御，第一件事不是买产品，是把权限收拾干净。还有一句：Kerberoasting 教会我一件事——服务账号的密码，千万别图省事设成弱密码，因为服务票据是任何人都能向域控要的，弱密码等于把门钥匙挂在门口。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的 lab.local 实验环境里：用 BloodHound 的数据收集器（SharpHound）收集你实验域的数据，再用 BloodHound 打开，看从一个普通实验用户到域管理员有几条路、每条路经过谁。<br>2. 只在你自己的实验环境里：故意给一个实验用户多余的权限（比如把普通用户加进某个服务器的本地管理员组），重新收集数据，看 BloodHound 算出的最短路径变短了没有——体会“权限越乱，路越多”。<br>3. 只在你自己的实验环境里：把多余的权限收回来，再收集一次数据，确认最短路径变长或消失了，理解“收拾权限就是堵路”。<br>4. 写一页纸的笔记：用你自己的话解释票据窃取、Kerberoasting、哈希传递三者的区别——偷的是什么、需不需要密码、防御的关键各是什么。</p>
+      <h2>避坑</h2>
+      <p>绝不在真实域上跑这些手法：未经授权的域内攻击是违法行为，只在自己的 lab.local 里做；别在实验环境里用真实密码：服务账号用长随机实验密码，练完就换；别只盯着工具输出：BloodHound 的图要会读——每条边是什么意思、每个节点是谁，读不懂图等于没做；别以为拿到域管理员就“学完了”：拿下域控只是开始，怎么发现、怎么防御才是第 20 章的重点；别把哈希当成“不是密码”：哈希泄露等于密码泄露，保护哈希和保护密码是一回事。</p>
+      <p>攻击的路线图已经清楚了：立足、发现、提权、拿下域控；票据和哈希是攻击者最爱偷的东西；BloodHound 负责把路算出来。下一章（<a href="m7c20-ad-defense.html">第 20 章</a>）换到防守方：怎么守住域控——分层管理、凭据保护、定期体检，把攻击者要走的路一条一条堵死。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>AD 攻击四台阶：立足、发现、提权、拿下域控；每一步都在为下一步铺路。</li>
+          <li>票据窃取是借别人的有效票据用，Kerberoasting 是拿服务票据离线猜密码，AS-REP Roasting 针对不需要预认证的账号。</li>
+          <li>哈希传递：哈希是指纹，系统只认哈希不认密码，哈希泄露等于密码泄露。</li>
+          <li>BloodHound 通过 LDAP 读出域结构，画成攻击地图，算出到域管理员的最短路径。</li>
+          <li>攻击路径是域的结构“长出来”的：权限给得越乱，路就越多；收拾权限就是堵路。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c18-ad-basics.html">← 上一章：第 18 章：活动目录基础</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c20-ad-defense.html">下一章：第 20 章：活动目录防御与加固 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

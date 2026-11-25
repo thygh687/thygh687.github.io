@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 10 章：Burp Suite 深入 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 10 章：Burp Suite 深入</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>前面几章讲漏洞原理时，反复出现一句话：“用 Burp 把请求拦下来改一改”。这一章就讲这个工具本身。Burp Suite 是 Web 渗透测试的事实标准：它坐在浏览器和服务器中间当代理，浏览器发出的每个请求、服务器返回的每个响应，都要经过它。经过它，就能被看到、被改掉、被重放、被爆破。第 5 章的逻辑漏洞、第 7 章的越权测试，靠的就是它。学会 Burp，等于拿到了 Web 测试的“总开关”。</p>
+      <p>先讲清楚 Burp 是怎么“坐在中间”的。浏览器默认是直连服务器的；配好代理后，浏览器把请求先发给 Burp（通常是本地 127.0.0.1:8080），Burp 再转发给服务器，服务器的响应也先回给 Burp，再由 Burp 转回浏览器。这就是为什么第一步是配代理：浏览器设置代理为 127.0.0.1:8080，Burp 里打开拦截开关（Intercept on），请求就会停在 Burp 里等你处理。HTTPS 网站还要多一步：装 Burp 的 CA 证书到浏览器里，否则浏览器会因为“证书不是它认识的机构签的”而报警——Burp 要解密 HTTPS 流量，必须让浏览器信任它的证书。这一步只在你自己的虚拟机、自己的浏览器里做。</p>
+
+      <h2>Proxy 与 Intercept：先看，再改</h2>
+      <p>Burp 最核心的模块是 Proxy。打开拦截后，每发一个请求，Burp 都会把它“冻住”显示给你：请求行、请求头、请求体、Cookie，全都看得见、改得动。点 Forward 放行，点 Drop 丢弃，改完再放行，服务器收到的就是你改过的版本。第 5 章的价格篡改就是这么做的：下单请求里的 <code>price=99</code> 改成 <code>price=1</code> 再放行，看服务器认不认。改完要养成习惯：看一眼服务器的响应——响应里写着“改成功了”还是“校验失败”，这是测试的直接反馈。</p>
+      <p>Proxy 还有个 HTTP history：所有经过的请求都会留一条记录。测试做到一半想不起来刚才发过什么，翻 history 就行；想把某个请求再发一次，右键 Send to Repeater。初学者最容易犯的错是拦截开着不关：开了拦截，每个请求都要手动点放行，正常浏览都卡住了——不改包的时候，记得把 Intercept 关掉（Intercept off），让流量正常通过，只在需要改的时候再打开。</p>
+
+      <h2>Repeater 与 Intruder：重放与爆破</h2>
+      <p><strong>Repeater（重放器）</strong>是 Burp 里用得最多的模块：把一个请求发过去，改一个参数，再发一次，对比两次响应。测 SQL 注入时，同一个参数换十个 payload，一个一个看回显；测越权时，同一个请求换三个不同的用户 ID，看哪个能看到别人的数据。Repeater 的价值在于“一次只改一个变量”，改完立刻看到结果——这是所有手工测试的基本功。</p>
+      <p><strong>Intruder（入侵者）</strong>是把 Repeater 的活自动化：选一个参数位，挂一个字典（比如常见用户名、常见密码、数字 1 到 1000），Burp 自动发几百上千个请求，把每个响应按状态码、长度、时间排好给你看。测登录爆破、枚举用户 ID、猜隐藏路径，都是 Intruder 的活。但要注意两点：免费版的 Intruder 是限速的，发得很慢；更重要的是，爆破只能对自己的靶场做，对真实网站做登录爆破是越界行为，还可能把账号锁死、把服务打挂。</p>
+
+      <h2>Scanner、Decoder 与其他帮手</h2>
+      <p>Burp 的 Scanner（扫描器，专业版功能）能自动爬网站、自动测常见漏洞，输出一份带严重程度的报告。免费版没有主动扫描，但可以把 Scanner 的思路学过来：爬一遍站，把所有接口列出来，再逐个手工测。Decoder（解码器）是小帮手：Base64 解码、URL 解码、哈希识别，第 7 章的 JWT 载荷就是用它这类工具解开的。还有 Comparer（对比器）：把两次响应并排比对，找细微差别——测布尔盲注时，两次响应只差一个词，肉眼看不出来，Comparer 一比就现形了。</p>
+      <p>最后是工作习惯：Burp 的项目文件（Project）要保存，测试做到一半关掉 Burp 再打开，history 和 Repeater 里的请求都在；测试范围（Scope）要先设好，只拦截目标站点的流量，别把浏览器里其他网站的请求也拦进来；每个发现的请求和响应，要截图或保存原始报文，写报告时当证据用。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Burp Suite代理工作原理图：浏览器经Burp转发请求到服务器，拦截改包后再放行">
+          <rect x="20" y="140" width="110" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="75" y="166" text-anchor="middle" font-size="13" fill="#1a1a2e">浏览器</text>
+          <text x="75" y="186" text-anchor="middle" font-size="11" fill="#666">代理 127.0.0.1:8080</text>
+          <rect x="210" y="120" width="140" height="100" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="146" text-anchor="middle" font-size="13" fill="#1a1a2e">Burp Suite</text>
+          <text x="280" y="166" text-anchor="middle" font-size="11" fill="#666">Proxy 拦截 · 改包</text>
+          <text x="280" y="184" text-anchor="middle" font-size="11" fill="#666">Repeater 重放</text>
+          <text x="280" y="202" text-anchor="middle" font-size="11" fill="#666">Intruder 爆破</text>
+          <rect x="430" y="140" width="110" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="485" y="166" text-anchor="middle" font-size="13" fill="#1a1a2e">目标服务器</text>
+          <text x="485" y="186" text-anchor="middle" font-size="11" fill="#666">只收靶场流量</text>
+          <line x1="130" y1="160" x2="210" y2="160" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#d)"/>
+          <line x1="350" y1="160" x2="430" y2="160" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#d)"/>
+          <line x1="430" y1="190" x2="350" y2="190" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#d)"/>
+          <line x1="210" y1="190" x2="130" y2="190" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#d)"/>
+          <text x="280" y="110" text-anchor="middle" font-size="12" fill="#666">HTTPS 要装 Burp CA 证书到自己的浏览器</text>
+          <rect x="120" y="250" width="320" height="60" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="274" text-anchor="middle" font-size="13" fill="#1a1a2e">工作流：拦截看请求 → 改参数 → 放行</text>
+          <text x="280" y="296" text-anchor="middle" font-size="11" fill="#666">→ 看响应 → 送 Repeater 细测 → 有发现就保存报文当证据</text>
+          <defs><marker id="d" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#1a1a2e"/></marker></defs>
+        </svg>
+        <figcaption>图：Burp Suite 坐在浏览器与服务器中间——拦截、改包、重放、爆破都在这里完成</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>Burp 刚上手时，最大的敌人不是工具复杂，而是“不知道该看什么”。我的建议是：先别碰 Intruder 和 Scanner，把 Proxy + Repeater 练熟——拦截一个登录请求，改一个参数，看一次响应，这一个循环练上一百遍，Web 测试的基本功就有了。我见过有人装上 Burp 第一天就跑自动扫描，扫出一堆“发现”，结果一半是误报、一半看不懂——自动扫描是加速器，不是替代品，它扫出来的每个发现都要回到 Repeater 里亲手验证一遍。还有一个习惯：每次测试前先设 Scope，只拦目标站点的流量。我有一次忘了设 Scope，浏览器里同时开着邮箱，拦截把邮箱的请求也冻住了，差点把一封正在写的邮件弄丢。从那以后，Scope 成了我开 Burp 的第一件事。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在自己的虚拟机里：装好 Burp Suite 免费版，浏览器代理设为 127.0.0.1:8080，装好 Burp CA 证书，打开拦截访问虚拟机里的 DVWA，确认请求能被冻住、改完能放行。<br>2. 改包练习：在 DVWA 里下一笔“订单”（或改一次资料），在 Burp 里把请求拦下来，改一个参数（价格、数量、用户 ID）再放行，记录服务器的响应有什么变化。<br>3. Repeater 练习：把一个登录请求送到 Repeater，换五个不同的用户名密码组合各发一次，对比五次响应的状态码和长度，找出“用户名存在”和“用户名不存在”的差别。<br>4. 设 Scope 并保存项目：把目标站点加进 Scope，确认其他网站的流量不再被拦截；保存项目文件，关掉 Burp 再打开，确认 history 和 Repeater 里的请求还在。</p>
+      <h2>避坑</h2>
+      <p>只对自己的靶场用 Burp：拦截、改包、爆破真实网站的流量是越界行为；不改包时记得关拦截：开着拦截不关，正常浏览都会被卡住；先设 Scope 再测试：别把浏览器里其他网站的请求也拦进来；免费版 Intruder 是限速的：爆破大字典会很慢，先从小字典开始；自动扫描的结果必须亲手验证：每个发现都要回 Repeater 里复现一遍，误报不能写进报告；保存项目文件：测试做到一半丢了 history，等于白干。</p>
+      <p>Burp 这件神器讲完了，Web 测试的“手”就有了。下一章我们把视野再放大一级：<a href="m7c11-exploit-tooling.html">第 11 章：漏洞利用工具链</a>——Metasploit、密码攻击、持久化与横向移动，讲讲拿到一个漏洞之后，整个利用链条是怎么串起来的。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>Burp Suite 坐在浏览器与服务器中间当代理：配代理 127.0.0.1:8080，HTTPS 要装 Burp CA 证书到自己的浏览器。</li>
+          <li>Proxy + Intercept：请求能被冻住、改掉、放行或丢弃；HTTP history 留着所有记录；不改包时要关拦截。</li>
+          <li>Repeater 一次只改一个变量、立刻看结果，是手工测试的基本功；Intruder 挂字典自动发大量请求，只对自己的靶场用。</li>
+          <li>Scanner 自动爬站扫漏洞（专业版），Decoder 解码、Comparer 对比响应差异，都是帮手；扫描结果必须亲手验证。</li>
+          <li>好习惯：先设 Scope、保存项目文件、把发现的原始报文存下来当报告证据。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c9-nmap-deep.html">← 上一章：第 9 章：Nmap 与扫描深入</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c11-exploit-tooling.html">下一章：第 11 章：漏洞利用工具链 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

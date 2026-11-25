@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 9 章：Nmap 与扫描深入 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 9 章：Nmap 与扫描深入</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>上一章我们把 Nmap 当作信息收集的一步来用：<code>nmap -sV -O</code>，看端口、看版本、看系统。这一章把 Nmap 拆开讲透：它到底发了什么包、不同的扫描类型有什么区别、什么时候该快、什么时候该慢、脚本能帮你多干哪些活。Nmap 被称为“扫描的艺术”，艺术就藏在这些选择里——同样的目标，不同的选项，看到的东西可能完全不同。</p>
+      <p>还是先立规矩：<strong>本章所有的扫描只针对你自己的虚拟机。</strong>靶机 IP 换成你虚拟机里那台靶机的地址，绝不扫真实网络、真实网站。命令本身没有善恶之分，授权范围决定了它是不是越界。</p>
+
+      <h2>扫描类型：问法不同，答案不同</h2>
+      <p>Nmap 的核心是“发探测包、看回包”。不同的扫描类型，问法不同。<strong>TCP 连接扫描（-sT）</strong>：老老实实完成一次完整的 TCP 三次握手再断开（断开时走四次挥手），最“礼貌”，也最容易被日志记录下来。<strong>SYN 扫描（-sS）</strong>：只发 SYN，等对方回 SYN/ACK 就知道端口开着，然后发 RST 直接断开，不完成握手——这就是默认的“半开扫描”，快、动静相对小，是最常用的扫描方式，需要管理员权限才能发原始包。</p>
+      <p><strong>UDP 扫描（-sU）</strong>：UDP 没有握手，Nmap 发一个空的 UDP 包过去，收到 ICMP 端口不可达就是关着，没回包可能是开着、也可能是被过滤——所以 UDP 扫描慢、结论也模糊，但 DNS（53）、SNMP（161）这些重要服务都是 UDP 的，不能不扫。<strong>其他问法</strong>还有 FIN、NULL、XMAS 扫描：发一些“不合常理”的包，利用不同系统对异常包的不同反应来判断端口状态，对付某些防火墙有用，但对 Windows 系统基本无效——因为 Windows 对所有这类包都回 RST。记住这个区别，免得在 Windows 靶机上白忙一场。</p>
+
+      <h2>时序与隐蔽：快和慢的取舍</h2>
+      <p>Nmap 的时序模板 <code>-T0</code> 到 <code>-T5</code>，是从“偏执慢”到“疯狂快”的六档。<code>-T0</code> 每 5 分钟才发一个包，慢到几乎不会触发任何告警；<code>-T3</code> 是默认档；<code>-T4</code> 是提速档，局域网里扫自己的虚拟机常用它；<code>-T5</code> 最快，但容易丢包、容易把结果扫错。在自己的虚拟机实验室里，用 <code>-T4</code> 就够了；<code>-T5</code> 只在时间特别紧、网络特别稳的时候用。还有两个实用选项：<code>--top-ports 100</code> 只扫最常见的 100 个端口（省时间），<code>-p-</code> 扫全部 65535 个端口（最全面，也最慢）。先扫常见端口找线索，再对有发现的目标扫全端口，是最高效的顺序。</p>
+      <p>防火墙会挡住很多探测。Nmap 有几个绕过思路：<code>-f</code> 把包分片，让防火墙看不清全貌；<code>--data-length</code> 在包里加随机数据，躲开按包大小识别的规则；<code>-D</code> 用诱饵 IP 混淆来源（只在授权测试里用）；<code>--source-port 53</code> 把源端口伪装成 DNS 端口，利用防火墙“放行 DNS”的规则。这些技巧的意义不在于“躲猫猫”本身，而在于帮你判断：目标前面有没有防火墙、防火墙的规则有多严——这本身就是有价值的情报。</p>
+
+      <h2>服务探测、系统探测与 NSE 脚本</h2>
+      <p>知道端口开着还不够，要知道端口后面跑的是什么。<code>-sV</code> 会主动和服务“聊几句”：发特定的探测串，看回包里的 Banner（横幅信息），猜出服务和版本。版本信息要会用：Apache 2.4.49 有已知的路径穿越漏洞，OpenSSH 某个旧版本有用户枚举问题——版本一出来，对照 CVE 库，线索就有了。但也要注意：Banner 可以伪造，版本号可以改，服务探测的结果要当作“线索”，不是“定论”。</p>
+      <p><code>-O</code> 猜操作系统，原理是看目标 TCP/IP 协议栈的“指纹”：不同系统对异常包的反应、窗口大小、TTL 初始值都不一样，Nmap 拿这些特征去匹配指纹库。猜得准不准，取决于目标的特征够不够典型。最后是 <strong>NSE（Nmap Scripting Engine）</strong>：Nmap 自带几百个脚本，能干很多扫描之外的活：<code>--script=http-title</code> 抓网页标题、<code>--script=smb-vuln-ms17-010</code> 检查永恒之蓝漏洞、<code>--script=vuln</code> 跑一整类漏洞检查脚本。NSE 的正确用法是“先扫端口，再针对性地挑脚本”，而不是上来就把所有脚本全跑一遍。</p>
+
+      <h2>输出与整理：扫完要能交代</h2>
+      <p>扫描结果要保存下来，备查、备复现。Nmap 的输出选项：<code>-oN</code> 存普通文本、<code>-oX</code> 存 XML（方便导入其他工具）、<code>-oA</code> 三种格式一次全存。我的习惯是每次扫描都用 <code>-oA</code>，再把关键结论抄进信息收集表：目标 IP、开着的端口、服务版本、操作系统猜测、NSE 发现、待验证项。扫描不是目的，扫描是为了回答“下一步该往哪打”——扫完说不出下一步，等于白扫。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Nmap扫描类型与工作流图：SYN扫描半开连接、服务探测、系统探测、NSE脚本">
+          <rect x="20" y="20" width="160" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="44" text-anchor="middle" font-size="13" fill="#1a1a2e">-sS SYN 扫描</text>
+          <text x="100" y="64" text-anchor="middle" font-size="11" fill="#666">半开，最常用</text>
+          <rect x="200" y="20" width="160" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="44" text-anchor="middle" font-size="13" fill="#1a1a2e">-sT 连接扫描</text>
+          <text x="280" y="64" text-anchor="middle" font-size="11" fill="#666">完整握手，易被记录</text>
+          <rect x="380" y="20" width="160" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="44" text-anchor="middle" font-size="13" fill="#1a1a2e">-sU UDP 扫描</text>
+          <text x="460" y="64" text-anchor="middle" font-size="11" fill="#666">慢，但 DNS/SNMP 必扫</text>
+          <rect x="20" y="110" width="250" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="134" text-anchor="middle" font-size="13" fill="#1a1a2e">-sV 服务探测 + -O 系统探测</text>
+          <text x="145" y="154" text-anchor="middle" font-size="11" fill="#666">版本对照 CVE，系统看协议栈指纹</text>
+          <rect x="290" y="110" width="250" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="134" text-anchor="middle" font-size="13" fill="#1a1a2e">NSE 脚本：--script=vuln</text>
+          <text x="415" y="154" text-anchor="middle" font-size="11" fill="#666">针对性挑脚本，别全跑一遍</text>
+          <rect x="120" y="200" width="320" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="224" text-anchor="middle" font-size="13" fill="#1a1a2e">时序：-T0 最慢最隐蔽 → -T5 最快</text>
+          <text x="280" y="244" text-anchor="middle" font-size="11" fill="#666">实验室常用 -T4；先扫常见端口，再扫全端口</text>
+          <text x="280" y="290" text-anchor="middle" font-size="12" fill="#666">输出用 -oA 保存三种格式；扫完要能说出“下一步往哪打”</text>
+          <text x="280" y="314" text-anchor="middle" font-size="12" fill="#666">只扫自己的虚拟机——授权范围决定扫描是不是越界</text>
+        </svg>
+        <figcaption>图：Nmap 的扫描类型、探测手段与工作顺序——先常见端口，再全端口，再针对性脚本</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>Nmap 用熟之后，你会发现它最大的价值不是“扫出了什么”，而是“帮你排除了什么”。我有一次对着一台靶机扫了全端口，只开了 22 和 80——当时有点失望，觉得“没东西可打”。结果正是这个“只有两个口”的结论，让我把全部精力放到 80 端口的网站上，最后在网站上找到了突破口。扫描的意义一半在“发现”，一半在“缩小范围”。另外一个实战教训：UDP 扫描慢得让人怀疑人生，一台主机的 UDP 全端口能扫半小时以上——正确做法是只扫 UDP 的常见端口（<code>--top-ports 20 -sU</code>），全端口 UDP 扫描留给确实有需要的时候。还有，扫之前一定先确认你在扫谁：输错一个 IP，扫到别人的机器，解释起来很麻烦；我的习惯是扫之前把目标 IP 念一遍，再按回车。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只扫自己的虚拟机：对靶机分别跑 <code>nmap -sS</code> 和 <code>nmap -sT</code>，对比两次的输出和用时，理解半开扫描和完整连接扫描的区别；再跑 <code>nmap -sU --top-ports 20</code> 看 UDP 端口。<br>2. 跑服务和系统探测：<code>nmap -sV -O -T4 靶机IP</code>，记下每个端口的服务版本和系统猜测，再对照 CVE 库查一个旧版本服务已知的漏洞，写进你的收集表。<br>3. 试 NSE 脚本：对靶机跑 <code>nmap --script=http-title -p 80 靶机IP</code> 和 <code>nmap --script=vuln -p 80 靶机IP</code>，看脚本输出了什么，判断哪些是真发现、哪些需要再验证。<br>4. 练输出习惯：用 <code>-oA scan-靶机名-日期</code> 保存一次完整扫描，把关键结论抄进信息收集表，并写一句话：根据这次扫描，下一步你打算往哪打。</p>
+      <h2>避坑</h2>
+      <p>只扫自己的虚拟机：输错 IP 扫到别人的机器，解释起来很麻烦，扫之前把目标 IP 念一遍；别一上来就扫全端口：先扫常见端口找线索，再对有发现的目标扫全端口；UDP 全端口扫描极慢：只扫常见 UDP 端口就够了；别把 Banner 当定论：版本号可以伪造，服务探测的结果是线索，要再验证；别把所有 NSE 脚本全跑一遍：针对性挑脚本，跑完要能说出下一步往哪打；记得用 -oA 保存输出：扫完说不出结论，等于白扫。</p>
+      <p>Nmap 讲透了，信息收集的“近看”这一步就有了趁手的工具。下一章我们讲渗透测试里最常用的另一件神器：<a href="m7c10-burp-deep.html">第 10 章：Burp Suite 深入</a>——抓包、改包、重放、爆破，Web 测试的大部分活，都是在它里面干的。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>扫描类型：-sS 半开扫描最常用，-sT 完整握手易被记录，-sU 慢但 DNS/SNMP 这类 UDP 服务必须扫。</li>
+          <li>时序 -T0 到 -T5 从最慢最隐蔽到最快；实验室常用 -T4；先扫常见端口，再扫全端口。</li>
+          <li>-sV 探测服务版本（对照 CVE 找线索），-O 靠协议栈指纹猜操作系统，NSE 脚本要针对性地挑着跑。</li>
+          <li>输出用 -oA 保存三种格式；扫描的意义一半在发现、一半在缩小范围，扫完要能说出下一步往哪打。</li>
+          <li>只扫自己的虚拟机；扫之前把目标 IP 念一遍再按回车。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c8-recon-scanning.html">← 上一章：第 8 章：信息收集与扫描进阶</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c10-burp-deep.html">下一章：第 10 章：Burp Suite 深入 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

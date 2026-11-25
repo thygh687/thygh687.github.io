@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块八第 13 章：日志源接入与 Windows 事件 ID · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块八第 13 章：日志源接入与 Windows 事件 ID</h1>
+      <div class="meta"><span class="tag">安全运营与应急响应</span>2026-11-25 · 模块八</div>
+      <p>上一章我们讲了告警来了怎么处理，但这些告警和日志是从哪来的？答案是：从每一台电脑、每一台服务器、每一台网络设备上“接”进来的。SIEM 再厉害，接不到日志也是空仓库。这一章讲两件事：第一，怎么把各处的日志接进 SIEM；第二，Windows 日志里最关键的那几个事件编号——认得它们，查日志时就不用每次都翻手册，看到 4625 就知道是登录失败，看到 4688 就知道是有人启动了新进程。</p>
+      <p>先说日志从哪来。一家公司里的日志源大概分五类：<strong>终端</strong>（员工电脑、服务器上的系统日志和安全日志）；<strong>网络设备</strong>（防火墙、路由器、交换机的流量日志）；<strong>安全设备</strong>（杀毒软件、EDR、防病毒网关的告警）；<strong>应用</strong>（邮箱、网站、数据库的访问日志）；<strong>云</strong>（云平台的操作记录和审计日志）。每一类都有自己的格式和脾气：Windows 日志是结构化的事件，防火墙日志是一行行的连接记录，云日志常常是 JSON。SIEM 的第一份工作，就是把这些五花八门的格式“翻译”成统一的样子，这个过程叫<strong>解析</strong>（Parsing）。解析做不好，日志接进来了也查不到——就像书都堆进了图书馆，却没有编目。</p>
+
+      <h2>日志是怎么接进来的</h2>
+      <p>接入日志有三种常见方式。第一种叫<strong>代理</strong>（Agent）：在每台电脑上装一个小小的采集程序，它读系统日志，再发给 SIEM。Windows 上常用的是 Winlogbeat 这类采集器，EDR 本身也常常自带采集功能。第二种叫 <strong>Syslog</strong>：网络设备和 Linux 服务器把日志主动“推”给 SIEM，用的就是几十年前就定下来的 Syslog 协议，简单、通用，是网络设备的标准做法。第三种叫 <strong>API 拉取</strong>：云平台和 SaaS 应用不让你装代理，只能由 SIEM 定时调用它们的接口，把审计日志“拉”回来。三种方式没有高下，只有合适不合适：终端用代理、网络设备用 Syslog、云用 API，是最常见的搭配。</p>
+      <p>接入之后还有三件要做的事：<strong>时间同步</strong>、<strong>留存</strong>和<strong>完整性</strong>。时间同步是最容易被忽略、也最致命的一点：如果终端的时间比 SIEM 快 10 分钟，攻击者先登录、后外联的两件事，在时间线上就会排反，调查时就会得出错误的结论。所以所有设备都要对 NTP 时间服务器。留存是指日志要存多久——合规常常要求存 90 天在线、一年归档，存太短，出事了想查却发现日志已经被删了。完整性是指日志不能被悄悄改掉：重要的日志要做防篡改（比如只读存储、哈希校验），否则攻击者删掉自己的登录记录，调查就断了线。取证里的证据链要求（<a href="m8c6-forensics-deep.html">第 6 章</a>讲过）在这里就派上了用场。</p>
+
+      <h2>Windows 事件 ID：最关键的十个编号</h2>
+      <p>Windows 的安全日志里，每条记录都有一个事件 ID（Event ID），相当于每种事情的“身份证号”。下面这十个，是 SOC 分析师最常查的，值得背下来：</p>
+      <p><strong>4624</strong>——登录成功。谁、在什么时候、从哪个 IP、用哪种方式登录的。注意登录类型：类型 2 是本地登录，类型 3 是网络登录，类型 10 是远程桌面。凌晨三点的类型 10 登录，值得多看一眼。<strong>4625</strong>——登录失败。第 11 章写检测规则时用的就是它，短时间内大量 4625 就是暴力破解的信号。<strong>4634 / 4647</strong>——注销。配合 4624 能算出一次会话持续了多久。<strong>4672</strong>——管理员登录。被授予了特殊权限的账号登录时产生，域管理员的 4672 出现在哪里，就要盯着哪里。<strong>4688</strong>——新进程启动。记录了谁启动了什么程序、命令行参数是什么——攻击者常用的 PowerShell、cmd 在这里都会留下记录。<strong>4697</strong>——安装了新服务。恶意软件喜欢把自己装成服务实现开机自启。<strong>4698</strong>——创建了计划任务。同样是常见的持久化手法。<strong>4720</strong>——创建了新账号。凭空多出一个账号，往往是攻击者留的后门。<strong>4728 / 4732</strong>——账号被加进了管理员组。普通账号突然变成管理员，是提权的典型信号。<strong>7045</strong>（系统日志）——安装了新服务，和 4697 互相印证。</p>
+      <p>记这些编号有个窍门：不用死记硬背，记住“登录是一家（4624 成功、4625 失败）、持久化是一家（4697 服务、4698 计划任务）、账号变化是一家（4720 建账号、4728 加管理员组）”。查日志的时候，先想“我在找哪类事”，再想“这类事的编号是哪个”，比翻手册快得多。还有一个提醒：密码策略也要顺带看一眼——按 NIST SP 800-63B Rev.4 的最新要求，单独使用的密码至少 15 位，不迷信复杂度，系统还要强制检查密码有没有出现在已泄露的密码库里；日志里反复出现 4625，常常就是因为某个账号的密码太弱、正在被人猜。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="日志从各处接入SIEM再变成告警的流程图">
+          <rect x="20" y="30" width="150" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="58" text-anchor="middle" font-size="13" fill="#1a1a2e">终端：Windows / Linux</text>
+          <rect x="20" y="100" width="150" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="128" text-anchor="middle" font-size="13" fill="#1a1a2e">网络：防火墙 / 路由器</text>
+          <rect x="20" y="170" width="150" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="198" text-anchor="middle" font-size="13" fill="#1a1a2e">安全设备：EDR / 杀毒</text>
+          <rect x="20" y="240" width="150" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="268" text-anchor="middle" font-size="13" fill="#1a1a2e">应用与云：邮箱 / 云审计</text>
+          <rect x="220" y="120" width="120" height="80" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="150" text-anchor="middle" font-size="13" fill="#1a1a2e">接入与解析</text>
+          <text x="280" y="170" text-anchor="middle" font-size="11" fill="#666">代理 / Syslog / API</text>
+          <rect x="390" y="120" width="150" height="80" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="150" text-anchor="middle" font-size="13" fill="#1a1a2e">SIEM</text>
+          <text x="465" y="170" text-anchor="middle" font-size="11" fill="#666">统一格式、存下来</text>
+          <line x1="170" y1="54" x2="220" y2="140" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="170" y1="124" x2="220" y2="150" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="170" y1="194" x2="220" y2="170" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="170" y1="264" x2="220" y2="180" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="340" y1="160" x2="388" y2="160" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="240" text-anchor="middle" font-size="12" fill="#666">时间同步 + 留存 + 防篡改，三件事缺一不可</text>
+          <rect x="130" y="265" width="300" height="44" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="292" text-anchor="middle" font-size="13" fill="#1a1a2e">查询（KQL / SPL）→ 检测规则 → 告警</text>
+        </svg>
+        <figcaption>图：日志从四类来源接入 SIEM，经过解析和存储，变成可以查询、可以告警的数据</figcaption>
+      </figure>
+
+      <h2>日志存多久、存在哪</h2>
+      <p>日志留存要回答两个问题：存多久，存在哪。存多久看三点：合规要求（很多行业要求安全日志至少存 90 天在线、一年归档）、调查需要（一次入侵从发生到被发现，常常隔几周甚至几个月，存 30 天可能刚好错过起点）、成本（日志量很大，存一年是一笔不小的开支）。常见的折中是“热存 90 天、冷存一年”：最近 90 天的日志放在 SIEM 里随时能查，更早的压缩归档到便宜的存储里，需要时再调出来。</p>
+      <p>存在哪也有讲究：日志不能只存在被记录的那台机器上——攻击者拿到机器权限，第一件事常常就是删日志。所以重要日志要实时发到 SIEM 或专门的日志服务器上，原始机器上的只是一份副本。还有一个细节：日志的备份和业务数据的备份要分开想——第 9 章讲的备份与业务连续性，管的是业务数据能不能恢复；日志备份管的是出事了能不能查，两者都很重要，但目的不一样。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我参与过一次“日志接不全”的教训：公司的 SIEM 上线三个月，一次演练里红队用一台没装代理的测试服务器做了跳板，整个过程 SIEM 里一条记录都没有——不是检测规则没写好，是日志根本没接进来。从那以后，我接手任何环境的第一件事，就是画一张“日志源地图”：每一台重要的服务器、每一台网络设备、每一个云账号，旁边打勾——接了还是没接、接了之后最近一条日志是什么时候。还有一个检查办法：每个月随机挑一台机器，在上面故意做一件会被记录的事（比如一次失败登录），然后去 SIEM 里查能不能找到；找不到，就是接入断了。日志接入不是“一劳永逸”的工程，是要定期巡检的水管——水管一断，下游的检测规则、分级、剧本全是空转。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：打开事件查看器（eventvwr.msc），进入“Windows 日志 → 安全”，找到最近的 4624、4625、4688 各一条，抄下它们的时间、账号、来源 IP 或进程名。<br>2. 在虚拟机里故意做一次登录失败（输错一次自己的密码），再回到事件查看器，找到新产生的 4625，确认它的“登录类型”和“来源网络地址”字段写的是什么。<br>3. 用 PowerShell 在虚拟机里查日志：运行 <code>Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4625} -MaxEvents 5</code>，看看命令行查日志和图形界面查有什么不同。<br>4. 画一张你自己的“日志源地图”：你的虚拟机、宿主机、路由器各产生什么日志，哪些已经能查到、哪些还没有接进来，列一张清单。</p>
+      <h2>避坑</h2>
+      <p>别只接服务器、不接终端：很多攻击是从员工电脑开始的，终端日志缺了，攻击的起点就看不见；别忘了时间同步：各设备时间对不上，时间线会排错，调查结论也会错；别只看安全日志：系统日志里的 7045 和应用日志里的记录，常常是破案的另一半；别把事件 ID 当全部：编号只告诉你“发生了什么事”，还要看里面的账号、IP、命令行参数这些细节；别在真实生产系统上练手：所有实验都在自己的虚拟机里做，输错密码也要输自己的虚拟机的密码。</p>
+      <p>上一章<a href="m8c12-soc-workflow.html">第 12 章</a>我们学会了告警来了怎么分级、分流、按剧本处理；这一章我们补上了上游——日志从哪来、Windows 里哪些事件编号最关键。下一章<a href="m8c14-disk-forensics-timeline.html">第 14 章</a>我们进入取证：当日志不够用、需要看硬盘里到底发生过什么时，怎么从磁盘镜像里拼出事情的先后顺序——只用你自己实验环境的镜像来练。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>日志源分五类：终端、网络设备、安全设备、应用、云；接入方式是代理、Syslog、API 拉取三种。</li>
+          <li>接入后要做好三件事：时间同步（NTP）、留存（合规要求的时间）、完整性（防篡改）。</li>
+          <li>最关键的 Windows 事件 ID：4624 登录成功、4625 登录失败、4688 新进程、4697/4698 持久化、4720 建账号、4728 加管理员组。</li>
+          <li>记编号的窍门是按“一家”记：登录一家、持久化一家、账号变化一家。</li>
+          <li>日志接入要定期巡检：画日志源地图，每月抽查一次“故意做的事能不能在 SIEM 里找到”。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m8c12-soc-workflow.html">← 上一章：第 12 章：SOC 工作流：分级、告警分流与剧本</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m8c14-disk-forensics-timeline.html">下一章：第 14 章：取证深入：磁盘取证与时间线分析 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

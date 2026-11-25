@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块十第 5 章：第三方风险 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块十第 5 章：第三方风险</h1>
+      <div class="meta"><span class="tag">治理、风险、合规与韧性</span>2026-11-25 · 模块十</div>
+      <p>上一章我们讲了 ISO 27001 的体系——自己家里的事。但现实是：没有一家公司是孤岛。你的网站托管在云厂商那里，你的工资单交给外包公司算，你的客服系统是买来的软件，连你办公室的打印机都可能连着供应商的远程维护通道。你的安全防线有多强，取决于链条上最弱的那一环——而那一环，常常不在你手里。这就是<strong>第三方风险</strong>：供应商和外包也可能把风险带进来。</p>
+      <p>记住一句话：<strong>你可以把工作外包出去，但责任外包不出去。</strong>供应商出了事，客户不会去找供应商算账，他们找的是你。数据泄露的通报、罚款、道歉，落到谁头上？落到数据的主人头上，也就是你。所以第三方风险不是“采购的事”，是安全治理的一部分——上一章 ISO 27001 的附录 A 里，组织类控制就专门有一组管供应商。</p>
+
+      <h2>第三方分几类：先分清，再管理</h2>
+      <p><strong>第一类，供应商（Vendor）</strong>：卖你产品和服务的，比如云服务商、软件厂商、硬件厂商。你买他们的东西，他们的东西有漏洞，你就跟着遭殃。<strong>第二类，外包商（Outsourcer）</strong>：替你干活的，比如外包客服、外包开发、外包运维。他们直接碰你的系统和数据，风险最高。<strong>第三类，分包商的下家（第四方）</strong>：你的供应商又把活包给了别人，你连对方是谁都不知道，风险藏得最深。<strong>第四类，开源与供应链</strong>：你用的软件里嵌着几十个开源组件，任何一个组件出漏洞、被投毒，都会顺着供应链爬进你的系统——模块六第 18 章讲过的供应链漏洞，就是这个意思。</p>
+      <p>分类的目的是分级管理：能碰到核心数据的外包商，要查得最严；只卖办公用品的供应商，简单登记就行。把所有第三方一视同仁，要么管不过来，要么管不到点子上。</p>
+
+      <h2>第三方风险从哪里来</h2>
+      <p>最常见的有五种。<strong>数据泄露</strong>：供应商保管着你的客户数据，他们被攻破，等于你被攻破。<strong>服务中断</strong>：云厂商一宕机，你的业务跟着停摆——第 7 章讲业务连续性时，这一点会再回来。<strong>恶意代码与后门</strong>：供应商的软件更新里被植入恶意代码，你一升级就中招，这是供应链攻击最狠的一招。<strong>权限过大</strong>：外包运维拿着管理员权限，离职了账号还没收回，或者权限从来没人复查。<strong>合规连带</strong>：供应商不合规（比如乱用你的客户数据），监管处罚会连你一起算进去。</p>
+      <p>还有一个容易被忽略的：<strong>供应商倒闭或被收购</strong>。服务突然没人维护了、数据拿不回来了、合同换了新东家不认了——这些不是技术问题，是实实在在的业务风险，签合同那天就要想好退路。</p>
+
+      <h2>管理第三方的四个步骤</h2>
+      <p><strong>第一步，合作前尽调。</strong>签合同之前先问：对方有没有安全认证（比如 ISO 27001）？有没有出过泄露事件？数据存在哪里、谁能访问？问卷和证据怎么看，第 12 章会专门讲。<strong>第二步，合同里写清。</strong>安全要求要写进合同：数据怎么保护、出了事多久通知你、有没有权审计对方、合作结束数据怎么删。没写进合同的要求，等于没提。<strong>第三步，合作中监控。</strong>定期复查权限、看对方的安全报告、关注对方有没有出事件；关键供应商每年至少复查一次。<strong>第四步，合作结束收尾。</strong>账号要收回、数据要删掉或拿回来、交接要留记录。合作结束时的收尾没做好，等于给前任供应商留了一把你家的钥匙。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="第三方风险管理四步与四类第三方图">
+          <rect x="20" y="15" width="250" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="40" text-anchor="middle" font-size="13" fill="#1a1a2e">供应商 Vendor：卖产品和服务</text>
+          <text x="145" y="60" text-anchor="middle" font-size="11" fill="#666">云厂商、软件厂商、硬件厂商</text>
+          <rect x="290" y="15" width="250" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="40" text-anchor="middle" font-size="13" fill="#1a1a2e">外包商：替你干活，直接碰数据</text>
+          <text x="415" y="60" text-anchor="middle" font-size="11" fill="#666">外包客服、开发、运维，风险最高</text>
+          <rect x="20" y="95" width="250" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="120" text-anchor="middle" font-size="13" fill="#1a1a2e">第四方：供应商的下家，藏得最深</text>
+          <text x="145" y="140" text-anchor="middle" font-size="11" fill="#666">你连对方是谁都不知道</text>
+          <rect x="290" y="95" width="250" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="120" text-anchor="middle" font-size="13" fill="#1a1a2e">开源与供应链：组件漏洞顺链爬进来</text>
+          <text x="415" y="140" text-anchor="middle" font-size="11" fill="#666">一个组件被投毒，全链遭殃</text>
+          <rect x="20" y="180" width="120" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="202" text-anchor="middle" font-size="13" fill="#1a1a2e">1. 合作前尽调</text>
+          <text x="80" y="220" text-anchor="middle" font-size="11" fill="#666">问卷、认证、事件史</text>
+          <rect x="150" y="180" width="120" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="210" y="202" text-anchor="middle" font-size="13" fill="#1a1a2e">2. 合同写清</text>
+          <text x="210" y="220" text-anchor="middle" font-size="11" fill="#666">保护、通知、审计权</text>
+          <rect x="280" y="180" width="120" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="340" y="202" text-anchor="middle" font-size="13" fill="#1a1a2e">3. 合作中监控</text>
+          <text x="340" y="220" text-anchor="middle" font-size="11" fill="#666">复查权限、看报告</text>
+          <rect x="410" y="180" width="130" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="475" y="202" text-anchor="middle" font-size="13" fill="#1a1a2e">4. 结束收尾</text>
+          <text x="475" y="220" text-anchor="middle" font-size="11" fill="#666">收账号、删数据</text>
+          <text x="280" y="270" text-anchor="middle" font-size="13" fill="#1a1a2e">核心原则：工作可以外包，责任外包不出去</text>
+          <text x="280" y="295" text-anchor="middle" font-size="12" fill="#666">分级管理：能碰核心数据的，查得最严</text>
+        </svg>
+        <figcaption>图：四类第三方与管理四步——合作前尽调、合同写清、合作中监控、结束收尾</figcaption>
+      </figure>
+
+      <h2>一个小例子：请外包客服之前</h2>
+      <p>假想一家 20 人的网店要请外包客服，对方需要登录订单系统、看到客户姓名、电话和地址。按本章的办法走一遍：尽调时问对方有没有 ISO 27001、有没有泄露史、客服电脑有没有加密、员工离职账号多久收回；合同里写“客户数据不得下载到个人电脑、不得外发，泄露事件 24 小时内通知我方，我方有权审计”；合作中每季度复查一次客服账号，只给“看订单、改订单状态”的最小权限；合作结束当天收回全部账号、确认对方删除了本地数据。这一套走下来，成本不高，但出事的概率和损失都小得多。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>第三方风险最容易栽跟头的地方，是“熟人供应商”——合作多年的老朋友，合同一签了之，从来没问过安全问题。等到对方被攻破、你的数据跟着泄露，才发现连对方安全负责人的电话都没有。我的习惯是：不管关系多熟，合作前的安全问卷必须走一遍，合同里的通知时限和审计权必须写清——这不是不信任，是对双方负责。还有一个教训：最小权限对外包商尤其重要，外包账号只给刚好够干活的权限，而且要有有效期，到期自动收回；“先给着、以后再说”的权限，最后都会变成没人记得的后门。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机或实验环境里做：给假想的 20 人小公司列一张第三方清单，至少包括一家云服务商、一家外包商、一个常用软件，写清每家能碰到什么数据、风险等级是高 / 中 / 低。<br>2. 给清单里风险最高的那一家写五条尽调问题：认证、泄露史、数据存放地、访问控制、事件通知时限。<br>3. 写三条要放进合同的安全条款：数据保护、事件通知、审计权与合作结束的数据删除。<br>4. 写一份合作结束检查清单：收账号、删数据、收回设备、确认删除的证据，至少列出六项。</p>
+      <h2>避坑</h2>
+      <p>别以为签了合同就安全了：合同是底线，合作中的监控和复查才是日常；别把所有第三方一视同仁：能碰核心数据的要查最严，卖办公用品的简单登记就行；别忘了第四方：问一句“你们又把活包给了谁”，藏得最深的风险往往在那里；别给外包商过大权限：只给刚好够干活的权限，要有有效期，到期自动收回；别在真实公司系统上练手：本章的动手做只写清单、写问题、写条款，不联系任何真实供应商，不碰真实公司的账号和数据。</p>
+      <p>知道风险可能从外面进来，还要会“检查”：一家公司的安全到底做得怎么样，不能只听它自己说。下一章讲 <a href="m10c6-audit-assessment.html">第 6 章：审计与安全评估</a>——内审、外审、渗透测试各是干什么的，一次检查从进场到出报告要走哪些步骤。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>第三方风险：供应商、外包商、第四方、开源供应链都可能把风险带进来；工作可以外包，责任外包不出去。</li>
+          <li>第三方要分级管理：能碰到核心数据的查得最严，不能一视同仁。</li>
+          <li>风险来源：数据泄露、服务中断、恶意代码与后门、权限过大、合规连带，还有供应商倒闭或被收购。</li>
+          <li>管理四步：合作前尽调、合同里写清、合作中监控、合作结束收尾；收尾没做好等于给别人留了钥匙。</li>
+          <li>外包账号要最小权限、有有效期、到期自动收回；熟人供应商也要走问卷和合同。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m10c4-iso27001.html">← 上一章：第 4 章：ISO 27001 与合规框架</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m10c6-audit-assessment.html">下一章：第 6 章：审计与安全评估 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

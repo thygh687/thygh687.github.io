@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows 专项第 7 章：Sysinternals 套件 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Windows 专项第 7 章：Sysinternals 套件</h1>
+      <div class="meta"><span class="tag">Windows 专项</span>2026-11-25 · Windows 专项</div>
+      <p>微软官方有一套免费工具叫 <strong>Sysinternals</strong>，是 Windows 排障和取证的事实标准。任务管理器看不到的东西，它能看到；系统自带工具查不清的问题，它能查清。很多安全工程师的电脑里，Sysinternals 是装机必备。</p>
+      <p>这一章讲其中最常用的三个：Process Explorer（进程）、Autoruns（自启项）、Process Monitor（实时监控）。再顺带认识 TCPView、streams、Sigcheck 几个小工具。目标是：遇到“电脑变慢”“有个程序不知道在干什么”“开机自启里有可疑东西”时，你知道该打开哪一个。</p>
+      <p>Sysinternals 的工具都是绿色免安装的单个 exe，从微软官网下载，解压就能用。记住只从微软官方渠道下载，别从第三方下载站拿——排障工具本身被篡改过，是最糟糕的事。</p>
+      <h2>Process Explorer：任务管理器的超级版</h2>
+      <p>Process Explorer（procexp）是加强版的任务管理器：进程按父子关系排成树，一眼看出谁是谁生的；每个进程能看到命令行、启动路径、加载的 DLL、打开的句柄、网络连接；可疑进程可以直接在里面查签名、提交到 VirusTotal 在线比对（需要联网，谨慎使用，只查你怀疑的文件）。</p>
+      <p>排障时的典型用法：电脑变慢，先看 CPU 占用最高的进程，再看它的子进程和命令行——很多挖矿木马就藏在名字正常的进程里，但命令行会露馅（比如指向临时目录下的脚本）。再看它的网络连接：一个记事本程序在往外连网，就是明显的异常。</p>
+      <p>验证签名的操作是：选中进程 → 右键 → Properties → Image 页，看 Verified 签名和公司名。没有签名、公司名空白、路径在临时目录下的进程，都值得多问一句。</p>
+      <h2>Autoruns：开机自启的全景图</h2>
+      <p>Autoruns 把 Windows 里所有能让程序自动跑起来的地方汇总到一张表里：注册表 Run 键、服务、任务计划、驱动、浏览器插件、WMI、Winlogon、启动文件夹……前面几章讲过的持久化位置，在这里一次看全。</p>
+      <p>用法是：打开 Autoruns，等它扫描完，按 Publisher 排序，先看没有签名（Publisher 空白）的条目，再看路径在临时目录、用户目录深处的条目。每个条目都可以右键跳转到注册表位置、打开所在文件夹、在线查 VirusTotal。</p>
+      <p>注意：Autoruns 里很多条目是系统正常的，不要看到不认识就取消勾选——取消勾选是禁用，不是删除，相对安全，但禁错了系统服务也会出问题。正确做法是：先查清条目是什么（看路径、看签名、看描述），再决定。</p>
+      <h2>Process Monitor：把系统的一举一动都记下来</h2>
+      <p>Process Monitor（Procmon）是实时监控工具：它记录系统里每一个文件读写、注册表读写、网络操作、进程创建，精确到毫秒。程序启动时读了哪些文件、改了哪些注册表、连了哪个地址，Procmon 全都记下来。</p>
+      <p>Procmon 的信息量极大，一开机就是几十万条记录，所以要用过滤器：只看某个进程、只看某个路径、只看写操作。典型用法是：怀疑某个程序在搞小动作时，先开 Procmon、设好过滤器、再运行那个程序，看它到底干了什么。</p>
+      <p>取证时 Procmon 是利器：一个安装包到底往系统里写了什么，一个可疑程序启动后第一件事是读什么文件，都能用它还原。但也要注意，Procmon 本身很占资源，别长时间开着全量记录。</p>
+      <h2>其他小工具：TCPView、streams、Sigcheck</h2>
+      <p><strong>TCPView</strong>是加强版的 netstat：实时显示每个进程的网络连接，哪个程序在连哪个地址、哪个端口，一目了然。发现陌生连接时，右键可以直接结束连接、结束进程。</p>
+      <p><strong>streams</strong>是查备用数据流（第 3 章的 ADS）的命令行工具：streams -s 目录名，可以批量扫描一个目录下所有文件挂了哪些流。</p>
+      <p><strong>Sigcheck</strong>是批量验证签名的命令行工具：sigcheck -e 目录名，可以检查一个目录下所有 exe 有没有签名。下载的安装包、从网上拿的工具，先用 Sigcheck 验一遍签名再运行，是个好习惯。</p>
+      <p>Sysinternals 还有几十个工具（PsTools、Disk2vhd、RAMMap 等），不必一次全学。先把上面这几个用熟，遇到新问题时再去官网的工具列表里找——知道“有这么个工具”比背全列表重要。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sysinternals 三件套图：Process Explorer 看进程树，Autoruns 看全部自启项，Process Monitor 记录文件与注册表操作">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="20" y="10" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">Process Explorer</text>
+          <text x="100" y="54" text-anchor="middle" font-size="11" fill="#666">进程树、签名、网络</text>
+          <rect x="200" y="10" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">Autoruns</text>
+          <text x="280" y="54" text-anchor="middle" font-size="11" fill="#666">全部自启项一览</text>
+          <rect x="380" y="10" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">Process Monitor</text>
+          <text x="460" y="54" text-anchor="middle" font-size="11" fill="#666">文件、注册表实时记录</text>
+          <rect x="20" y="110" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="134" text-anchor="middle" font-size="13" fill="#1a1a2e">TCPView：谁在连网</text>
+          <text x="140" y="154" text-anchor="middle" font-size="11" fill="#666">实时网络连接</text>
+          <rect x="300" y="110" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="134" text-anchor="middle" font-size="13" fill="#1a1a2e">streams / Sigcheck</text>
+          <text x="420" y="154" text-anchor="middle" font-size="11" fill="#666">查 ADS、批量验签名</text>
+          <rect x="130" y="210" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="234" text-anchor="middle" font-size="13" fill="#1a1a2e">只从微软官网下载</text>
+          <text x="280" y="254" text-anchor="middle" font-size="11" fill="#666">排障工具本身不能被篡改</text>
+          <line x1="280" y1="62" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="162" x2="280" y2="208" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">先看路径和签名，再下结论；名字最容易冒充</text>
+          <text x="280" y="325" text-anchor="middle" font-size="12" fill="#666">Procmon 信息量极大，一定要先设过滤器</text>
+
+        </svg>
+        <figcaption>图：Sysinternals 三件套——进程、全部自启项、实时监控，各管一面</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ Sysinternals 是微软官方免费排障套件，只从官网下载，绿色免安装。</p>
+      <p>□ Process Explorer 是加强版任务管理器：进程树、命令行、签名、网络连接都能看。</p>
+      <p>□ Autoruns 汇总全部自启项，是查持久化最高效的工具，先看无签名条目。</p>
+      <p>□ Process Monitor 实时记录文件、注册表、网络操作，信息量大，一定要先设过滤器。</p>
+      <p>□ TCPView 看实时网络连接，streams 查 ADS，Sigcheck 批量验签名。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>Sysinternals 是我电脑里最老的一套工具，用了十几年还没被替代。印象最深的一次，是用户说“电脑一开机就弹广告，杀毒查不到”，我用 Autoruns 按时间排序，发现一个上周新建的计划任务，指向一个藏在 ProgramData 下的脚本；再用 Procmon 跟踪它启动的过程，看到它先读注册表、再连一个境外地址下载配置——整条链路十分钟就还原出来了。我的经验是：排障工具不在多，在顺手；Process Explorer、Autoruns、Procmon 这三个练熟，能解决八成以上的“不知道是谁在搞鬼”的问题。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：从微软官网下载 Sysinternals Suite，解压到一个文件夹，先打开 Process Explorer，看看进程树：找到 explorer.exe，看看它的子进程有哪些；再右键一个系统进程看签名。<br>2. 在虚拟机里打开 Autoruns，等扫描完成，点 Options → 勾选 Verify code signatures 和 Hide Microsoft entries，再看看剩下的非微软自启项有哪些，把不认识的记下来查一查。<br>3. 在虚拟机里打开 Process Monitor，先点 Filter → Filter，设一条“Process Name is notepad.exe”，再打开记事本、输入几个字、保存，看看 Procmon 记下了记事本的哪些文件和注册表操作；练完把 Procmon 关掉。</p>
+      <h2>避坑</h2>
+      <p>只从微软官网下载 Sysinternals，别从第三方下载站拿：排障工具本身被篡改是最糟糕的事；Autoruns 里别看到不认识就取消勾选：先查清那是什么，禁错系统服务也会出问题；Procmon 别长时间全量开着：信息量极大又占资源，先设过滤器再记录；VirusTotal 在线比对要谨慎：别把公司内部文件、含敏感信息的文件传上去比对。</p>
+      <p>Sysinternals 三件套在手，“是谁在搞鬼”这个问题就有了查法。下一章我们看系统把“谁干过什么”记在哪：<a href="windows-c8-logs-sysmon-etw.html">第 8 章</a>事件日志、Sysmon 与 ETW——电脑干过什么事，都记在哪，记了多少。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>Sysinternals 是微软官方免费排障套件，只从官网下载，绿色免安装。</li>
+          <li>Process Explorer 是加强版任务管理器：进程树、命令行、签名、网络连接都能看。</li>
+          <li>Autoruns 汇总全部自启项，是查持久化最高效的工具，先看无签名条目。</li>
+          <li>Process Monitor 实时记录文件、注册表、网络操作，信息量大，一定要先设过滤器。</li>
+          <li>TCPView 看实时网络连接，streams 查 ADS，Sigcheck 批量验签名。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="windows-c6-powershell.html">← 上一章：第 6 章：PowerShell 安全实战</a>
+        <a href="../course.html">课程目录</a>
+        <a href="windows-c8-logs-sysmon-etw.html">下一章：第 8 章：事件日志、Sysmon 与 ETW →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

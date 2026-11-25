@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 18 章：活动目录基础 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 18 章：活动目录基础</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>上一章（<a href="m7c17-ad-lab.html">第 17 章</a>）我们搭好了自己的域：域控 DC01、两台客户端、域名 lab.local。这一章把活动目录的骨架讲清楚——域、域控、组织单位、组、组策略、Kerberos、LDAP，这些词你以后每天都会碰到。打个比方：如果把企业内网比作一座大楼，活动目录就是这座楼的“户口本 + 门禁系统 + 管理制度”：户口本记着谁是谁，门禁决定谁能进哪间房，管理制度决定每间房的规矩。</p>
+      <p>先讲<strong>域（Domain）</strong>和<strong>域控（Domain Controller）</strong>。域就是一组共享同一套账号数据库的电脑的集合，比如 lab.local 域里的所有电脑，都认同一套账号：你在客户端 1 上用 alice 登录，和在客户端 2 上用 alice 登录，是同一个 alice。域控就是管这套数据库的服务器：验证密码、发通行证（票据）、下发策略。域控是整个域的心脏——第 20 章讲防御时你会明白，守住域控就是守住整个域。一台域里可以有多个域控，互相备份；你的实验环境里先有一台就够了。</p>
+
+      <h2>组织单位、组与组策略</h2>
+      <p><strong>组织单位（OU）</strong>是域里的“文件夹”：你可以按部门把用户和电脑分到不同的 OU，比如“IT 部”“财务部”。OU 的作用不是好看，是为了<strong>分组管理</strong>——策略可以按 OU 下发，IT 部的电脑装开发工具，财务部的电脑锁 USB，各管各的。</p>
+      <p><strong>组（Group）</strong>是“权限的打包”：不给一个人一个人授权，而是把人放进组、给组授权。比如 Finance 组能读财务共享文件夹，新来的财务同事只要加进 Finance 组，权限就自动有了；离职了，从组里拿掉，权限就收回了。这是模块六第 10 章 RBAC（基于角色的访问控制）在 AD 里的落地：权限跟着角色走，不跟着人走。</p>
+      <p><strong>组策略（GPO）</strong>是域控下发的“规矩”：密码要多长、屏幕多久锁定、哪些软件不许装、USB 能不能用，都可以写成一条组策略，挂到某个 OU 上，OU 里的电脑一开机、用户一登录就自动执行。组策略是管理员最强的管理工具，也是攻击者最想动的东西——第 19 章你会看到，改一条组策略就能让整个 OU 的电脑按攻击者的意思办事。</p>
+
+      <h2>Kerberos 与 LDAP：认证是怎么发生的</h2>
+      <p>AD 里最核心的协议是 <strong>Kerberos</strong>。它的流程可以讲成一个“三步拿票”的故事：第一步，你向域控证明你是谁（输密码），域控给你一张“入场券”（TGT，票据授予票据）；第二步，你拿着 TGT 去找域控，说“我想访问文件服务器”，域控再给你一张“服务票”（TGS）；第三步，你拿着服务票去找文件服务器，服务器验证票据无误就放你进去。整个过程里你的密码只在第一步出现一次，之后全靠票据说话——票据就是 AD 世界的通行证。理解这套流程，是理解第 19 章票据攻击的前提：攻击者偷的、伪造的，都是这些票据。</p>
+      <p>另一个核心协议是 <strong>LDAP</strong>：它是查“户口本”的协议。用户、组、OU、电脑的信息都存在 AD 数据库里，LDAP 就是读写这本户口本的语言。很多工具（包括第 19 章的 BloodHound）都是通过 LDAP 把整个域的结构读出来，再画成一张攻击路径图。记住这两个协议的分工：<strong>Kerberos 管“你是谁、你能进哪扇门”，LDAP 管“户口本里写了什么”</strong>。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="活动目录结构与Kerberos三步拿票图">
+          <rect x="20" y="20" width="160" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="46" text-anchor="middle" font-size="14" fill="#1a1a2e">域 lab.local</text>
+          <text x="100" y="66" text-anchor="middle" font-size="11" fill="#666">户口本 + 门禁 + 规矩</text>
+          <rect x="220" y="20" width="150" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="295" y="46" text-anchor="middle" font-size="14" fill="#1a1a2e">域控 DC01</text>
+          <text x="295" y="66" text-anchor="middle" font-size="11" fill="#666">验证身份、发票据</text>
+          <rect x="410" y="20" width="130" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="475" y="46" text-anchor="middle" font-size="14" fill="#1a1a2e">OU / 组 / GPO</text>
+          <text x="475" y="66" text-anchor="middle" font-size="11" fill="#666">分组管理、下发规矩</text>
+          <rect x="20" y="130" width="160" height="52" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="152" text-anchor="middle" font-size="13" fill="#1a1a2e">第一步：证明你是谁</text>
+          <text x="100" y="170" text-anchor="middle" font-size="11" fill="#666">输密码，拿到 TGT 入场券</text>
+          <rect x="200" y="130" width="160" height="52" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="152" text-anchor="middle" font-size="13" fill="#1a1a2e">第二步：换服务票</text>
+          <text x="280" y="170" text-anchor="middle" font-size="11" fill="#666">拿 TGT 换 TGS 服务票</text>
+          <rect x="380" y="130" width="160" height="52" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="152" text-anchor="middle" font-size="13" fill="#1a1a2e">第三步：进门</text>
+          <text x="460" y="170" text-anchor="middle" font-size="11" fill="#666">拿服务票访问服务器</text>
+          <rect x="140" y="230" width="280" height="56" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="254" text-anchor="middle" font-size="14" fill="#1a1a2e">LDAP：查户口本的协议</text>
+          <text x="280" y="274" text-anchor="middle" font-size="11" fill="#666">用户、组、OU、电脑的信息都在里面</text>
+          <text x="280" y="318" text-anchor="middle" font-size="12" fill="#666">密码只出现一次，之后全靠票据说话</text>
+        </svg>
+        <figcaption>图：域的结构与 Kerberos 三步拿票——票据就是 AD 世界的通行证</figcaption>
+      </figure>
+
+      <h2>信任关系与域的层级</h2>
+      <p>大公司不只有一个域：总公司一个域，分公司一个域，收购来的公司又一个域。域和域之间用<strong>信任关系（Trust）</strong>连起来：A 域信任 B 域，B 域的用户就能访问 A 域的资源。信任是有方向的——A 信任 B，不等于 B 信任 A。多个域组成<strong>林（Forest）</strong>，林是信任的边界：同一个林里的域默认互相信任，不同林之间默认不信任。攻击者最喜欢找信任关系里的薄弱环节：第 21 章你会看到，拿下一个边缘域，再顺着信任关系爬进核心域，是常见的攻击路径。你的实验环境只有一个域、一个林，先把单域吃透，再去想多域的事。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>新人学 AD 最容易犯的错，是把“域”和“工作组”混为一谈。工作组是每台电脑各管各的账号，你在 A 电脑上建的账号，B 电脑不认；域是所有电脑共用一套账号，alice 在哪台电脑上都是 alice。这个区别一想就明白：公司里几百台电脑，要是每台都要单独建账号，IT 会疯掉——域就是为了解决这个问题而生的。还有一句：学 AD 一定要亲手点一点“Active Directory 用户和计算机”——OU、组、GPO 这些概念，看十遍不如在实验环境里建一次、改一次、删一次。概念是骨架，动手才是血肉。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的实验环境里：打开域控上的“Active Directory 用户和计算机”，把 lab.local 域里的 OU、用户、组、电脑一个一个点开，画一张你自己的域结构图（纸上画就行）。<br>2. 只在你自己的实验环境里：在客户端上用域账号登录，打开命令提示符输入 <code>whoami /groups</code>，看这个账号属于哪些组，再对照域控上的设置，确认组和权限的对应关系。<br>3. 只在你自己的实验环境里：在域控上新建一条组策略（比如“屏幕 10 分钟无操作自动锁定”），挂到一个 OU 上，在该 OU 的客户端上重启或等策略刷新，验证策略真的生效了。<br>4. 只在你自己的实验环境里：用 <code>nslookup lab.local</code> 和 <code>ping lab.local</code> 确认域名解析指向域控，理解“DNS 是域的寻址基础”这句话。</p>
+      <h2>避坑</h2>
+      <p>别把域和工作组混为一谈：域是集中账号，工作组是各管各的；别在域控上乱改组策略：一条错误的 GPO 能锁住整个 OU 的电脑，改之前先在单个测试 OU 上试；别忽视 DNS：AD 离了 DNS 就找不到域控，排错先查 DNS；别给普通用户域管理员权限：权限跟着组走，加错组等于送钥匙；别在实验环境里用真实信息：用户名、部门名、密码全用假的。</p>
+      <p>骨架画完了：域是户口本，域控是心脏，OU 和组是分组管理，GPO 是下发的规矩，Kerberos 是拿票进门，LDAP 是查户口本。下一章（<a href="m7c19-ad-attacks.html">第 19 章</a>）开始拆这座楼：票据攻击、哈希传递、BloodHound——攻击者是怎么顺着这套骨架爬到域控的。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>域是一组共享账号数据库的电脑，域控是管这套数据库、验证身份、发票据的服务器。</li>
+          <li>OU 是分组管理的文件夹，组是权限的打包，GPO 是域控下发给 OU 的规矩。</li>
+          <li>Kerberos 三步拿票：证明身份拿 TGT，换服务票 TGS，拿票进门；密码只出现一次。</li>
+          <li>LDAP 是读写 AD 户口本的协议，用户、组、OU、电脑的信息都在里面。</li>
+          <li>信任关系连接不同的域，林是信任的边界；攻击者常顺着信任关系从边缘域爬向核心域。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c17-ad-lab.html">← 上一章：第 17 章：动手：搭一个活动目录实验环境</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c19-ad-attacks.html">下一章：第 19 章：活动目录攻击 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

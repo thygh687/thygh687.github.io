@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 28 章：法律与道德边界 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 28 章：法律与道德边界</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>前面二十七章，我们学了怎么找漏洞、怎么利用漏洞、怎么爬到域控。这一章讲的是所有技术之上的东西：<strong>什么能做，什么绝对不能做。</strong>渗透测试是一把双刃剑——同样的技术，用在授权测试里是工作，用在没有授权的地方就是违法。这一章没有“动手做攻击”的内容，只有一条一条的边界，记住它们，再去碰技术。</p>
+      <p>先讲最基本的一条：<strong>未经授权，绝不测试别人的系统。</strong>“别人的系统”包括：别人的网站、别人的服务器、公司的生产系统（除非公司书面授权你测）、邻居的 Wi-Fi、公共场所的网络。判断授权的标准只有一个：<strong>书面授权</strong>——系统所有者或管理者签字盖章的授权书，写明测什么、测到什么程度、什么时候测。口头说“你随便测测”不算授权，“这个网站看起来没人管”不算授权，“我只是看看、没改东西”也不算授权。没有书面授权，任何测试行为都不要开始。</p>
+
+      <h2>法律红线：三条绝对不能碰</h2>
+      <p>第一，<strong>未经授权访问计算机系统是违法行为。</strong>在我国，未经授权侵入计算机系统、获取数据、控制系统，可能触犯刑法和网络安全相关法律——“我只是学习”“我没有恶意”“我没有造成损失”，都不是免责理由。学习阶段的正确做法只有一个：在自己的虚拟机、自己的靶场、自己的实验环境里练。</p>
+      <p>第二，<strong>数据不能乱碰、不能乱拿、不能乱传。</strong>测试中接触到的任何真实数据——用户信息、业务数据、密码、隐私信息——都不能下载到自己的电脑、不能发给别人、不能公开。测试报告里写证据，要脱敏：账号打码、密码不写明文、敏感数据只写“存在此类数据”，不写具体内容。测试结束，临时拿到的数据要按约定删除或归还。</p>
+      <p>第三，<strong>不能破坏、不能留后门、不能扩大影响。</strong>测试不能删数据、不能改配置、不能让业务中断；测试用的账号、后门、测试数据，测试结束要全部清理干净，并写进报告里让客户确认。留一个“方便下次进来”的后门，是严重的职业失格，也是违法行为。</p>
+
+      <h2>道德边界与职业操守</h2>
+      <p>法律是底线，道德是更高的要求。第一，<strong>只在授权范围内行动</strong>：授权测 A 系统，就不要顺手去碰 B 系统；授权测到“验证漏洞存在”，就不要继续往深处挖数据。走到边界就停下，停下并记录——这是第 27 章方法论的要求，也是职业操守的要求。</p>
+      <p>第二，<strong>发现漏洞要负责任地披露</strong>：在授权测试里，发现的问题写进报告交给客户；在授权范围外偶然发现某个网站有漏洞，正确做法是通过官方渠道（比如厂商的安全应急响应中心）报告，给对方留出修复时间，而不是公开炫耀、不是拿去换好处、更不是先利用再说。</p>
+      <p>第三，<strong>工具和知识不能交给错误的人做错误的事</strong>：不要帮别人攻击系统、不要替别人“教训”某个网站、不要把测试工具借给没有授权的人。你的技术越强，这条边界越重要。</p>
+      <p>最后说考证：想把渗透测试当职业，考证是常见的一步。当前版本的安全从业入门认证里，CompTIA Security+ 的当前版本是 SY0-801；国内认证里，CISP（注册信息安全专业人员）是国内认证，适合在国内发展的人考。考证之前，先把本模块的流程和边界练熟——证书证明你学过，边界感证明你能被信任。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="法律与道德边界三条红线图">
+          <rect x="180" y="10" width="200" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="37" text-anchor="middle" font-size="15" fill="#1a1a2e">边界只有一条标准：书面授权</text>
+          <rect x="20" y="80" width="160" height="60" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="104" text-anchor="middle" font-size="13" fill="#1a1a2e">红线一</text>
+          <text x="100" y="124" text-anchor="middle" font-size="11" fill="#666">未经授权绝不访问</text>
+          <rect x="200" y="80" width="160" height="60" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="104" text-anchor="middle" font-size="13" fill="#1a1a2e">红线二</text>
+          <text x="280" y="124" text-anchor="middle" font-size="11" fill="#666">数据不乱碰、不乱传</text>
+          <rect x="380" y="80" width="160" height="60" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="104" text-anchor="middle" font-size="13" fill="#1a1a2e">红线三</text>
+          <text x="460" y="124" text-anchor="middle" font-size="11" fill="#666">不破坏、不留后门</text>
+          <rect x="20" y="180" width="160" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="202" text-anchor="middle" font-size="13" fill="#1a1a2e">只在授权范围内</text>
+          <text x="100" y="220" text-anchor="middle" font-size="11" fill="#666">走到边界就停下</text>
+          <rect x="200" y="180" width="160" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="202" text-anchor="middle" font-size="13" fill="#1a1a2e">负责任地披露</text>
+          <text x="280" y="220" text-anchor="middle" font-size="11" fill="#666">给对方修复时间</text>
+          <rect x="380" y="180" width="160" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="202" text-anchor="middle" font-size="13" fill="#1a1a2e">测试结束要清理</text>
+          <text x="460" y="220" text-anchor="middle" font-size="11" fill="#666">账号、后门、数据全清</text>
+          <text x="280" y="280" text-anchor="middle" font-size="12" fill="#666">“我只是学习”“我没有恶意”都不是免责理由</text>
+          <text x="280" y="302" text-anchor="middle" font-size="12" fill="#666">技术越强，边界感越重要</text>
+        </svg>
+        <figcaption>图：法律三条红线与职业操守三条要求——边界只有一条标准：书面授权</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我刚入行时，有位前辈跟我说了一句话，我记到现在：“安全工程师的饭碗，一半是技术，一半是信任。”技术可以练，信任丢一次就没了。我见过有人因为一次越界测试丢了工作、丢了客户，甚至惹上官司——技术再好也没用。所以我的习惯是：每次测试开始前，先问自己三个问题——授权书在手里吗？范围写清楚了吗？测试结束怎么清理、向谁交代？三个问题都有答案，才开电脑。还有一句：如果你在测试里偶然看到了不该看的数据，正确的反应是立刻停下、立刻上报、立刻删除——装作没看见、顺手拷一份，都是错的。边界感不是束缚，是这个职业的护身符。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在纸上做：给你的靶场写一份完整的“模拟授权书”——授权方、被授权方、测试范围、测试时间、禁止事项、数据处理约定、清理责任，七项齐全才算合格。<br>2. 只在纸上做：写三份“场景判断”——朋友让你帮忙测他公司的网站（没有公司授权）、你在网上发现一个网站有漏洞、测试时偶然看到了一份真实的用户数据，每种场景写清“能不能做、该怎么做”。<br>3. 只在你自己的实验环境里：检查你的靶场和实验记录——有没有留下测试账号、测试后门、临时数据？按“测试结束要清理”的要求，全部清理一遍并记录。<br>4. 把本章的三条红线和三条职业操守抄进你的实验笔记首页，以后每次动手之前先看一遍。</p>
+      <h2>避坑</h2>
+      <p>别把口头答应当授权：只有书面授权才算数；别拿“学习”“没恶意”当借口：没有授权就是越界；别碰真实数据：脱敏、删除、归还，一个都不能少；别留后门：测试结束全部清理干净；别公开未修复的漏洞：走官方渠道，给对方修复时间；别帮别人攻击系统：工具和知识不能交给错误的人。</p>
+      <p>边界讲完了：书面授权是唯一标准，三条红线绝不能碰，职业操守是更高的要求。下一章（<a href="m7c29-capstone.html">第 29 章</a>）是模块七的结课实战：把二十八章的本事合起来，在自己的实验环境里做一次完整的渗透测试——从约定范围到交报告，全流程走一遍。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>授权的唯一标准是书面授权：口头答应、“看起来没人管”、“只是看看”都不算授权。</li>
+          <li>法律三条红线：未经授权绝不访问、数据不乱碰不乱传、不破坏不留后门。</li>
+          <li>只在授权范围内行动：走到边界就停下并记录；测试结束要清理干净并让客户确认。</li>
+          <li>发现漏洞要负责任地披露：走官方渠道，给对方留出修复时间，不公开炫耀、不拿去换好处。</li>
+          <li>考证参考：Security+ 当前版本是 SY0-801，CISP 是国内认证；证书证明你学过，边界感证明你能被信任。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c27-pentest-methodology.html">← 上一章：第 27 章：渗透测试方法论</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c29-capstone.html">下一章：第 29 章：动手：综合实战——一次完整的渗透测试 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

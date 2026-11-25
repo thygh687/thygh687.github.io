@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数学基础专项小结：安全背后的数学 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>数学基础专项小结：安全背后的数学</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · 数学基础专项第 1–6 章</div>
+      <p>六章数学，讲的其实是一件事：安全不是凭感觉，是可以算出来的。讲道理要靠逻辑，分组配对要靠集合，网络和路径要靠图，密码强度要靠数数，风险大小要靠概率，AI 背后的判断要靠向量和矩阵。每一章都是一件工具，六件工具合起来，就是安全工程师的数学底子——看到一个安全问题，先问“这是什么数学问题”，再动手。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="数学基础专项六章知识串联图">
+          <defs>
+            <marker id="arrm" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="130" y="10" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">第 1 章 逻辑与证明：讲道理站得住</text>
+          <rect x="130" y="70" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">第 2 章 集合与关系：分组与配对</text>
+          <rect x="130" y="130" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">第 3 章 图论入门：点和线画出网络</text>
+          <rect x="130" y="190" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">第 4 章 组合数学：数清有多少种可能</text>
+          <rect x="130" y="250" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="275" text-anchor="middle" font-size="14" fill="#1a1a2e">第 5 章 概率与统计：把风险算成数字</text>
+          <rect x="130" y="310" width="300" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="335" text-anchor="middle" font-size="14" fill="#1a1a2e">第 6 章 线性代数：向量与矩阵看懂 AI</text>
+          <line x1="280" y1="50" x2="280" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm)"/>
+          <line x1="280" y1="110" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm)"/>
+          <line x1="280" y1="170" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm)"/>
+          <line x1="280" y1="230" x2="280" y2="248" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm)"/>
+          <line x1="280" y1="290" x2="280" y2="308" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm)"/>
+        </svg>
+        <figcaption>图：六章数学是一条链——从讲道理，到分组、画图、数数、算风险，再到看懂 AI</figcaption>
+      </figure>
+      <h2>这六章是怎么连起来的</h2>
+      <p>先讲道理。<a href="maths-c1-logic-proofs.html">第 1 章</a>讲逻辑与证明：命题、联结词、真值表，四种证明方法，常见逻辑谬误。安全报告的结论要站得住，靠的就是这一章——结论后面跟一句“因为……”，就是证明的习惯。</p>
+      <p>再分组配对。<a href="maths-c2-sets-relations.html">第 2 章</a>讲集合与关系：并、交、差、补四种运算，等价关系与等价类，偏序关系，函数与单射、满射、双射。数据库查询、权限矩阵、按角色分组，全是这一章的东西在干活。</p>
+      <p>然后画图。<a href="maths-c3-graph-theory.html">第 3 章</a>讲图论入门：顶点与边、有向图与无向图、度、路径、连通性、割点与桥、树、攻击树、BFS、DFS 与 Dijkstra 算法。网络拓扑、攻击路径、依赖关系，画出来都是图。</p>
+      <p>接着数数。<a href="maths-c4-combinatorics.html">第 4 章</a>讲组合数学：加法与乘法原则、排列与组合、密码强度计算、鸽巢原理、生日悖论。密码强度就是一道数数题：按 NIST SP 800-63B Rev.4，单独使用的密码至少 15 位，不迷信复杂度，强制查泄露密码库。</p>
+      <p>再算风险。<a href="maths-c5-probability-statistics.html">第 5 章</a>讲概率与统计：条件概率、贝叶斯定理、期望值、平均值与中位数、方差与标准差、相关不等于因果。风险等于可能性乘以影响，告警调得准不准，先看基础概率。</p>
+      <p>最后看懂 AI。<a href="maths-c6-linear-algebra.html">第 6 章</a>讲线性代数入门：向量、点积、矩阵、逆矩阵、行列式、线性方程组、向量空间、特征值。每个行为是一个向量，正常行为聚成一团，离团越远越可疑——机器学习的异常检测，直觉就是这一句。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>把一句安全结论拆成前提和结论，用四种证明方法检查它站不站得住，认出“没出事所以安全”这类逻辑谬误。</li>
+        <li>用并、交、差、补做账号排查：算出僵尸账号的差集，按角色把用户分成等价类，再按组配权限。</li>
+        <li>画一张网络图或攻击路径图，找出度最大的点、割点和桥，用 BFS 的思路算出攻击者的最短路径。</li>
+        <li>算出一个密码的组合数，判断它够不够长；按 NIST SP 800-63B Rev.4 的要求，给自己设一句 15 位以上的口令。</li>
+        <li>用期望值给风险算账：可能性乘以影响，算出修一个漏洞值不值，再用贝叶斯定理理解告警为什么会有那么多误报。</li>
+        <li>看一组日志数据时，同时看平均值和中位数，用标准差判断一个数据点是不是离群，再问一句“相关还是因果”。</li>
+        <li>把一个登录行为写成向量，理解“正常行为聚成一团、离团越远越可疑”的异常检测直觉，看懂安全工具说明里的“特征”和“模型”。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>模块五，数据库与密码学。这六章的工具在那里一件一件派上用场：模运算与素数是组合与数论的计数，哈希碰撞是生日悖论的直接应用，椭圆曲线上的点加法和向量加法是亲戚，TLS 1.3 的握手要先讲清楚再动手。去之前，先把第 4 章的口令换成 15 位以上的，把第 5 章的期望值公式抄进你的笔记——模块五的每一章，都在等你用这两件工具。</p>
+      <div class="lesson-nav">
+        <a href="maths-c6-linear-algebra.html">← 数学基础专项第 6 章：线性代数入门</a>
+        <a href="../course.html">课程目录</a>
+        <a href="../course.html#m5">下一站：模块五：数据库与密码学 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

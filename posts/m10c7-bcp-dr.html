@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块十第 7 章：业务连续性与灾难恢复 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块十第 7 章：业务连续性与灾难恢复</h1>
+      <div class="meta"><span class="tag">治理、风险、合规与韧性</span>2026-11-25 · 模块十</div>
+      <p>前面几章讲的都是“怎么不让坏事发生”。这一章讲一个更现实的问题：坏事发生了怎么办？服务器烧了、机房进水了、勒索软件把所有数据加密了、云厂商宕机了——业务怎么不停摆？这就是<strong>业务连续性（BCP）与灾难恢复（DR）</strong>。安全工作的最高境界不是“永远不出事”，而是“出了大事，还能继续运转”。</p>
+      <p>先分清两个词：<strong>业务连续性计划（BCP）</strong>管的是“整个业务怎么不停”——人、流程、场地、供应商，出事了谁来接替、去哪里办公、客户怎么通知；<strong>灾难恢复计划（DRP）</strong>管的是“技术系统怎么恢复”——服务器、数据、网络怎么在备用地点重建起来。BCP 是大圈，DRP 是大圈里技术的那一块。两个计划都要有，缺一个，出了事还是会乱。</p>
+
+      <h2>两个关键数字：RTO 与 RPO</h2>
+      <p>做 BCP/DR 之前，先定两个数字。<strong>RTO（恢复时间目标）</strong>：系统最多能停多久？比如网店的订单系统 RTO 是 4 小时，意思是出事后 4 小时内必须恢复；内部报销系统 RTO 是 3 天，停几天也没大事。<strong>RPO（恢复点目标）</strong>：最多能丢多少数据？比如订单数据 RPO 是 15 分钟，意思是备份至少每 15 分钟做一次，出事最多丢 15 分钟的数据；内部公告 RPO 是 1 天，丢一天的公告可以重发。</p>
+      <p>这两个数字不是技术人员拍脑袋定的，是业务部门和技术一起定的：业务说“停多久会亏多少钱、丢多少数据会出大事”，技术说“做到这个数字要花多少钱”。RTO 越短、RPO 越小，成本越高——每 5 分钟备份一次，比每天备份一次贵得多。所以定数字之前，先做<strong>业务影响分析（BIA）</strong>：把每个业务流程列出来，评估它停摆的损失，再决定它的 RTO 和 RPO。最重要的业务，数字最严；不重要的业务，数字可以放宽。</p>
+
+      <h2>备份：3-2-1 法则</h2>
+      <p>灾难恢复的底座是备份，记住 <strong>3-2-1 法则</strong>：至少 <strong>3</strong> 份数据，存在 <strong>2</strong> 种不同的介质上，其中 <strong>1</strong> 份放在异地（离线或另一个地方）。为什么？一份备份和源数据放在同一台机器上，机器一坏、勒索一来就一起没了，不算备份；两份备份放在同一个机房，机房一进水就一起没了，也不算备份。只有异地那一份，才能在真正的灾难里救命。</p>
+      <p>备份还要定期<strong>恢复演练</strong>：真的从备份里恢复一次，确认文件能打开、系统能启动、数据是最新的。模块六第 23 章的评估清单里就有这一项——没演练过的备份，等于没有备份。演练要留记录：什么时候演练的、恢复用了多久、有没有问题，这些记录在审计时（第 6 章）就是证据。</p>
+
+      <h2>灾难恢复的几种场地</h2>
+      <p>系统恢复需要一个“备用场地”，按准备程度分四档。<strong>冷站（Cold Site）</strong>：只有一个空场地，有电、有网，设备要现买现装，恢复最慢、最便宜。<strong>暖站（Warm Site）</strong>：场地里有设备、有部分数据，恢复需要几小时到一天。<strong>热站（Hot Site）</strong>：备用系统一直开着、数据实时同步，出事后几分钟就能切换，最贵。<strong>云端恢复</strong>：把备用系统放在云上，平时只付少量费用，出事时快速扩容——现在很多小公司选这条路，因为不用自己养一个备用机房。</p>
+      <p>选哪一档，看 BIA 的结果：RTO 只有几小时的核心系统，值得上热站或云端；RTO 有几天的非核心系统，冷站就够了。花大钱给不重要的系统建热站，是浪费；给核心系统只准备冷站，是失职。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="业务连续性与灾难恢复流程及备份3-2-1法则图">
+          <rect x="20" y="15" width="250" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="40" text-anchor="middle" font-size="13" fill="#1a1a2e">业务影响分析 BIA</text>
+          <text x="145" y="60" text-anchor="middle" font-size="11" fill="#666">哪个业务最重要？停摆损失多大？</text>
+          <rect x="290" y="15" width="250" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="40" text-anchor="middle" font-size="13" fill="#1a1a2e">定 RTO 与 RPO</text>
+          <text x="415" y="60" text-anchor="middle" font-size="11" fill="#666">最多停多久？最多丢多少数据？</text>
+          <rect x="20" y="95" width="250" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="120" text-anchor="middle" font-size="13" fill="#1a1a2e">备份 3-2-1 法则</text>
+          <text x="145" y="140" text-anchor="middle" font-size="11" fill="#666">3 份数据 · 2 种介质 · 1 份异地</text>
+          <rect x="290" y="95" width="250" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="120" text-anchor="middle" font-size="13" fill="#1a1a2e">备用场地：冷站 / 暖站 / 热站 / 云端</text>
+          <text x="415" y="140" text-anchor="middle" font-size="11" fill="#666">按 RTO 选档次，核心系统值得上热站</text>
+          <rect x="20" y="175" width="520" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="198" text-anchor="middle" font-size="13" fill="#1a1a2e">演练、演练、再演练：桌面推演 → 模拟切换 → 真实恢复</text>
+          <text x="280" y="218" text-anchor="middle" font-size="11" fill="#666">没演练过的计划等于没有计划 · 演练记录就是审计证据</text>
+          <text x="280" y="270" text-anchor="middle" font-size="13" fill="#1a1a2e">BCP 管整个业务怎么不停，DRP 管技术系统怎么恢复</text>
+          <text x="280" y="295" text-anchor="middle" font-size="12" fill="#666">出事后先按应急响应遏制（模块八），再按 BCP/DR 恢复业务</text>
+        </svg>
+        <figcaption>图：业务连续性与灾难恢复——从业务影响分析，到 RTO/RPO，到备份与备用场地，再到演练</figcaption>
+      </figure>
+
+      <h2>演练：计划的试金石</h2>
+      <p>计划写得再漂亮，没演练过等于没有。演练分三级，由易到难：<strong>桌面推演</strong>——大家坐在一起，按剧本走一遍流程（“假设订单系统宕机了，谁先打电话、谁去备用场地、客户怎么通知”），只动嘴、不动系统，成本最低，建议每季度做一次；<strong>模拟切换</strong>——真的把备用系统拉起来、切一部分流量过去，验证技术上行不行；<strong>真实恢复</strong>——完整地从备份恢复一次，计时、记录问题。演练之后一定要复盘：哪里卡住了、联系人名单对不对、RTO 达没达到，复盘的问题要进整改清单。</p>
+      <p>演练还有一个意外的好处：它是最好的培训。平时没人读的计划，演练一次大家就记住了。等到真的出事，团队不是在翻文件，而是在执行已经走过一遍的动作。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我参加过一次真实的灾难恢复：机房空调坏了，服务器过热宕机。计划写得很好，但演练时发现两个致命问题——备用场地的联系人电话换了没人更新，备份的恢复密码只有一个人知道，而那个人正在休假。那次之后我养成两个习惯：第一，计划里的联系人名单每季度核对一次；第二，关键密码和恢复步骤必须至少两个人知道，而且要写进密封的信封放在安全的地方。还有一句：演练不要只挑“好演”的场景，专门挑最难的——主系统和备用系统同时出问题、关键人员联系不上——因为真实的灾难从不按剧本出牌。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机或实验环境里做：给假想的 20 人小公司做一张迷你业务影响分析表，列三个业务（网店订单、内部办公、客户资料库），各写一句“停摆一天的损失”和你定的 RTO、RPO。<br>2. 按 3-2-1 法则，给这家公司设计一个备份方案：几份数据、存在哪两种介质上、异地那份放哪里、多久备份一次。<br>3. 写一份桌面推演剧本：假设“勒索软件加密了订单系统”，按时间线写出前两小时谁做什么——谁发现、谁上报、谁决定切换、客户怎么通知。<br>4. 在你的虚拟机里真的做一次恢复演练：从备份里恢复一个文件或一个文件夹，计时、记录步骤，确认文件能打开。</p>
+      <h2>避坑</h2>
+      <p>别把备份和源数据放同一台机器：勒索一来、机器一坏就一起没了，异地那一份才是救命的；别定拍脑袋的 RTO/RPO：要先做业务影响分析，业务和技术一起定，数字越严成本越高；别写了计划不演练：没演练过的计划等于没有计划，从桌面推演开始，每季度做一次；别让关键步骤只有一个人会：联系人名单每季度核对，恢复密码和步骤至少两个人知道；别在真实公司系统上练手：本章的动手做只写表格、写剧本、在自己的虚拟机里恢复文件，不碰任何真实公司的生产系统。</p>
+      <p>业务能不停摆，靠的不只是技术，还有人——出事那天，是人去执行计划、做判断、互相配合。下一章讲 <a href="m10c8-security-awareness.html">第 8 章：安全意识培训与组织文化</a>：人是最弱的一环，也是最强的一环，关键看你怎么培养。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>BCP 管整个业务怎么不停，DRP 管技术系统怎么恢复；安全工作的最高境界是出了大事还能继续运转。</li>
+          <li>RTO 是最多能停多久，RPO 是最多能丢多少数据；两个数字由业务和技术一起定，先做业务影响分析。</li>
+          <li>备份用 3-2-1 法则：3 份数据、2 种介质、1 份异地；没演练过的备份等于没有备份。</li>
+          <li>备用场地分冷站、暖站、热站和云端四档，按 RTO 选档次，核心系统值得上热站或云端。</li>
+          <li>演练分桌面推演、模拟切换、真实恢复三级，每季度至少做一次桌面推演，演练后一定要复盘。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m10c6-audit-assessment.html">← 上一章：第 6 章：审计与安全评估</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m10c8-security-awareness.html">下一章：第 8 章：安全意识培训与组织文化 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux 管理专项第 1 章：包管理与软件源 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Linux 管理专项第 1 章：包管理与软件源</h1>
+      <div class="meta"><span class="tag">Linux 管理专项</span>2026-11-25 · Linux 管理专项</div>
+      <p>Windows 装软件是去官网下载安装包，Linux 装软件是去“软件源”里取。软件源是一个官方或可信的仓库，里面放着成千上万个软件包；包管理器负责从仓库里下载、安装、升级、卸载，还自动处理依赖关系。这一章讲 Linux 的包管理：apt、dnf、软件源、依赖、签名验证。</p>
+      <p>对安全工作来说，包管理是第一道防线：软件从哪来，决定了软件可不可信。从官方源装的软件，经过签名验证；从网上随便下载的脚本、来路不明的安装包，没有这层保障。很多入侵事件的起点，就是装了一个被篡改的软件包。</p>
+      <p>本章以 Ubuntu/Debian 的 apt 和 RHEL/Fedora 的 dnf 为例讲，命令不同，思路一样：只从可信的源装软件、装之前验证签名、定期升级补丁。动手只在你自己的虚拟机里做。</p>
+      <h2>包管理器：apt 与 dnf</h2>
+      <p>Ubuntu/Debian 系用 <strong>apt</strong>：apt update 是刷新软件列表（只更新目录，不装东西），apt upgrade 是把已装的软件升到新版，apt install 软件名是安装，apt remove 是卸载。RHEL/Fedora 系用 <strong>dnf</strong>（老版本叫 yum）：dnf update、dnf install、dnf remove，意思一样。</p>
+      <p>新手最常犯的错误，是分不清 apt update 和 apt upgrade：update 只是“去书店看看新书目录”，upgrade 才是“把书买回家”。只跑 update 不跑 upgrade，补丁永远装不上。安全加固的第一步，就是定期跑升级：sudo apt update && sudo apt upgrade。</p>
+      <p>查某个软件装没装：dpkg -l | grep 软件名（Debian 系）或 rpm -qa | grep 软件名（RHEL 系）。查某个软件属于哪个包：apt-file search 文件名（要先装 apt-file）。</p>
+      <h2>软件源：软件从哪来</h2>
+      <p>软件源的列表存在配置文件里：Debian 系在 /etc/apt/sources.list 和 /etc/apt/sources.list.d/ 下，RHEL 系在 /etc/yum.repos.d/ 下。每个源是一行地址，指向官方或镜像站的仓库。系统默认的源就是官方源，一般不需要改。</p>
+      <p>加第三方源要格外小心：每加一个源，就等于多信任了一个软件发布者。加源之前要问三个问题：这个源是谁运营的？有没有官方背书？有没有签名验证？来路不明的源、网上教程里随手贴的源，不要加。加了不用的源，要及时删掉。</p>
+      <p>国内镜像源是很多教程推荐的“加速办法”，但本课按你的习惯：只用官方源和官方镜像，不用第三方来源。速度慢一点可以等，来源不可信是原则问题。</p>
+      <h2>依赖与签名：为什么装一个软件会带出一串</h2>
+      <p>Linux 软件很少是单个文件：一个程序往往依赖好几个库（比如图形库、加密库），包管理器会自动把依赖一起装上。这就是“装一个软件带出一串”的原因。依赖的好处是省空间、好维护，风险是：一个被篡改的底层库，会影响所有依赖它的程序——供应链攻击打的就是这个点。</p>
+      <p>签名验证是包管理的防线：官方源里的每个软件包，发布者都用私钥签过名，系统用预置的公钥验证签名，签名不对就拒绝安装。你可以用 apt-key list（新版用 /etc/apt/trusted.gpg.d/）看看系统信任哪些签名密钥。不要为了装某个软件而关掉签名验证——那等于拆掉了防线。</p>
+      <p>还有一个概念叫“包的来源可追溯”：apt show 软件名能看到版本、维护者、描述；apt changelog 能看到这个版本的改动记录。装软件之前花十秒看一眼，比装完再查要省事得多。</p>
+      <h2>升级策略：安全更新与系统升级</h2>
+      <p>升级分两种：<strong>安全更新</strong>是修漏洞的，要尽快装；<strong>功能升级</strong>是加新功能的，可以等一等。Ubuntu 有 unattended-upgrades 可以自动装安全更新，服务器上常用这个办法：安全更新自动装，功能升级手动挑时间做。</p>
+      <p>升级之前要做两件事：第一，备份重要数据和配置（预备课第 21 课讲过备份）；第二，看看这次升级会动哪些包（apt list --upgradable），有没有内核、有没有关键服务。升级内核要重启，升级数据库要先停服务——生产系统升级要挑维护窗口，绝不能在业务高峰期动手。</p>
+      <p>升级之后要验证：服务还在跑吗？网站还能打开吗？日志里有没有报错？验证通过了，这次升级才算完成。只升级不验证，等于只做了半件事。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Linux 包管理图：包管理器从官方软件源取包，验证签名后安装，自动处理依赖，定期升级安全更新">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="180" y="10" width="200" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">官方软件源</text>
+          <text x="280" y="54" text-anchor="middle" font-size="11" fill="#666">仓库：成千上万个软件包</text>
+          <rect x="20" y="90" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">包管理器 apt / dnf</text>
+          <text x="140" y="134" text-anchor="middle" font-size="11" fill="#666">下载、安装、升级、卸载</text>
+          <rect x="300" y="90" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">签名验证</text>
+          <text x="420" y="134" text-anchor="middle" font-size="11" fill="#666">签名不对就拒绝安装</text>
+          <rect x="20" y="190" width="240" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">自动处理依赖</text>
+          <text x="140" y="234" text-anchor="middle" font-size="11" fill="#666">装一个，带上一串库</text>
+          <rect x="300" y="190" width="240" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">定期升级安全更新</text>
+          <text x="420" y="234" text-anchor="middle" font-size="11" fill="#666">安全更新尽快装</text>
+          <line x1="280" y1="54" x2="280" y2="88" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="140" y1="142" x2="140" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="420" y1="142" x2="420" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="290" text-anchor="middle" font-size="12" fill="#666">apt update 是刷新目录，apt upgrade 才是真的升级</text>
+          <text x="280" y="315" text-anchor="middle" font-size="12" fill="#666">加第三方源之前先问：谁运营的？有官方背书吗？</text>
+
+        </svg>
+        <figcaption>图：包管理流程——只从可信的源取包、验签名再安装、定期升级安全更新</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ apt update 是刷新软件列表，apt upgrade 才是真的升级，安全更新要尽快装。</p>
+      <p>□ 软件源是软件的来源，只用官方源和官方镜像，别加来路不明的第三方源。</p>
+      <p>□ 每个官方软件包都有签名验证，签名不对就拒绝安装，别关掉这道防线。</p>
+      <p>□ 装一个软件会带出一串依赖，底层库被篡改会影响所有依赖它的程序。</p>
+      <p>□ 升级之前先备份、看清单，升级之后先验证服务，验证通过才算完成。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>我管服务器的第一条规矩，就是“软件只从官方源来”。有一次同事图方便，从网上下载了一个 .deb 包直接装，结果那个包被改过，装完多了一个后门服务——清理花了两天。教训是：方便和可信，只能选一个的时候选可信。还有，升级之前先看 apt list --upgradable，升级之后先看服务还在不在——我见过太多“升级完就走人，第二天发现服务没起来”的事故。升级不是跑完命令就完事，验证通过了才算完。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的 Linux 虚拟机里：运行 sudo apt update，再运行 apt list --upgradable，看看有哪些软件可以升级，把数量记下来；再运行 dpkg -l | grep -i openssh，看看 SSH 相关包装了没有。<br>2. 在虚拟机里查看软件源：cat /etc/apt/sources.list，再 ls /etc/apt/sources.list.d/，看看你的系统现在用的是哪些源；再运行 apt-key list 或 ls /etc/apt/trusted.gpg.d/，看看系统信任哪些签名密钥。<br>3. 在虚拟机里装一个无害的小工具练手：sudo apt install -y htop，装完运行 htop 看看，再运行 sudo apt remove htop 把它卸掉，熟悉安装和卸载的完整流程。</p>
+      <h2>避坑</h2>
+      <p>别在生产系统、别人的服务器上练 apt 命令：动手只在你自己的虚拟机里做；别从网上随便下载 .deb/.rpm 包直接装：没有签名验证的包，等于来路不明的安装包；别只跑 apt update 不跑 upgrade：只刷新目录不升级，补丁永远装不上；别为了装软件关掉签名验证：那等于拆掉了包管理的防线；升级之前先备份，升级之后先验证，别升级完就走人。</p>
+      <p>包管理是 Linux 安全的第一道防线：软件从哪来，决定了软件可不可信。下一章我们看 Linux 里“谁能干什么”：<a href="linux-c2-users-sudo.html">第 2 章</a>用户、组与 sudo——谁是管理员，谁只能看，以及 sudo 是怎么把管理员权限借出去的。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>apt update 是刷新软件列表，apt upgrade 才是真的升级，安全更新要尽快装。</li>
+          <li>软件源是软件的来源，只用官方源和官方镜像，别加来路不明的第三方源。</li>
+          <li>每个官方软件包都有签名验证，签名不对就拒绝安装，别关掉这道防线。</li>
+          <li>装一个软件会带出一串依赖，底层库被篡改会影响所有依赖它的程序。</li>
+          <li>升级之前先备份、看清单，升级之后先验证服务，验证通过才算完成。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="summary-windows.html">← 上一章：Windows 专项小结</a>
+        <a href="../course.html">课程目录</a>
+        <a href="linux-c2-users-sudo.html">下一章：第 2 章：用户、组与 sudo →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

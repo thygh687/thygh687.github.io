@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 2 章：SQL 注入实战 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 2 章：SQL 注入实战</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>上一章我们看懂了请求与响应的全过程。这一章讲 Web 安全里最经典、也最常考的漏洞：SQL 注入。原理在<a href="m5c4-sql-injection.html">模块五第 4 章</a>已经讲过——程序把用户输入直接拼进 SQL 语句，攻击者就能改变这条语句的意思。这一章我们把原理变成动手能力：在自己的靶场里，从发现注入点、确认注入类型，到拿到数据、再到写出修复方案，走完一整套流程。</p>
+      <p>先把一句话刻在脑子里：<strong>SQL 注入不是“黑客魔法”，而是字符串拼接惹的祸。</strong>程序本来想拼出 <code>SELECT * FROM users WHERE id = 5</code>，如果它直接把你输入的 <code>5</code> 拼进去，你输入 <code>5 OR 1=1</code>，语句就变成了 <code>SELECT * FROM users WHERE id = 5 OR 1=1</code>——<code>1=1</code> 永远成立，数据库就把整张表都吐出来了。攻击者没有攻破数据库，他只是让程序替自己说了一句不同的话。</p>
+
+      <h2>最经典的例子：绕过登录</h2>
+      <p>很多登录框背后的 SQL 是这样的：<code>SELECT * FROM users WHERE username = '输入的用户名' AND password = '输入的密码'</code>。如果你在用户名里输入 <code>admin' --</code>，语句就变成 <code>WHERE username = 'admin' --' AND password = ...</code>——<code>--</code> 在 SQL 里是注释，后面的密码检查整段被注释掉了，数据库只验证用户名是 admin，你就以管理员身份登录了，连密码都不需要。这就是为什么“登录框”是注入的重灾区。</p>
+      <p>另一个万能钥匙是 <code>' OR '1'='1</code>：用户名输入 <code>' OR '1'='1' --</code>，条件变成 <code>username = '' OR '1'='1'</code>，恒成立。初学者第一次在靶场里看到登录框直接被绕过，往往会愣一下——原来大名鼎鼎的 SQL 注入，入门只需要一个单引号。单引号就是探测注入的“听诊器”：在一个输入框里输入一个 <code>'</code>，如果页面报错、行为异常，就说明输入可能被拼进了 SQL，值得继续测。</p>
+
+      <h2>四种注入类型，怎么认、怎么用</h2>
+      <p><strong>第一，联合查询注入（UNION-based）。</strong>页面会把查询结果直接显示出来时最方便：用 <code>UNION SELECT</code> 把另一张表的数据“拼”进正常结果里一起显示。步骤是先用 <code>ORDER BY</code> 猜列数（<code>ORDER BY 3</code> 报错、<code>ORDER BY 2</code> 正常，说明有 2 列），再用 <code>UNION SELECT 1,2</code> 看哪一列会显示在页面上，最后把 <code>1,2</code> 换成想查的字段，例如数据库名、表名、用户名和密码哈希。</p>
+      <p><strong>第二，报错注入（Error-based）。</strong>页面不显示数据，但会把数据库的报错信息显示出来。攻击者故意构造会让数据库报错的语句，让报错信息里“夹带”出想要的数据。比如用 <code>extractvalue()</code> 这类函数，报错内容里就会带出查询结果。修复时记住：生产环境绝不能把数据库报错直接显示给用户，报错信息是给攻击者的免费情报。</p>
+      <p><strong>第三，布尔盲注（Boolean-based blind）。</strong>页面既不显示数据、也不报错，只对“真”和“假”有两种不同反应（比如“用户存在”和“用户不存在”）。攻击者就一次问一个是非题：<code>AND (SELECT SUBSTRING(password,1,1) FROM users WHERE username='admin') = 'a'</code>——页面说“存在”，第一位就是 a；说“不存在”，就换 b 再问。一位一位地问，最终能把整个密码问出来。慢，但很稳。</p>
+      <p><strong>第四，时间盲注（Time-based blind）。</strong>页面对真假没有任何区别时，最后的办法是让数据库“用时间回答”：<code>AND IF(条件成立, SLEEP(5), 0)</code>——条件成立页面就慢 5 秒，不成立就立刻返回。用秒表当“显示器”，同样能一位一位问出数据。时间盲注最能磨练耐心，也是自动化工具（比如 sqlmap）最常干的活。</p>
+
+      <h2>怎么防：参数化查询是正解</h2>
+      <p>防 SQL 注入的正解只有一个：<strong>参数化查询（预编译语句）</strong>。原理很简单：先把 SQL 语句的结构定死发给数据库（<code>SELECT * FROM users WHERE id = ?</code>），再把用户输入当作纯粹的数据传进去。输入里的单引号、<code>OR 1=1</code> 再也不会被当成 SQL 代码来执行，因为它们出现的时候，语句的结构早就定下来了。所有主流语言都有参数化查询：Python 的 DB-API、PHP 的 PDO、Java 的 PreparedStatement、.NET 的参数化命令。</p>
+      <p>还有几层辅助防线：数据库账号用最小权限（网站用的账号绝不能是数据库管理员，万一注入了也只能读有限的表）；输入校验做白名单（数字字段只允许数字）；生产环境关闭详细报错；定期用工具扫描。但要分清主次：这些都只是“纵深防御”，没有参数化查询，其他防线迟早会被绕过。反过来，有了参数化查询，注入这扇门就从根本上关上了。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SQL注入原理图：正常输入与恶意输入拼接成不同SQL语句的对比">
+          <rect x="20" y="20" width="240" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="44" text-anchor="middle" font-size="13" fill="#1a1a2e">正常输入：id = 5</text>
+          <text x="140" y="64" text-anchor="middle" font-size="11" fill="#666">SELECT * FROM users WHERE id = 5</text>
+          <rect x="300" y="20" width="240" height="60" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="44" text-anchor="middle" font-size="13" fill="#1a1a2e">恶意输入：5 OR 1=1</text>
+          <text x="420" y="64" text-anchor="middle" font-size="11" fill="#666">WHERE id = 5 OR 1=1（恒成立）</text>
+          <rect x="180" y="110" width="200" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="13" fill="#1a1a2e">程序直接拼接字符串</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">输入被当成 SQL 代码执行</text>
+          <rect x="180" y="190" width="200" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="212" text-anchor="middle" font-size="13" fill="#1a1a2e">数据库执行被改写的语句</text>
+          <text x="280" y="232" text-anchor="middle" font-size="11" fill="#666">返回整张表 / 绕过登录</text>
+          <rect x="120" y="272" width="320" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="13" fill="#1a1a2e">正解：参数化查询——结构先定，输入只当数据</text>
+          <line x1="140" y1="80" x2="250" y2="110" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="420" y1="80" x2="310" y2="110" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="190" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="242" x2="280" y2="272" stroke="#1a1a2e" stroke-width="1.5"/>
+        </svg>
+        <figcaption>图：SQL 注入的本质——字符串拼接让输入变成了代码；参数化查询把结构与数据分开</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>测注入时，新手最常犯的错误是“一上来就扔 payload 大全”。正确的做法恰恰相反：先花十分钟把这个功能摸透——这个参数是干什么的、正常返回长什么样、输错了会怎样、错误信息长什么样。再用一个单引号做“探测”，确认存在注入之后，才按部就班地判断类型、猜列数、拿数据。我做过的最快的注入测试只用了三分钟，最慢的磨了两天——慢的那次不是 payload 不够多，而是目标用了盲注，我得一位一位地问。还有一句忠告：拿到数据库的管理员账号密码哈希之后，不要急着去破解，先想想报告里该怎么写——“能读到整张用户表”本身，就已经是高危发现了，定级用<a href="m6c11-risk-management.html">第 11 章</a>的影响 × 可能性来算。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在自己的虚拟机里：搭好 DVWA 靶场，把安全级别调到 Low，打开 SQL Injection 模块；先输入一个正常的数字 id，记下页面长什么样，再输入一个单引号 <code>'</code>，观察页面有什么变化。<br>2. 在靶场里复现登录绕过：用 <code>admin' --</code> 或 <code>' OR '1'='1</code> 试着绕过一个登录框，成功后写下你输入的完整内容和它拼成的 SQL 语句。<br>3. 做一次联合查询注入：用 <code>ORDER BY</code> 猜出列数，再用 <code>UNION SELECT</code> 查出数据库名和当前用户，记录每一步的输入和页面反应。<br>4. 把 DVWA 安全级别调到 High，再用同样的方法试一遍，看看哪些 payload 失效了、为什么失效；然后写三句话说明：如果这是真实网站，正确的修复方法是什么（提示：参数化查询 + 最小权限）。</p>
+      <h2>避坑</h2>
+      <p>绝不在真实网站上测注入：只在自己的虚拟机靶场里做，对真实网站做注入测试是违法行为；别迷信“过滤单引号就安全了”：黑名单过滤总能被绕过（大小写、编码、双写），参数化查询才是正解；别把报错信息当小事：生产环境显示数据库报错，等于免费送情报；别只测 GET 参数：POST 表单、Cookie、HTTP 头里的值也可能被拼进 SQL；别忘了定级：能读到用户表、能绕过登录，就是高危，按模块六第 11 章的风险思路写进报告。</p>
+      <p>SQL 注入这一仗打完，你已经亲手摸过 Web 安全里最经典的漏洞：原理是拼接、探测靠单引号、利用分四种、修复靠参数化。下一章我们把目光从服务器转向浏览器：<a href="m7c3-xss.html">第 3 章：XSS 跨站脚本</a>——让别人的浏览器替你干活，偷走会话、改掉页面，甚至不需要知道对方的密码。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>SQL 注入的本质是字符串拼接：用户输入被当成 SQL 代码执行，改变了语句的意思。</li>
+          <li>探测靠一个单引号；登录绕过常用 <code>admin' --</code> 或 <code>' OR '1'='1</code>，原理是注释掉密码检查或构造恒真条件。</li>
+          <li>四种利用方式：联合查询注入、报错注入、布尔盲注、时间盲注，页面回显越少，问法就越迂回。</li>
+          <li>修复的正解是参数化查询（结构先定、输入只当数据），辅以最小权限、白名单校验和关闭详细报错。</li>
+          <li>注入测试只在自己的靶场里做；按模块六第 11 章的影响 × 可能性给发现定级。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c1-web-internals.html">← 上一章：第 1 章：Web 工作原理深入</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c3-xss.html">下一章：第 3 章：XSS 跨站脚本 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows 专项第 1 章：Windows 架构：NT Executive、内核与 HAL · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Windows 专项第 1 章：Windows 架构：NT Executive、内核与 HAL</h1>
+      <div class="meta"><span class="tag">Windows 专项</span>2026-11-25 · Windows 专项</div>
+      <p><a href="m2c13-windows-internals.html">模块二第 13 章</a>讲过 Windows 内部结构，这一章把那张图拆开细讲：Windows 最底层是怎么搭起来的，应用程序的一次点击，要经过多少层才落到硬件上。先记住一句话：Windows 不是一块铁板，而是一座分层的大楼，每一层只跟上下两层打交道。</p>
+      <p>分层的好处是出了问题好定位：程序崩了不一定是系统坏了，驱动出问题不一定是硬件坏了。学安全的人更要懂分层，因为攻击者最爱找的，就是层与层之间的缝隙——比如从用户态想办法钻进内核态。</p>
+      <p>本章不要求你背下每个组件的名字，而是要建立一张心智地图：用户程序在哪、系统服务在哪、内核在哪、硬件抽象层在哪。下几章讲进程、注册表、服务时，你会不断回到这张地图上。</p>
+      <h2>先分清用户态和内核态</h2>
+      <p>Windows 把 CPU 的运行状态分成两大块：<strong>用户态</strong>和<strong>内核态</strong>。你在桌面上打开的记事本、浏览器、微信，都跑在用户态；操作系统最核心的部分跑在内核态。用户态的程序想碰硬件、想读别的进程的内存，必须通过系统调用向内核申请，不能自己直接动手。</p>
+      <p>为什么这样分？一是保护：一个用户程序写错了内存，最多自己崩溃，不会把整个系统拖垮；二是安全：恶意软件如果只能待在用户态，它能造成的破坏就有限。反过来，攻击者一旦拿到内核态权限，就等于拿到了整台机器的钥匙——这就是为什么驱动签名、内核隔离这些防护那么重要。</p>
+      <p>你可以把用户态想象成商场里的店铺，内核态是商场的物业和配电房。店铺之间互相不能乱进对方的仓库，要用电、用水都得向物业申请。店铺可以装修得很花哨，但配电房的门必须锁好。</p>
+      <h2>NT Executive：内核之上的管理层</h2>
+      <p>内核（Kernel）本身很小很精，只负责最基础的事：线程调度、中断处理、同步原语。内核之上是 <strong>NT Executive</strong>，它是一组管理服务：对象管理器、内存管理器、进程管理器、I/O 管理器、安全引用监视器（SRM）、配置管理器（管注册表）、缓存管理器，等等。</p>
+      <p>打个比方，内核是工地上的塔吊司机，只负责把东西吊到指定位置；NT Executive 是工地的项目经理，管进度、管材料、管安全、管账本。你平时用的任务管理器里看到的进程、内存占用、句柄数，背后都是 NT Executive 在记账。</p>
+      <p>对安全工作来说，NT Executive 里最值得认识的是两个角色：<strong>安全引用监视器（SRM）</strong>，每次访问文件、注册表、进程时，它都会查一遍访问令牌和 ACL（第 9 章细讲）；<strong>对象管理器</strong>，Windows 里几乎所有东西——文件、进程、线程、事件、互斥体——都是对象，有名字、有类型、有权限，统一用句柄来访问。</p>
+      <h2>HAL：让同一套系统跑在不同硬件上</h2>
+      <p><strong>硬件抽象层（HAL，Hardware Abstraction Layer）</strong>是 Windows 和硬件之间的一层薄薄的翻译。不同的主板、中断控制器、定时器，HAL 把它们的差异藏起来，让上面的内核看到的是一套统一的接口。</p>
+      <p>这就是为什么同一份 Windows 安装盘能装在不同品牌的电脑上：换主板、换 CPU 型号，大部分工作由 HAL 和驱动消化，内核不用重写。排障时也要记住这一点：蓝屏信息里如果出现 hal.dll 相关字样，往往要先怀疑硬件、固件或驱动，而不是先怀疑应用程序。</p>
+      <p>HAL 下面是设备驱动：每块硬件都由驱动程序翻译成系统能懂的语言。驱动跑在内核态——这意味着一个有漏洞的驱动，就是一条通往内核的路。第 10 章讲的虚拟化安全和驱动防护，根子就在这里。</p>
+      <h2>一次点击要走多远</h2>
+      <p>以双击打开一个记事本文件为例：桌面程序（用户态）收到点击，调用 Windows API；API 通过系统调用进入内核态，I/O 管理器找到文件系统驱动，驱动再通过 HAL 和磁盘驱动把文件从硬盘读出来；读出来的内容交给内存管理器放进内存，最后显示在屏幕上。</p>
+      <p>这条链上的每一个环节都可能被攻击者利用，也都可以被防护：API 层有应用控制，内核层有 PatchGuard 和驱动签名，文件系统层有权限和完整性检查。学安全不是学某一招，而是学会沿着这条链一节一节地问：这一节是谁在把关？如果把关的人被绕过，会发生什么？</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Windows 分层架构图：用户程序、子系统、NT Executive、内核、HAL、硬件自上而下排列">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="130" y="10" width="300" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">用户程序：记事本、浏览器、你的软件</text>
+          <text x="280" y="54" text-anchor="middle" font-size="11" fill="#666">跑在用户态，崩了不拖垮系统</text>
+          <rect x="130" y="70" width="300" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="94" text-anchor="middle" font-size="13" fill="#1a1a2e">Windows 子系统与 API</text>
+          <text x="280" y="114" text-anchor="middle" font-size="11" fill="#666">Win32 API、系统调用的入口</text>
+          <rect x="130" y="130" width="300" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="154" text-anchor="middle" font-size="13" fill="#1a1a2e">NT Executive：对象、内存、进程、I/O、安全</text>
+          <text x="280" y="174" text-anchor="middle" font-size="11" fill="#666">管理服务，记账和把关</text>
+          <rect x="130" y="190" width="300" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">内核 Kernel</text>
+          <text x="280" y="234" text-anchor="middle" font-size="11" fill="#666">线程调度、中断、同步</text>
+          <rect x="130" y="250" width="300" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="274" text-anchor="middle" font-size="13" fill="#1a1a2e">HAL 硬件抽象层</text>
+          <text x="280" y="294" text-anchor="middle" font-size="11" fill="#666">把不同硬件翻译成统一接口</text>
+          <line x1="280" y1="54" x2="280" y2="70" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="114" x2="280" y2="130" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="174" x2="280" y2="190" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="234" x2="280" y2="250" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="330" text-anchor="middle" font-size="12" fill="#666">从上到下，就是一次请求走过的路</text>
+
+        </svg>
+        <figcaption>图：Windows 分层架构——应用程序到硬件要经过的子系统、NT Executive、内核与 HAL</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ Windows 分两层：用户态跑应用，内核态跑系统核心，中间靠系统调用联系。</p>
+      <p>□ 内核很小，只管线程调度、中断和同步；NT Executive 管对象、内存、进程、I/O 和安全检查。</p>
+      <p>□ HAL 把不同硬件的差异藏起来，让同一套 Windows 能跑在不同机器上。</p>
+      <p>□ 驱动跑在内核态，有漏洞的驱动就是通往内核的路，驱动安全就是系统安全的一部分。</p>
+      <p>□ 排障先定位在哪一层：用户态问题和内核态、驱动层问题的查法完全不同。</p>
+      <p>□ 把本章的命令和检查步骤抄进自己的笔记，下次遇到同类问题直接用。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>排障时我最常用的一招，就是先问“它在哪一层”。用户说“电脑卡”，我先看是某个应用占满 CPU（用户态），还是系统进程、中断占用高（内核态、驱动层）。有一次一台电脑间歇性蓝屏，换内存、重装系统都没用，最后发现是主板 BIOS 太旧，HAL 和中断控制器配合出问题——升级 BIOS 就好了。记住：层分得越清，定位越快；上来就重装系统，是最贵、最慢的排障方法。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：打开任务管理器 → 详细信息，看看 System、Registry、Memory Compression 这几个系统进程，再打开资源监视器，观察 CPU、内存、磁盘三栏，把看到的数字记下来。<br>2. 在虚拟机里以管理员身份打开 PowerShell，运行 Get-Process | Sort-Object CPU -Descending | Select-Object -First 10，看看谁最占 CPU；再运行 systeminfo，看看系统版本和 BIOS 版本，把它们记进笔记。<br>3. 对照本章的图，画一遍你自己的分层图：把你常用的三个程序放在最上层，把你知道的系统服务放在中间，标出它们要经过哪些层才能碰到磁盘。</p>
+      <h2>避坑</h2>
+      <p>别在真实电脑、公司的电脑上乱试：本章的查看类操作是只读的，相对安全，但任何“关闭服务、卸载驱动、改注册表”的操作都不要在真实系统上练手；别把“内核态”理解成“更高级的用户程序”：内核态没有进程隔离，出错就是蓝屏，这是它和用户态最本质的区别；别以为重装能解决一切：驱动、固件、HAL 层面的问题，重装系统后还在原地等你。</p>
+      <p>这一章把 Windows 的分层地图铺好了：用户态与内核态的分界、NT Executive 的管理角色、HAL 的翻译作用。下一章我们从地图走到现场：<a href="windows-c2-system-processes.html">第 2 章</a>讲一开机就在跑的 SMSS、CSRSS、LSASS——那些名字古怪、却一个都不能杀的系统进程。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>Windows 分两层：用户态跑应用，内核态跑系统核心，中间靠系统调用联系。</li>
+          <li>内核很小，只管线程调度、中断和同步；NT Executive 管对象、内存、进程、I/O 和安全检查。</li>
+          <li>HAL 把不同硬件的差异藏起来，让同一套 Windows 能跑在不同机器上。</li>
+          <li>驱动跑在内核态，有漏洞的驱动就是通往内核的路，驱动安全就是系统安全的一部分。</li>
+          <li>排障先定位在哪一层：用户态问题和内核态、驱动层问题的查法完全不同。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="summary-module2.html">← 上一章：模块二小结</a>
+        <a href="../course.html">课程目录</a>
+        <a href="windows-c2-system-processes.html">下一章：第 2 章：系统进程：SMSS、CSRSS、LSASS →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

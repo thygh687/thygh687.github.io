@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七小结：从看懂网站到合法找漏洞 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七小结：从看懂网站到合法找漏洞</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · 模块七第 1–29 章</div>
+      <p>二十九章讲的其实是一条线，顺序不能反：先看懂网站是怎么工作的，再学会怎么找漏洞，最后学会怎么合法地做一次完整的测试。前半部分在讲“看懂”——请求、响应、会话、注入、跨站；中间在讲“打进去”——扫描、利用、提权、后渗透；后半部分在讲“打得深、守得住、做得对”——活动目录、API、开发流程、无线、方法论与法律边界。最后一章把这些本事合起来，变成一份能交出去的渗透测试报告。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="模块七二十九章知识串联图">
+          <defs>
+            <marker id="arrm7" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="130" y="10" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">看懂网站：请求、响应、会话、注入</text>
+          <rect x="130" y="70" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">打进去：扫描、利用、提权、后渗透</text>
+          <rect x="130" y="130" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">打得深：绕过、持久化、活动目录</text>
+          <rect x="130" y="190" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">换个战场：API、开发流程、无线</text>
+          <rect x="130" y="250" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="275" text-anchor="middle" font-size="14" fill="#1a1a2e">做得对：方法论、法律边界、复测闭环</text>
+          <rect x="130" y="310" width="300" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="335" text-anchor="middle" font-size="14" fill="#1a1a2e">合起来：一次完整的渗透测试</text>
+          <line x1="280" y1="50" x2="280" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm7)"/>
+          <line x1="280" y1="110" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm7)"/>
+          <line x1="280" y1="170" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm7)"/>
+          <line x1="280" y1="230" x2="280" y2="248" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm7)"/>
+          <line x1="280" y1="290" x2="280" y2="308" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm7)"/>
+        </svg>
+        <figcaption>图：二十九章讲的其实是一条线——看懂、打进去、打得深、换战场、做得对</figcaption>
+      </figure>
+      <h2>这二十九章是怎么连起来的</h2>
+      <p>先看懂网站。<a href="m7c1-web-internals.html">第 1 章</a> Web 工作原理深入讲了请求、响应、会话与 Cookie——网站是怎么工作的，先会模块四第 9 章的 HTML/JS 再来学。<a href="m7c2-sqli-lab.html">第 2 章</a> SQL 注入实战从原理到利用，原理在模块五第 4 章。<a href="m7c3-xss.html">第 3 章</a> XSS 跨站脚本，让别人的浏览器替你干活。<a href="m7c4-csrf-ssrf.html">第 4 章</a> CSRF 与 SSRF，借刀杀人的两种方式（2025 版 OWASP 已把 SSRF 并入 A01）。<a href="m7c5-upload-logic.html">第 5 章</a>文件上传与逻辑漏洞，不止是技术漏洞。<a href="m7c6-xxe-deserialization.html">第 6 章</a> XXE 与反序列化，容易忽略的两类漏洞。<a href="m7c7-session-auth.html">第 7 章</a>会话与认证深入：JWT、CORS、CSP 与越权访问，Web 认证的攻与防。</p>
+      <p>然后是打进去的工具与手法。<a href="m7c8-recon-scanning.html">第 8 章</a>信息收集与扫描进阶：Nmap、漏洞扫描、OSINT。<a href="m7c9-nmap-deep.html">第 9 章</a> Nmap 与扫描深入，扫描的艺术。<a href="m7c10-burp-deep.html">第 10 章</a> Burp Suite 深入，抓包改包的神器怎么用。<a href="m7c11-exploit-tooling.html">第 11 章</a>漏洞利用工具链：Metasploit、Burp、密码攻击、持久化与横向移动。<a href="m7c12-metasploit-deep.html">第 12 章</a> Metasploit 深入，漏洞利用框架怎么用。<a href="m7c13-linux-privesc.html">第 13 章</a> Linux 提权，Linux 系统的提权手法。<a href="m7c14-windows-privesc.html">第 14 章</a> Windows 提权，Windows 系统的提权手法。<a href="m7c15-post-exploitation-report.html">第 15 章</a>后渗透与报告：拿到权限之后干什么——收集信息、横向移动、写报告。</p>
+      <p>再往深处打。<a href="m7c16-evasion-persistence.html">第 16 章</a>绕过与持久化：免杀、持久化机制与 C2——躲过检测、留住权限，防御靠纵深防御。<a href="m7c17-ad-lab.html">第 17 章</a>动手搭一个活动目录实验环境：自己的域控实验室，域控加两台客户端，网络与真实网络隔离。<a href="m7c18-ad-basics.html">第 18 章</a>活动目录基础：企业内网的骨架——域、域控、OU、组、GPO、Kerberos 三步拿票。<a href="m7c19-ad-attacks.html">第 19 章</a>活动目录攻击：票据、哈希传递、BloodHound——从普通账号爬到域管理员的四台阶。<a href="m7c20-ad-defense.html">第 20 章</a>活动目录防御与加固：分层管理、凭据保护、收拾权限、监控告警，怎么守住域控。<a href="m7c21-ad-attacks-advanced.html">第 21 章</a>活动目录攻击进阶：黄金票据、白银票据、横向移动、无约束委派、NTLM 中继、DCSync。</p>
+      <p>然后换一个战场。<a href="m7c22-api-security.html">第 22 章</a> API 安全：OWASP API Top 10——接口才是现在的主战场，BOLA 是头号杀手。<a href="m7c23-api-deep.html">第 23 章</a> API 安全深入：GraphQL 与 JWT 攻击——内省、深度查询、alg none、弱密钥、kid 与 jku 注入。<a href="m7c24-devsecops.html">第 24 章</a>安全开发生命周期 DevSecOps：SAST、DAST、SCA、IaC 四种扫描，安全要进开发流程。<a href="m7c25-wireless-pentest.html">第 25 章</a>无线渗透：Wi-Fi 实战，只针对自己的路由器和实验环境——WPA3、PMF、长随机密码。</p>
+      <p>最后是做得对。<a href="m7c26-owasp-top10-lab.html">第 26 章</a>动手按 OWASP Top 10 2025 版逐条过：A01 到 A10，每条四步——理解原理、找到入口、验证影响、想好修复。<a href="m7c27-pentest-methodology.html">第 27 章</a>渗透测试方法论：七个阶段，从约定范围到复测闭环。<a href="m7c28-legal-ethics.html">第 28 章</a>法律与道德边界：书面授权是唯一标准，三条红线绝不能碰；Security+ 当前版本是 SY0-801，CISP 是国内认证。<a href="m7c29-capstone.html">第 29 章</a>是模块七的结课实战：五个战场、七个阶段，一次完整的渗透测试，一份能交出去的报告。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>说清一个网站是怎么工作的：请求、响应、会话、Cookie，再讲清 SQL 注入、XSS、CSRF、SSRF 是怎么发生的。</li>
+        <li>用 Nmap、Burp Suite、Metasploit 走完一次扫描到利用的流程，并在自己的靶场里验证 Linux 与 Windows 提权。</li>
+        <li>搭出自己的活动目录实验环境，用 BloodHound 画出从普通用户到域管理员的攻击路径，再按分层与凭据保护的思路堵上它。</li>
+        <li>按 OWASP API Top 10 测接口：用两个账号交叉测 BOLA 与 BFLA，验一遍 JWT 的签名，查 GraphQL 的内省与深度限制。</li>
+        <li>按 OWASP Top 10 2025 版逐条检查一个靶场：每条写清入口、验证结果与修复办法。</li>
+        <li>按七个阶段做一次完整的渗透测试：先写授权书、再动手，最后交出一份带证据、带定级、带修复步骤的报告，并复测闭环。</li>
+        <li>守住边界：只在自己的实验环境里动手，只认书面授权，测试结束清理干净——技术越强，边界感越重要。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>模块八，安全运营与应急响应。角色从攻击方换成防守方：蓝队的工作——盯着、发现、出事之后怎么办。模块七的本事会一直跟着你：你知道攻击者从哪来、走哪条路、会在哪一步被拦住，所以你也知道监控该盯哪里、告警该怎么设、应急响应该先做什么。去之前，先把第 29 章的渗透测试报告收好——那是你第二份真正的安全工作成果，第一份是模块六的评估报告。</p>
+      <div class="lesson-nav">
+        <a href="m7c29-capstone.html">← 模块七第 29 章：动手：综合实战——一次完整的渗透测试</a>
+        <a href="../course.html">课程目录</a>
+        <a href="../course.html#m8">下一站：模块八：安全运营与应急响应 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

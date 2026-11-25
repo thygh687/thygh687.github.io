@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块八第 9 章：备份与业务连续性：BCP/DR、RTO/RPO · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块八第 9 章：备份与业务连续性：BCP/DR、RTO/RPO</h1>
+      <div class="meta"><span class="tag">安全运营与应急响应</span>2026-11-25 · 模块八</div>
+      <p>第 4 章开头那个场景还记得吗？凌晨三点，财务系统被勒索软件加密了。如果这时候有人问“备份呢？”而答案是“备份也在同一台服务器上，一起被加密了”——那这个故事就没有下一章了。备份是安全工作的最后一道防线：<strong>前面所有防线都可能被突破，备份是让业务活下去的兜底</strong>。但“有备份”不等于“能活下去”——备份能不能恢复、多快能恢复、能恢复到哪个时间点，都是要事先算清楚、演练过的。本章讲备份和它背后的两套计划：BCP 和 DR。</p>
+      <p>先分清三个概念。<strong>备份（Backup）</strong>是把数据复制一份存起来，丢了能找回来。<strong>BCP（Business Continuity Plan，业务连续性计划）</strong>是“出事了业务怎么不停”：比如主系统挂了，能不能切到备用系统、能不能先手工顶上、哪些业务可以先停、哪些一分钟都不能停。<strong>DR（Disaster Recovery，灾难恢复计划）</strong>是 BCP 里偏技术的那一半：“系统怎么在别处重建起来”——备用服务器在哪、数据怎么同步、网络怎么切过去。简单说：<strong>BCP 管“业务”，DR 管“技术”</strong>，备份是 DR 里最基础的一环。</p>
+
+      <h2>RTO 与 RPO：两个必须事先定好的数字</h2>
+      <p>BCP/DR 计划的核心，是两个数字，事发之前就必须定好、让业务部门签字认可。<strong>RTO（Recovery Time Objective，恢复时间目标）</strong>：系统最多能停多久？比如财务系统 RTO 是 4 小时，意思是出事后 4 小时内必须恢复运行；超过 4 小时，损失就不可接受。<strong>RPO（Recovery Point Objective，恢复点目标）</strong>：最多能丢多少数据？比如 RPO 是 1 小时，意思是备份至少每小时做一次，出事时最多丢 1 小时的数据；如果备份每天才做一次，RPO 就是 24 小时——出事那天白天干的活可能全没了。</p>
+      <p>这两个数字直接决定了备份的方案和花多少钱：RTO 越短，需要的备用系统越贵（热备比冷备贵得多）；RPO 越短，备份就要越频繁、存储就要越多。所以 RTO/RPO 不是技术人员自己拍脑袋定的，而是和业务部门一起商量出来的：业务说“这个系统停 4 小时我们还能忍，停一天就完了”，技术再去算“4 小时恢复需要什么样的备份和备用系统”。定好了这两个数字，备份策略才有依据——否则备份做得多勤都可能是错的：天天备份、但恢复要两天，RTO 还是不达标。</p>
+
+      <h2>备份的 3-2-1 规则</h2>
+      <p>备份怎么做才靠谱？业界最常用的是 <strong>3-2-1 规则</strong>：<strong>3</strong> 份数据（原件加两份备份）、存在 <strong>2</strong> 种不同的介质上（比如一份在硬盘、一份在磁带或云上）、其中 <strong>1</strong> 份放在异地（不在同一个办公室、同一个机房）。为什么这样定？因为同一种灾难往往会同时毁掉放在一起的东西：办公室着火，本地的两份备份一起没了；勒索软件加密了内网所有联网的盘，联网的备份也一起被加密了——所以异地那一份、离线的那一份，才是勒索场景下真正的救命稻草。</p>
+      <p>针对勒索软件，现在还有一条补充规则：备份要<strong>不可变（Immutable）</strong>——备份写进去之后，在一段时间内谁也改不了、删不掉，连管理员账号被盗了也删不掉。很多备份系统和云存储都支持“对象锁定”或“写一次读多次”的模式。没有不可变保护的备份，在勒索攻击面前只是“晚一点被加密的备份”。备份的频率、保留多久、存在哪里，都要写进备份策略，并和 RTO/RPO 对上号。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="备份 3-2-1 规则与 RTO RPO 示意图">
+          <rect x="20" y="20" width="160" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="43" text-anchor="middle" font-size="14" fill="#1a1a2e">3 份数据</text>
+          <text x="100" y="62" text-anchor="middle" font-size="11" fill="#666">原件 + 两份备份</text>
+          <rect x="200" y="20" width="160" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="43" text-anchor="middle" font-size="14" fill="#1a1a2e">2 种介质</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">硬盘 + 磁带 / 云</text>
+          <rect x="380" y="20" width="160" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="43" text-anchor="middle" font-size="14" fill="#1a1a2e">1 份异地</text>
+          <text x="460" y="62" text-anchor="middle" font-size="11" fill="#666">不在同一机房</text>
+          <rect x="20" y="110" width="250" height="64" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="133" text-anchor="middle" font-size="13" fill="#1a1a2e">RTO：最多能停多久？</text>
+          <text x="145" y="153" text-anchor="middle" font-size="11" fill="#666">例：财务系统 4 小时内必须恢复</text>
+          <rect x="290" y="110" width="250" height="64" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="133" text-anchor="middle" font-size="13" fill="#1a1a2e">RPO：最多能丢多少数据？</text>
+          <text x="415" y="153" text-anchor="middle" font-size="11" fill="#666">例：每小时备份一次，最多丢 1 小时</text>
+          <rect x="20" y="205" width="520" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="228" text-anchor="middle" font-size="13" fill="#1a1a2e">勒索时代的补充：备份要不可变（Immutable）</text>
+          <text x="280" y="248" text-anchor="middle" font-size="11" fill="#666">写进去就改不了、删不掉，连被盗的管理员账号也删不掉</text>
+          <text x="280" y="300" text-anchor="middle" font-size="13" fill="#1a1a2e">没有演练过的备份，等于没有备份</text>
+          <text x="280" y="322" text-anchor="middle" font-size="12" fill="#666">定期真的恢复一次，确认 RTO / RPO 达标</text>
+        </svg>
+        <figcaption>图：备份 3-2-1 规则与 RTO/RPO——备份的频率和速度，都由这两个事先定好的数字决定</figcaption>
+      </figure>
+
+      <h2>恢复演练：备份的真正考试</h2>
+      <p>备份最常见的死法，是“从来没恢复过”。备份任务每天显示“成功”，真到恢复那天才发现：备份文件损坏了、备份里缺了关键数据库、恢复步骤没人会、恢复要的时间远远超过 RTO。所以备份策略里必须有一条：<strong>定期做恢复演练</strong>。演练不用每次都全量恢复，可以轮着来：这个月恢复一个文件，下个月恢复一台虚拟机，每季度做一次完整的系统恢复计时——从“宣布系统挂了”开始计时，到“业务恢复运行”停表，看看实际用时有没有超过 RTO。演练中发现的问题（备份缺东西、步骤写得不对、权限不够）要记下来改掉——演练的目的就是“在不疼的时候发现问题”，而不是在真出事的时候才发现。</p>
+      <p>对个人学习者来说，备份的道理是一样的：你的学习笔记、虚拟机、实验数据，同样值得一份 3-2-1 式的备份——虚拟机快照是一份，复制到移动硬盘是一份，重要笔记再同步一份到你信任的云端（注意：按你的习惯，数据默认放本地，云端只是异地副本）。<a href="m6c14-security-check-lab.html">模块六第 14 章</a>和预备课里讲过的备份恢复练习，就是这套思想的个人版。</p>
+
+      <h2>备份策略怎么写：一页纸模板</h2>
+      <p>一份能用的备份策略，一页纸就够，写清六件事：<strong>备份什么</strong>（哪些系统、哪些数据，列出清单）、<strong>多久备份一次</strong>（由 RPO 决定）、<strong>备份存多久</strong>（保留期，比如每天的备份留 30 天、每月的留一年）、<strong>备份存在哪</strong>（按 3-2-1 规则写清位置）、<strong>谁负责</strong>（备份任务的负责人和替补）、<strong>多久演练一次</strong>（恢复演练的频率和方式）。六件事写下来，备份工作就有了章法；没写下来的备份，迟早会漏掉某个系统、丢掉某份数据。</p>
+      <p>备份策略还要和第 4 章的应急预案对上号：预案里写“从备份恢复”，备份策略里就要写“恢复要找谁、按什么步骤、花多久”。两份文档互相引用、口径一致，应急时才不会出现“预案说恢复、没人知道怎么恢复”的尴尬。策略写完之后，每年复审一次：业务变了、系统换了，备份清单也要跟着变。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我见过最惨的一次，是某公司的备份做了三年，每天都显示成功，真到勒索那天恢复，发现备份里根本没有数据库——备份任务配错了路径，三年都在备份一堆没用的日志文件。没人检查过备份内容，也没人做过恢复演练。所以我的规矩是：备份任务配好之后，第一件事就是做一次完整恢复，确认备份里有你以为有的东西；之后每季度抽查一次恢复。还有一个教训：备份的账号权限要单独管——勒索攻击者进内网后，第一件事常常是找备份服务器、删备份。如果备份账号和日常管理员账号是同一个，备份就和生产系统一起丢了。备份的账号、备份的网络，能隔离就隔离。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：给你的虚拟机定 RTO 和 RPO——假设它是你的“学习系统”，你能接受它停多久、最多丢多少数据？把两个数字写下来，并想想对应的备份频率应该是怎样的。<br>2. 检查你现在的备份：按 3-2-1 规则打分——有几份？几种介质？有没有异地？缺的那一项，就是下一步要补的。<br>3. 做一次真实的恢复演练：在虚拟机里新建一个测试文件，备份它，删掉它，再从备份里恢复出来并计时——确认你的备份真的能恢复，恢复要花多久。<br>4. 写一份一页纸的“个人灾难恢复计划”：虚拟机坏了怎么办（快照恢复）、重要文件丢了怎么办（从哪份备份恢复）、恢复步骤是什么、每一步要花多久。</p>
+      <h2>避坑</h2>
+      <p>别把备份和原件放一起：同一台机器、同一个机房的备份，灾难一来会一起没；别只备份不演练：没恢复过的备份等于没有备份，定期真的恢复一次并计时；别让备份账号和日常账号混用：备份要单独的账号和隔离的网络，防攻击者顺手删备份；别备份错了东西：配好备份后先做一次完整恢复，确认备份里有你以为有的东西；别不设 RTO/RPO：没有这两个数字，备份做得多勤都可能是错的；别在真实生产系统上练恢复演练：所有演练只在你自己的虚拟机里做。</p>
+      <p>模块六的备份练习告诉我们“个人数据要备份”，这一章把备份放进了业务连续性的大框架：BCP 管业务不停、DR 管技术重建、RTO/RPO 是事先定好的两个数字、3-2-1 是备份的铁律、恢复演练是真正的考试。防住了、响应了、恢复了，还差最后一件事：把整件事讲清楚。下一章讲<a href="m8c10-incident-report.html">写一份安全事件报告——把一次事件讲清楚</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>备份是最后一道防线；BCP 管“业务怎么不停”，DR 管“系统怎么在别处重建”，备份是 DR 最基础的一环。</li>
+          <li>RTO 是最多能停多久，RPO 是最多能丢多少数据——两个数字事前定好，由业务部门签字认可。</li>
+          <li>备份 3-2-1 规则：3 份数据、2 种介质、1 份异地；勒索时代还要加上不可变（Immutable）保护。</li>
+          <li>没有演练过的备份等于没有备份：定期真的恢复一次并计时，确认 RTO/RPO 达标。</li>
+          <li>备份账号要单独管理、网络要隔离，防攻击者进内网后顺手删备份。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m8c8-vuln-management.html">← 上一章：第 8 章：漏洞管理流程</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m8c10-incident-report.html">下一章：第 10 章：写一份安全事件报告 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

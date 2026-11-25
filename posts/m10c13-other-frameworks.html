@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块十第 13 章：其他合规框架：SOC 2 与 NIS2 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块十第 13 章：其他合规框架：SOC 2 与 NIS2</h1>
+      <div class="meta"><span class="tag">治理、风险、合规与韧性</span>2026-11-25 · 模块十</div>
+      <p>前面我们讲了 NIST CSF 和 ISO 27001——一个是自愿对照的地图，一个是可以拿证书的体系。但合规的世界不止这两套：不同的客户、不同的行业、不同的国家，会要求不同的证明。这一章讲另外两个初学者最常遇到的名字：<strong>SOC 2</strong> 和 <strong>NIS2</strong>。认识它们，你就不会在客户或招聘要求里看到这些词时一头雾水。</p>
+      <p>先建立一个总的认识：合规框架分三类——<strong>自愿框架</strong>（NIST CSF，想用就用）、<strong>认证标准</strong>（ISO 27001、SOC 2，通过审核拿报告或证书）、<strong>法律法规</strong>（GDPR、NIS2、《个人信息保护法》，不遵守会受罚）。三类框架经常重叠：同一套控制措施，可以同时满足 ISO 27001 和 SOC 2 的要求，聪明的公司会“一套措施、多处复用”，而不是每个框架各做一套。</p>
+
+      <h2>SOC 2：给客户看的“信任报告”</h2>
+      <p><strong>SOC 2</strong> 是美国注册会计师协会（AICPA）制定的服务组织控制报告，主要面向向客户提供服务的公司——云服务商、SaaS 软件公司、外包商。客户想知道“把数据交给你，你靠不靠谱”，SOC 2 报告就是答案。它的核心是五项<strong>信任服务标准（Trust Services Criteria）</strong>：<strong>安全性</strong>（Security，必须项，系统有没有防住未授权访问）、<strong>可用性</strong>（Availability，系统能不能按约定运转）、<strong>处理完整性</strong>（Processing Integrity，处理过程准不准、完整不完整）、<strong>保密性</strong>（Confidentiality，标为保密的信息有没有保护好）、<strong>隐私性</strong>（Privacy，个人信息有没有按承诺处理）。</p>
+      <p>SOC 2 分两种报告：<strong>Type I</strong> 是“某个时间点的快照”——控制措施设计得合不合理，当天查一次；<strong>Type II</strong> 是“一段时间内的运行证明”——控制措施在过去 3 到 12 个月里是不是真的在有效运行。Type II 比 Type I 更有说服力，客户通常要的是 Type II。第 12 章讲尽调证据时提到的 SOC 2 报告，指的就是它——拿到对方的 SOC 2 Type II 报告，要看它覆盖了哪几项标准、哪个时间段、有没有保留意见。</p>
+      <p>SOC 2 和 ISO 27001 的关系要分清：ISO 27001 是“管理体系认证”，发证书；SOC 2 是“审计报告”，发报告，没有“通过 / 不通过”，只有审计师的意见。很多面向美国客户的 SaaS 公司会同时做这两样：ISO 27001 证明体系，SOC 2 证明运行。</p>
+
+      <h2>NIS2：欧盟的强制性网络安全法</h2>
+      <p><strong>NIS2</strong> 是欧盟 2023 年通过、2024 年起各成员国陆续落地的《网络与信息系统安全指令》（第二版），和 GDPR 一样是强制性的法律，但管的不是个人数据，而是<strong>关键行业和重要行业的网络安全</strong>：能源、交通、银行、医疗、数字基础设施、云服务、在线平台等等。只要你的公司在这些行业里、或者为这些行业提供关键服务，NIS2 就可能管到你。</p>
+      <p>NIS2 的核心要求有四条：<strong>风险管理措施</strong>（要有风险评估、要有控制措施，和 ISO 27001、NIST CSF 的思路是一致的）；<strong>事件报告</strong>（重大事件要在 24 小时内向主管部门初步报告，72 小时内提交详细报告——比 GDPR 的 72 小时更严）；<strong>供应链安全</strong>（要管供应商的安全，呼应第 5 章和第 12 章）；<strong>高层责任</strong>（管理层要对网络安全负责，出了问题管理层可能被追责——这和第 1 章的治理、第 4 章 ISO 27001 的领导作用是同一个方向）。违反 NIS2 的罚款也很重，最高可达全球年营业额的 2% 或 1000 万欧元。</p>
+      <p>对初学者来说，NIS2 的启示是：网络安全正在从“自愿做好”变成“法律要求做好”，而且责任正在往高层走。以后面试时，如果对方是面向欧洲市场的公司，问起 NIS2，你能说出“它管关键行业、24 小时报告、高层要负责”，就已经超过大多数初学者了。</p>
+
+      <h2>还有哪些框架值得知道名字</h2>
+      <p>除了上面讲的，还有几个名字值得认识，不用深究，但要知道它们是干什么的：<strong>PCI DSS</strong>——处理银行卡支付的公司必须遵守的支付卡安全标准，管持卡人数据；<strong>HIPAA</strong>——美国医疗健康信息的保护法，管病历和健康数据；<strong>CMMC</strong>——美国国防供应链的网络安全成熟度认证，想接国防订单的公司要过这一关；<strong>等保（网络安全等级保护）</strong>——中国的要求，信息系统按等级做保护、做测评。每个行业、每个国家都有自己的合规要求，安全工程师不需要全背下来，但要知道“遇到一个新行业，先问它有什么合规要求”——这是第 2 章风险识别里“法律法规要求”的具体做法。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SOC 2五项信任标准与NIS2四项要求对照图">
+          <rect x="20" y="15" width="250" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="40" text-anchor="middle" font-size="13" fill="#1a1a2e">SOC 2：给客户看的信任报告</text>
+          <text x="145" y="60" text-anchor="middle" font-size="11" fill="#666">AICPA 制定 · 面向服务型公司</text>
+          <rect x="290" y="15" width="250" height="56" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="40" text-anchor="middle" font-size="13" fill="#1a1a2e">NIS2：欧盟强制性网络安全法</text>
+          <text x="415" y="60" text-anchor="middle" font-size="11" fill="#666">管关键行业 · 2024 年起落地</text>
+          <rect x="20" y="95" width="250" height="80" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="118" text-anchor="middle" font-size="13" fill="#1a1a2e">五项信任服务标准</text>
+          <text x="145" y="138" text-anchor="middle" font-size="11" fill="#666">安全性（必须）· 可用性</text>
+          <text x="145" y="156" text-anchor="middle" font-size="11" fill="#666">处理完整性 · 保密性 · 隐私性</text>
+          <rect x="290" y="95" width="250" height="80" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="118" text-anchor="middle" font-size="13" fill="#1a1a2e">四项核心要求</text>
+          <text x="415" y="138" text-anchor="middle" font-size="11" fill="#666">风险管理 · 24 小时事件报告</text>
+          <text x="415" y="156" text-anchor="middle" font-size="11" fill="#666">供应链安全 · 高层责任</text>
+          <rect x="20" y="200" width="520" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="223" text-anchor="middle" font-size="13" fill="#1a1a2e">Type I 是时间点快照，Type II 是 3–12 个月的运行证明</text>
+          <text x="280" y="243" text-anchor="middle" font-size="11" fill="#666">客户通常要 Type II · ISO 27001 发证书，SOC 2 发审计报告</text>
+          <text x="280" y="280" text-anchor="middle" font-size="13" fill="#1a1a2e">一套措施、多处复用：同一套控制可同时满足多个框架</text>
+          <text x="280" y="305" text-anchor="middle" font-size="12" fill="#666">还值得知道名字：PCI DSS（支付卡）· HIPAA（医疗）· CMMC（国防）· 等保</text>
+        </svg>
+        <figcaption>图：SOC 2 的五项信任服务标准与 NIS2 的四项核心要求</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>合规框架最容易让人陷入“集邮”心态：ISO 27001、SOC 2、NIS2、PCI DSS，一个一个考过去，考完才发现日常安全还是老样子。我的经验是反过来的：先按第 2 章的风险管理把真正重要的风险管住，再看客户和法律要求哪张“纸”，按那张纸的要求补证据、补记录——框架是来证明你做得好的，不是来代替你做事的。还有一句：面试时被问到不熟悉的框架，别硬编，说“我知道它是管什么的、大概要求是什么，细节我会去查标准原文”——诚实加方法，比编一个错误答案强得多。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机或实验环境里做：做一张框架对照表，列出 NIST CSF、ISO 27001、SOC 2、NIS2、GDPR 五个名字，各写一句“它是什么、谁要求、管什么”。<br>2. 假设一家做 SaaS 的小公司，客户要求提供 SOC 2 Type II 报告，写出它要做的三件事：选哪几项信任服务标准、观察期定多久、找谁来审计。<br>3. 假设一家为欧洲医院提供云服务的公司，写出 NIS2 对它的三条要求：风险管理、事件报告时限、供应链安全各写一句话。<br>4. 写一段话说明“一套措施、多处复用”：挑一项控制（比如多因素认证），写出它能同时满足 ISO 27001、SOC 2 和 NIS2 里的哪条要求。</p>
+      <h2>避坑</h2>
+      <p>别陷入“集邮”心态：先管住真正的风险，再按要求补证据，框架是来证明你做得好的，不是代替你做事的；别混淆证书和报告：ISO 27001 发证书，SOC 2 发审计报告，没有“通过 / 不通过”，只有审计师的意见；别把 Type I 当成 Type II：客户通常要的是 3–12 个月运行证明的 Type II，快照是不够的；别忽视 NIS2 的 24 小时报告时限：比 GDPR 的 72 小时更严，要写进应急响应预案；别在真实公司系统上练手：本章的动手做只写表格、做对照，不碰任何真实公司的账号、数据和系统。</p>
+      <p>框架都认识了，模块十只剩最后一件事：把前面十三章合起来，动手做一次。下一章是 <a href="m10c14-capstone.html">第 14 章：动手：综合实战——给一家小公司写一份安全治理方案</a>，模块十的结课实战。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>合规框架分三类：自愿框架（NIST CSF）、认证标准（ISO 27001、SOC 2）、法律法规（GDPR、NIS2、《个人信息保护法》）。</li>
+          <li>SOC 2 是给客户看的信任报告，五项信任服务标准：安全性、可用性、处理完整性、保密性、隐私性；Type II 是 3–12 个月的运行证明。</li>
+          <li>NIS2 是欧盟强制性的网络安全法，管关键行业，要求风险管理、24 小时事件报告、供应链安全、高层负责。</li>
+          <li>一套措施、多处复用：同一套控制可以同时满足多个框架的要求，不必每个框架各做一套。</li>
+          <li>还值得知道名字：PCI DSS 管支付卡，HIPAA 管美国医疗信息，CMMC 管美国防供应链，等保是中国的要求。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m10c12-third-party-deep.html">← 上一章：第 12 章：第三方风险深入：尽调问卷与审计证据</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m10c14-capstone.html">下一章：第 14 章：动手：综合实战——给一家小公司写一份安全治理方案 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux 管理专项第 3 章：systemd 服务深入 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Linux 管理专项第 3 章：systemd 服务深入</h1>
+      <div class="meta"><span class="tag">Linux 管理专项</span>2026-11-25 · Linux 管理专项</div>
+      <p>电脑开机后，谁负责把一个个服务拉起来？现代 Linux 的答案是 <strong>systemd</strong>：它是系统的第一个进程（PID 1），也是服务管理器、日志管理器、定时任务管理器——很多活儿都归它管。</p>
+      <p>systemd 是现在最主流的 init 系统，Ubuntu、Debian、RHEL、Fedora 都在用。学会 systemctl、journalctl 这两个命令，就等于学会了 Linux 服务管理的一大半。这一章讲 systemd 的核心概念：单元、服务管理、排障、定时器。</p>
+      <p>先说一句：systemd 争议不少，老派用户更喜欢简单的 SysVinit。但对初学者来说，先学会主流的 systemd，再去了解别的，才是省时间的路。</p>
+      <h2>PID 1 与单元：systemd 的基本概念</h2>
+      <p>开机时内核启动的第一个用户态进程就是 systemd，PID 是 1。之后所有的进程，都是 systemd 的子孙（直接或间接）。systemd 用“<strong>单元（Unit）</strong>”来管理一切：服务是 service 单元，挂载点是 mount 单元，设备是 device 单元，定时任务是 timer 单元，目标状态是 target 单元。</p>
+      <p>服务的配置文件叫单元文件（unit file），放在 /lib/systemd/system/（系统自带的）和 /etc/systemd/system/（管理员自己写的、覆盖系统默认的）。一个服务单元文件里写着：服务叫什么、用什么命令启动、依赖哪些服务、崩了要不要重启、以哪个用户身份跑。</p>
+      <p>目标（target）是“一组服务的状态”：比如 multi-user.target 是多用户命令行状态，graphical.target 是图形界面状态。开机进哪个目标，决定了拉起哪些服务。</p>
+      <h2>systemctl：服务的开关与状态</h2>
+      <p>管理服务用 <strong>systemctl</strong>：systemctl status 服务名看状态，systemctl start/stop/restart 服务名是启动、停止、重启，systemctl enable/disable 服务名是设开机自启、不自启，systemctl is-enabled 服务名看自启状态。注意 start 和 enable 是两回事：start 是现在就跑，enable 是下次开机自动跑。</p>
+      <p>看所有服务的状态：systemctl list-units --type=service --state=running 列出正在跑的服务，systemctl list-unit-files --type=service 看所有服务的自启设置。排障时先跑 systemctl status，再看它说“失败”还是“正在运行”。</p>
+      <p>改完单元文件要跑 systemctl daemon-reload，让 systemd 重新读配置，再重启服务。忘了 daemon-reload 就重启服务，改的是旧配置——这是新手最常见的 systemd 排障坑。</p>
+      <h2>服务出问题怎么查</h2>
+      <p>服务起不来，先看三处：第一，systemctl status 服务名，看它最后几行报错；第二，journalctl -u 服务名，看这个服务的全部日志（第 6 章细讲 journalctl）；第三，服务依赖的服务是不是也挂了——单元文件里的 After= 和 Requires= 写着依赖关系。</p>
+      <p>常见故障有：端口被占了（另一个程序已经在用这个端口）、配置文件写错了（改配置前先备份、改完先检查语法）、权限不对（服务用的账号读不到文件）、依赖的服务没起来。按这个清单逐项排查，比漫无目的地重装快得多。</p>
+      <p>服务崩了自动重启，是 systemd 的一个重要功能：单元文件里 Restart=always 就是“崩了就重启”，Restart=on-failure 是“失败了才重启”。但自动重启不是万能的：如果配置错了，重启一百次还是失败——先修配置，再谈重启策略。</p>
+      <h2>定时器：systemd 的定时任务</h2>
+      <p>systemd 的 <strong>timer 单元</strong>是新一代的定时任务，可以替代传统的 cron（当然 cron 也还在用）。定时器的好处是：能精确控制“开机后多久跑”“错过时间要不要补跑”，日志直接进 journald，方便查。</p>
+      <p>一个定时器配一个服务：timer 决定什么时候跑，service 决定跑什么。比如每天凌晨备份的任务，就是 backup.timer + backup.service 两个文件。查看所有定时器用 systemctl list-timers，看看下次运行时间、过去运行结果。</p>
+      <p>初学者不必马上把 cron 全换成定时器，先学会看、学会查：系统自带的定时器（比如日志轮转、软件源更新）长什么样，再决定自己的任务用哪种方式。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="systemd 结构图：PID 1 的 systemd 管理 service、timer、target 等单元，systemctl 控制，journalctl 查日志">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="180" y="10" width="200" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">systemd：PID 1</text>
+          <text x="280" y="54" text-anchor="middle" font-size="11" fill="#666">开机第一个进程</text>
+          <rect x="20" y="90" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">service 单元</text>
+          <text x="100" y="134" text-anchor="middle" font-size="11" fill="#666">服务怎么启动</text>
+          <rect x="200" y="90" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">timer 单元</text>
+          <text x="280" y="134" text-anchor="middle" font-size="11" fill="#666">定时任务</text>
+          <rect x="380" y="90" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">target 单元</text>
+          <text x="460" y="134" text-anchor="middle" font-size="11" fill="#666">一组服务的状态</text>
+          <rect x="20" y="190" width="240" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">systemctl：开关与状态</text>
+          <text x="140" y="234" text-anchor="middle" font-size="11" fill="#666">start / enable 要分清</text>
+          <rect x="300" y="190" width="240" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">journalctl -u 服务名</text>
+          <text x="420" y="234" text-anchor="middle" font-size="11" fill="#666">这个服务的全部日志</text>
+          <line x1="280" y1="54" x2="280" y2="88" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="140" y1="142" x2="140" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="420" y1="142" x2="420" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="290" text-anchor="middle" font-size="12" fill="#666">改完单元文件先 systemctl daemon-reload，再重启服务</text>
+          <text x="280" y="315" text-anchor="middle" font-size="12" fill="#666">start 是现在就跑，enable 是下次开机自动跑</text>
+
+        </svg>
+        <figcaption>图：systemd 是 PID 1——用单元管理服务、定时器与目标状态</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ systemd 是 PID 1，用单元管理服务、定时器、挂载点和目标状态。</p>
+      <p>□ systemctl 管服务的开关与自启：start 是现在跑，enable 是开机自启。</p>
+      <p>□ 服务出问题先看 systemctl status，再看 journalctl -u 服务名的日志。</p>
+      <p>□ 改完单元文件要先 systemctl daemon-reload，再重启服务验证。</p>
+      <p>□ timer 单元是新一代定时任务，日志直接进 journald，方便查。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>我排障时最常用的一句话就是“先看 systemctl status，再看 journalctl”。有一次 Web 服务起不来，status 只说 failed，journalctl 里写着“端口 80 已被占用”——原来是另一个测试服务没关，占着端口。我的经验是：systemd 的报错信息一般都写得很清楚，问题是你有没有去看。还有，改单元文件一定要先备份原文件，改完跑 daemon-reload，再重启验证——我见过太多人改完配置直接重启服务器，结果服务起不来，才发现是配置写错了一个字母。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的 Linux 虚拟机里：运行 systemctl status ssh 或 systemctl status sshd，看看 SSH 服务的状态；再运行 systemctl list-timers，看看系统里有哪些定时器、下次什么时候跑。<br>2. 在虚拟机里练习服务的开关：sudo systemctl status cron，再 sudo systemctl stop cron，等几秒再 sudo systemctl start cron，观察状态变化；练完确认 cron 回到运行状态。<br>3. 在虚拟机里看一个单元文件：cat /lib/systemd/system/cron.service（或 sshd.service），找出 ExecStart、After、Restart 这几行，说出这个服务是用什么命令启动的、依赖谁、崩了会不会重启。</p>
+      <h2>避坑</h2>
+      <p>别在生产系统、别人的服务器上练 systemctl stop/start：动手只在你自己的虚拟机里做；start 和 enable 别搞混：start 是现在跑，enable 是开机自启，两个都要设才算“现在跑、以后也跑”；改完单元文件别忘了 systemctl daemon-reload，否则改的是旧配置；服务崩了先看日志、修配置，别只会反复重启——配置错了重启一百次也没用。</p>
+      <p>systemd 是现代 Linux 的服务总管：PID 1、单元、systemctl、journalctl，四个概念就够上手。下一章我们给远程登录上锁：<a href="linux-c4-ssh-hardening.html">第 4 章</a> SSH 加固——远程登录怎么才安全，密钥、端口、Fail2ban 全套讲清楚。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>systemd 是 PID 1，用单元管理服务、定时器、挂载点和目标状态。</li>
+          <li>systemctl 管服务的开关与自启：start 是现在跑，enable 是开机自启。</li>
+          <li>服务出问题先看 systemctl status，再看 journalctl -u 服务名的日志。</li>
+          <li>改完单元文件要先 systemctl daemon-reload，再重启服务验证。</li>
+          <li>timer 单元是新一代定时任务，日志直接进 journald，方便查。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="linux-c2-users-sudo.html">← 上一章：第 2 章：用户、组与 sudo</a>
+        <a href="../course.html">课程目录</a>
+        <a href="linux-c4-ssh-hardening.html">下一章：第 4 章：SSH 加固 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

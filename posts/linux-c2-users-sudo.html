@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux 管理专项第 2 章：用户、组与 sudo · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Linux 管理专项第 2 章：用户、组与 sudo</h1>
+      <div class="meta"><span class="tag">Linux 管理专项</span>2026-11-25 · Linux 管理专项</div>
+      <p>Linux 的第一条安全规矩，就是“别用 root 日常干活”。root 是超级管理员，能干一切，也能毁掉一切。正确的做法是：平时用普通用户，需要管理员权限时，用 sudo 临时借一下，用完就还回去。</p>
+      <p>这一章讲 Linux 的用户和组：账号存在哪、权限怎么分、sudo 是怎么工作的、怎么给不同的人不同的权限。预备课第 9 课讲过 Linux 权限的基础（rwx、chmod、chown），这一章在那个基础上讲“人”的管理。</p>
+      <p>先记住一句话：Linux 安全的核心是“最小权限”——每个人、每个程序，都只拿到完成工作所必需的最小权限，多一点都不要。</p>
+      <h2>用户与组：账号存在哪</h2>
+      <p>Linux 的账号信息存在几个文本文件里：/etc/passwd 存用户名、UID、家目录、默认 Shell；/etc/shadow 存密码哈希（只有 root 能读）；/etc/group 存组和组员。UID 是用户的数字编号：0 是 root，1–999 是系统用户，1000 起是普通用户。</p>
+      <p>新建用户用 useradd 用户名，设密码用 passwd 用户名，删用户用 userdel 用户名（加 -r 连家目录一起删）。改用户信息用 usermod。查当前用户用 whoami，查所有用户用 cat /etc/passwd，查某个用户属于哪些组用 groups 用户名。</p>
+      <p>组的用途是“批量授权”：把一群人放进一个组，给组授权，就等于给组里所有人授权。比如把开发人员放进 developers 组，给这个组读某个代码目录的权限，比一个个用户授权省事得多。建组用 groupadd 组名，加人进组用 usermod -aG 组名 用户名。</p>
+      <h2>文件权限回顾：rwx 与数字表示</h2>
+      <p>预备课第 9 课讲过：每个文件有三组权限——所有者（u）、所属组（g）、其他人（o），每组是读（r=4）、写（w=2）、执行（x=1）。chmod 755 就是所有者 rwx、组 rx、其他人 rx。这一章补充两个特殊权限：SUID（以文件所有者的身份运行）、SGID（以文件所属组的身份运行）、粘滞位（sticky bit，目录里的文件只能由所有者删）。</p>
+      <p>SUID 最典型的是 /usr/bin/passwd：普通用户改自己的密码时，需要写 /etc/shadow，但 shadow 只有 root 能写——passwd 程序带了 SUID 位，运行时临时以 root 身份运行，改完就还回去。SUID 是方便和风险的结合体：带 SUID 的程序一旦有漏洞，就是提权漏洞。所以定期检查系统里有哪些 SUID 程序（find / -perm -4000），是安全检查的基本功。</p>
+      <p>粘滞位最典型的是 /tmp：所有人都能写，但只能删自己的文件，不能删别人的。没有粘滞位，/tmp 里你的文件别人就能删掉。</p>
+      <h2>sudo：把管理员权限借出去</h2>
+      <p><strong>sudo</strong>是“以超级用户的身份做一件事”的命令：sudo apt update 就是“借 root 的身份跑一次 apt update”。借之前要输自己的密码（不是 root 的密码），验证通过才能借；借来的权限默认只维持一段时间（通常 15 分钟），超时要重新输密码。</p>
+      <p>谁能借、能借什么，写在 /etc/sudoers 文件里（用 visudo 编辑，千万别直接用文本编辑器改，改错了可能谁都借不了权限）。规则可以写得很细：比如“用户小明只能用 sudo 跑 systemctl restart nginx，不能跑别的”。这就是最小权限在 sudo 上的落地。</p>
+      <p>sudo 的好处是可审计：谁、什么时候、借权限干了什么，都记在日志里（/var/log/auth.log 或 journald，第 6 章讲）。root 密码只有极少数人知道，日常管理都用 sudo 出借、可回收、可审计的权限——这就是现代 Linux 管理的标准做法。</p>
+      <h2>不要做的事：root 直登与共享账号</h2>
+      <p>两条红线：第一，<strong>不要允许 root 直接 SSH 登录</strong>（第 4 章会细讲怎么关）；第二，<strong>不要多人共用一个账号</strong>。共用账号的问题是：出事了不知道是谁干的，离职了改密码要通知所有人，审计日志里只有一个名字。</p>
+      <p>正确的做法是：一人一个账号，需要管理员权限的进 sudo 组（或单独配 sudoers 规则），离职了删账号、回收 sudo 权限。账号管理是安全工作的地基，地基不稳，上面盖什么都没用。</p>
+      <p>还有一条：服务不要用 root 跑。Web 服务器、数据库这些服务，都有自己的专用低权限账号（比如 www-data、mysql），就算服务被攻破，攻击者拿到的也只是这个低权限账号，而不是 root。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Linux 用户与 sudo 图：普通用户平时用自己的权限，需要时用 sudo 临时借 root 权限，用完还回，操作记入日志">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="20" y="10" width="240" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">普通用户 user</text>
+          <text x="140" y="54" text-anchor="middle" font-size="11" fill="#666">UID 1000 起，日常干活</text>
+          <rect x="300" y="10" width="240" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">root 超级管理员</text>
+          <text x="420" y="54" text-anchor="middle" font-size="11" fill="#666">UID 0，能干一切</text>
+          <rect x="20" y="110" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="134" text-anchor="middle" font-size="13" fill="#1a1a2e">sudo：临时借权限</text>
+          <text x="140" y="154" text-anchor="middle" font-size="11" fill="#666">输自己的密码，用完还回去</text>
+          <rect x="300" y="110" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="134" text-anchor="middle" font-size="13" fill="#1a1a2e">/etc/sudoers 规则</text>
+          <text x="420" y="154" text-anchor="middle" font-size="11" fill="#666">谁能借、能借什么</text>
+          <rect x="130" y="210" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="234" text-anchor="middle" font-size="13" fill="#1a1a2e">日志记下谁借了权限干了什么</text>
+          <text x="280" y="254" text-anchor="middle" font-size="11" fill="#666">可审计、可回收</text>
+          <line x1="140" y1="54" x2="140" y2="108" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="420" y1="54" x2="420" y2="108" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="162" x2="280" y2="208" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">一人一个账号，不要共用；服务不要用 root 跑</text>
+          <text x="280" y="325" text-anchor="middle" font-size="12" fill="#666">定期检查 SUID 程序：find / -perm -4000</text>
+
+        </svg>
+        <figcaption>图：最小权限——平时用普通用户，需要时 sudo 临时借管理员权限，用完就还</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ Linux 账号存在 /etc/passwd 和 /etc/shadow 里，UID 0 是 root，1000 起是普通用户。</p>
+      <p>□ 文件权限是 rwx 三组，SUID 让程序临时以所有者身份运行，要定期检查。</p>
+      <p>□ sudo 是临时借管理员权限：输自己的密码、用完还回、操作记入日志。</p>
+      <p>□ 谁能借、能借什么写在 /etc/sudoers 里，用 visudo 编辑，别直接改文件。</p>
+      <p>□ 一人一个账号、服务不用 root 跑、root 不直登，是 Linux 管理的三条红线。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>我接手过一台“祖传”服务器：所有人都用 root 登录，密码贴在机房墙上。出事之后查日志，全是 root 干的，分不清是谁。清理的办法就是本章这一套：一人一个账号、sudo 组管权限、root 禁止远程登录、服务用低权限账号跑。改完的第一个月有人抱怨“麻烦”，三个月后没人想回去了——因为出问题时终于能查到是谁、在什么时候、干了什么。记住：账号管理不是为了为难人，是为了出事的时候能找到人。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的 Linux 虚拟机里：运行 id，看看自己的 UID 和所属组；再运行 cat /etc/passwd | cut -d: -f1，列出所有用户；再运行 sudo -l，看看自己能用 sudo 干什么。<br>2. 在虚拟机里新建一个测试用户练手：sudo useradd testuser，再 sudo passwd testuser 设密码，再 sudo usermod -aG sudo testuser 把它加进 sudo 组，验证完用 sudo userdel -r testuser 把它删掉。<br>3. 在虚拟机里检查 SUID 程序：sudo find / -perm -4000 -type f 2>/dev/null，看看有哪些程序带 SUID 位，再 ls -l /usr/bin/passwd，看看它的权限位长什么样。</p>
+      <h2>避坑</h2>
+      <p>别在生产系统、别人的服务器上练 useradd、userdel：动手只在你自己的虚拟机里做；别直接用文本编辑器改 /etc/sudoers：改错了可能谁都借不了权限，一定要用 visudo；别多人共用一个账号：出事了查不到是谁，离职了也收不回权限；别让服务用 root 跑：服务被攻破就等于整台机器被攻破；别用 root 日常干活：一个手滑的 rm -rf，root 是没有“后悔药”的。</p>
+      <p>用户、组、sudo——Linux 的“谁能干什么”就讲完了。下一章我们看开机启动的服务归谁管：<a href="linux-c3-systemd.html">第 3 章</a> systemd 服务深入——现代 Linux 的服务管理器，服务怎么启动、怎么排障、怎么写自己的服务单元。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>Linux 账号存在 /etc/passwd 和 /etc/shadow 里，UID 0 是 root，1000 起是普通用户。</li>
+          <li>文件权限是 rwx 三组，SUID 让程序临时以所有者身份运行，要定期检查。</li>
+          <li>sudo 是临时借管理员权限：输自己的密码、用完还回、操作记入日志。</li>
+          <li>谁能借、能借什么写在 /etc/sudoers 里，用 visudo 编辑，别直接改文件。</li>
+          <li>一人一个账号、服务不用 root 跑、root 不直登，是 Linux 管理的三条红线。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="linux-c1-packages.html">← 上一章：第 1 章：包管理与软件源</a>
+        <a href="../course.html">课程目录</a>
+        <a href="linux-c3-systemd.html">下一章：第 3 章：systemd 服务深入 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

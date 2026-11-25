@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 22 章：API 安全：OWASP API Top 10 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 22 章：API 安全：OWASP API Top 10</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>前面的章节里，网站是“页面”：浏览器打开一个网页，服务器返回 HTML。但现在的系统越来越多是“前端 + 接口”：手机 App、小程序、网页前端，背后都是一个个 API（应用程序接口）在传数据——查订单、改头像、转积分，全是 API 调用。攻击者也跟着变了：不去翻页面，直接去翻接口。这一章讲 OWASP API Security Top 10（2023 版），这是 API 世界的漏洞排行榜，也是你以后做 API 测试的检查清单。</p>
+      <p>先理解 API 和普通网页的区别：网页是给人看的，API 是给程序用的。网页会把按钮藏起来、把不该点的链接不显示；API 不会——接口地址、参数名、返回的字段，全都明明白白写在请求里。攻击者拿到一个 API 地址，就能自己拼请求、改参数、一个一个试。API 安全的核心问题就一句话：<strong>服务器有没有在每一次请求上都认真核对“你是谁、你能干什么”</strong>。很多 API 的漏洞，都是因为服务器只在前端页面上做了检查，而在接口上没做——前端不显示删除按钮，不等于接口拒绝删除请求。</p>
+
+      <h2>最危险的三条：越权、认证与数据过度暴露</h2>
+      <p><strong>API1 失效的对象级授权（BOLA）</strong>是 API 漏洞里的头号杀手。举个例子：你登录后访问 <code>/api/orders/123</code> 看自己的订单，把 123 改成 124，就看到了别人的订单——服务器只验证了“你登录了”，没验证“这个订单是不是你的”。防御：每次请求都要核对“这个对象属于当前用户吗”，对象 ID 绝不能只靠前端传来的数字说了算。</p>
+      <p><strong>API2 失效的认证</strong>：API 的认证常常比网页更脆弱——令牌长期有效、令牌可以暴力猜解、忘记密码的接口没有限流。防御：令牌要短有效期、要能吊销，登录和重置密码接口要限流，密码按 NIST SP 800-63B Rev.4 的要求（单独使用的密码至少 15 位，强制查泄露密码库）。</p>
+      <p><strong>API3 过度的数据暴露</strong>：接口返回了比前端需要多得多的数据——前端只显示用户名，接口却把手机号、身份证号、内部备注全返回了。攻击者不需要越权，只需要正常调用接口，就能把多余的数据全拿走。防御：接口只返回前端真正需要的字段，多余的字段坚决不返回。</p>
+
+      <h2>剩下的七条</h2>
+      <p><strong>API4 缺乏资源与速率限制</strong>：接口不限流，攻击者可以一秒发几千个请求，把服务器打垮，或者用暴力猜解慢慢试密码。防御：限流、限并发、限制单个请求的大小。<strong>API5 失效的功能级授权（BFLA）</strong>：普通用户直接调用了只有管理员能用的接口，比如 <code>/api/admin/delete-user</code>——前端没显示这个按钮，但接口没拦。防御：每个接口都要按角色核对权限，BOLA 管“对象”，BFLA 管“功能”，两个都要查。<strong>API6 批量分配（Mass Assignment）</strong>：接口直接把请求里的 JSON 字段往数据库对象上贴，攻击者在请求里多加一个 <code>"is_admin": true</code>，就把自己升成管理员了。防御：只接受白名单里的字段，多余字段一律丢弃。</p>
+      <p><strong>API7 安全配置错误</strong>：调试接口没关、错误信息把堆栈和内部路径全吐出来、用了默认密码。防御：生产环境关调试、错误信息只给通用提示、按基线检查配置。<strong>API8 注入</strong>：和第 2 章的 SQL 注入一个道理，接口参数没过滤就拼进查询里——只不过注入点从网页表单换成了 API 参数。防御：参数化查询、输入验证。<strong>API9 不当的资产管理</strong>：旧版本接口（v1）还在跑，新版本（v2）修了漏洞，但攻击者继续调旧接口；测试环境的接口也暴露在公网上。防御：给所有接口建台账，下线旧版本，测试接口不对外开放。<strong>API10 不安全的第三方 API 消费</strong>：你的系统调用了别人的 API，却不验证对方返回的数据——对方返回什么你就信什么。防御：验证、过滤、限制第三方返回的数据，别盲目信任。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OWASP API Top 10 十条分类图">
+          <rect x="180" y="10" width="200" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="37" text-anchor="middle" font-size="15" fill="#1a1a2e">OWASP API Top 10</text>
+          <rect x="20" y="70" width="160" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="92" text-anchor="middle" font-size="13" fill="#1a1a2e">API1 对象越权</text>
+          <text x="100" y="110" text-anchor="middle" font-size="11" fill="#666">头号杀手 BOLA</text>
+          <rect x="200" y="70" width="160" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="92" text-anchor="middle" font-size="13" fill="#1a1a2e">API2 认证失效</text>
+          <text x="280" y="110" text-anchor="middle" font-size="11" fill="#666">令牌太长、不限流</text>
+          <rect x="380" y="70" width="160" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="92" text-anchor="middle" font-size="13" fill="#1a1a2e">API3 数据过度暴露</text>
+          <text x="460" y="110" text-anchor="middle" font-size="11" fill="#666">返回了多余字段</text>
+          <rect x="20" y="140" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="162" text-anchor="middle" font-size="13" fill="#1a1a2e">API4 不限流</text>
+          <text x="100" y="180" text-anchor="middle" font-size="11" fill="#666">暴力猜解、打垮服务</text>
+          <rect x="200" y="140" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="162" text-anchor="middle" font-size="13" fill="#1a1a2e">API5 功能越权</text>
+          <text x="280" y="180" text-anchor="middle" font-size="11" fill="#666">普通用户调管理接口</text>
+          <rect x="380" y="140" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="162" text-anchor="middle" font-size="13" fill="#1a1a2e">API6 批量分配</text>
+          <text x="460" y="180" text-anchor="middle" font-size="11" fill="#666">多传字段升成管理员</text>
+          <rect x="20" y="210" width="160" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="232" text-anchor="middle" font-size="13" fill="#1a1a2e">API7 配置错误</text>
+          <text x="100" y="250" text-anchor="middle" font-size="11" fill="#666">调试未关、信息泄露</text>
+          <rect x="200" y="210" width="160" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="232" text-anchor="middle" font-size="13" fill="#1a1a2e">API8 注入</text>
+          <text x="280" y="250" text-anchor="middle" font-size="11" fill="#666">参数拼进查询</text>
+          <rect x="380" y="210" width="160" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="232" text-anchor="middle" font-size="13" fill="#1a1a2e">API9 / API10</text>
+          <text x="460" y="250" text-anchor="middle" font-size="11" fill="#666">旧接口未下线 / 轻信第三方</text>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">核心问题：每次请求都核对“你是谁、你能干什么”了吗</text>
+          <text x="280" y="322" text-anchor="middle" font-size="12" fill="#666">前端藏起来，不等于接口拦住了</text>
+        </svg>
+        <figcaption>图：OWASP API Top 10 的十条——前三条最危险，BOLA 是头号杀手</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我测过的 API 里，BOLA 的出现频率高得吓人——十个系统里有七八个能用“改 ID 看别人的数据”的办法打出问题。原因很简单：开发写接口时想的是“前端只会传当前用户的 ID”，忘了攻击者可以直接拼请求。所以我给开发提的检查只有一句话，写在接口文档的每一页：这个接口收到请求时，有没有拿“当前登录的用户”和“请求要操作的对象”比对过？没有比对，就是 BOLA。另外提醒一句：API 测试别只测“正常流程”——正常流程是开发测过的，你要测的是“改一个参数会怎样、换一个用户会怎样、去掉令牌会怎样”，这三个问题问遍所有接口，漏洞就出来一半了。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的靶场虚拟机里：找一个带 API 的开源靶场（比如 OWASP Juice Shop 这类本地靶场），用浏览器开发者工具看它发了哪些 API 请求，把请求地址和参数抄下来。<br>2. 只在你自己的靶场虚拟机里：用 Burp Suite（第 10 章的工具）拦截一个“查看自己订单”的 API 请求，把订单 ID 改成别人的，看服务器拦不拦得住——这就是在测 BOLA。<br>3. 只在你自己的靶场虚拟机里：对同一个接口做三件事——去掉认证令牌再发一次、换成另一个用户的令牌再发一次、在请求里多加一个不在文档里的字段再发一次，记录服务器的三种反应。<br>4. 按本章的十条，写一张你自己的“API 测试检查清单”，每条写一句“怎么测”和一句“怎么算有问题”。</p>
+      <h2>避坑</h2>
+      <p>别只测网页不测接口：前端藏起来不等于接口拦住了；别只用一个账号测：BOLA 和 BFLA 一定要用两个不同权限的账号交叉测；别忽视返回数据：接口多返回一个字段，就是一次数据泄露；别忘了旧版本接口：v1 没下线，v2 修得再好也没用；所有测试只在自己的靶场虚拟机里做，绝不拿真实网站的 API 练手。</p>
+      <p>API 的地图已经有了：十条里前三条最要命，BOLA 是头号杀手，核心问题永远是“每次请求都核对了吗”。下一章（<a href="m7c23-api-deep.html">第 23 章</a>）把 API 再往深处挖：GraphQL 和 JWT——两种现在最常见的接口技术，各自的攻击手法是什么。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>API 是给程序用的接口：地址、参数、返回字段全写在请求里，攻击者可以直接拼请求试。</li>
+          <li>API1 BOLA 是头号杀手：改对象 ID 就能看别人的数据；防御是每次请求核对对象归属。</li>
+          <li>API2 认证失效与 API3 数据过度暴露：令牌要短有效期、可吊销，接口只返回需要的字段。</li>
+          <li>API4–API6：不限流、功能越权、批量分配；API7–API10：配置错误、注入、旧接口未下线、轻信第三方。</li>
+          <li>API 测试三问：改一个参数会怎样、换一个用户会怎样、去掉令牌会怎样。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c21-ad-attacks-advanced.html">← 上一章：第 21 章：活动目录攻击进阶</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c23-api-deep.html">下一章：第 23 章：API 安全深入：GraphQL 与 JWT 攻击 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

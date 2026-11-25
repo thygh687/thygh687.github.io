@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows 专项第 8 章：事件日志、Sysmon 与 ETW · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Windows 专项第 8 章：事件日志、Sysmon 与 ETW</h1>
+      <div class="meta"><span class="tag">Windows 专项</span>2026-11-25 · Windows 专项</div>
+      <p>电脑干过什么事，都记在哪？答案是日志。谁登录过、谁改过配置、哪个程序崩了、哪次更新失败了，Windows 都记在事件日志里。学安全的人一半的工作，就是跟日志打交道：出事之前看日志能发现苗头，出事之后看日志能还原经过。</p>
+      <p>但 Windows 自带的日志有个短板：它记的是“发生了什么”，不太记“是谁干的、干了什么细节”。比如它会记“某个进程启动了”，但不记这个进程的命令行、父进程、哈希值。Sysmon 就是来补这块短板的：它是微软官方的系统监控工具，把进程创建、网络连接、驱动加载这些关键事件记成结构化的日志。</p>
+      <p>这一章讲三样东西：Windows 事件日志（怎么看、看哪些事件 ID）、Sysmon（装什么、记什么）、ETW（Windows 的底层事件追踪机制，知道它是什么就够了）。</p>
+      <h2>事件日志：先认识三个日志</h2>
+      <p>打开 eventvwr.msc（事件查看器），最常用的三个日志是：<strong>系统（System）</strong>——驱动、服务、系统组件的事件；<strong>安全（Security）</strong>——登录、权限、审核策略的事件；<strong>应用程序（Application）</strong>——应用程序自己的事件。</p>
+      <p>每个事件有 ID、有级别（信息、警告、错误）、有来源、有时间。安全工作里最常用的事件 ID 包括：4624 登录成功、4625 登录失败、4672 管理员登录、4688 进程创建、4697 安装了服务、4720 新建了用户账号、7045 安装了服务（系统日志）。把这几个 ID 记下来，翻日志时就有了抓手。</p>
+      <p>日志也有大小限制：默认每个日志最多 20MB 左右，满了就覆盖旧的。所以重要日志要定期导出保存（右键日志 → 将所有事件另存为），或者用集中的日志服务器收。等出事了才发现日志被覆盖了，是最常见的遗憾。</p>
+      <h2>Sysmon：把关键事件记全</h2>
+      <p><strong>Sysmon（System Monitor）</strong>也是 Sysinternals 家的工具，装上之后常驻后台，把关键事件写进事件查看器 → 应用程序和服务日志 → Microsoft → Windows → Sysmon → Operational。它的配置文件决定记什么：进程创建（事件 ID 1，带命令行、父进程、哈希）、网络连接（ID 3）、进程终止（ID 5）、驱动加载（ID 6）、镜像加载（ID 7）、注册表修改（ID 12/13/14）、文件创建（ID 11）、DNS 查询（ID 22）。</p>
+      <p>Sysmon 最大的价值，是进程创建事件（ID 1）里带上了命令行和父进程：攻击者用 PowerShell 下载恶意脚本，命令行的内容就写在日志里；Word 文档启动了一个 PowerShell，父进程关系也写在日志里——这种“谁生了谁”的关系，是发现无文件攻击的关键证据。</p>
+      <p>安装 Sysmon 要用管理员身份运行 sysmon64.exe -accepteula -i 配置文件.xml。网上有公开的 Sysmon 配置模板（比如 SwiftOnSecurity 的配置），初学者可以直接用现成的模板，先跑起来、看到日志，再慢慢学着改配置。注意：Sysmon 记的日志量不小，要留意磁盘空间和日志大小设置。</p>
+      <h2>ETW：Windows 的底层事件总线</h2>
+      <p><strong>ETW（Event Tracing for Windows）</strong>是 Windows 底层的事件追踪机制：系统内核、驱动、应用程序都可以通过 ETW 发出事件，消费者（比如 Sysmon、杀毒软件、EDR）订阅这些事件来做监控和分析。可以把 ETW 理解成系统内部的一条“事件总线”，谁都可以往上发消息，谁都可以订阅自己关心的消息。</p>
+      <p>初学者不需要会写 ETW 程序，只需要知道三点：第一，很多安全工具（包括 Sysmon 和 EDR）底层都靠 ETW 拿数据；第二，ETW 的数据量很大，工具要靠过滤和聚合才能看得过来；第三，攻击者有时会想办法关掉或绕过 ETW 监控，所以“监控本身还在不在工作”也是要检查的。</p>
+      <p>把三者串起来：ETW 是底层的事件总线，Sysmon 是订阅 ETW、把关键事件写成日志的记录员，事件查看器是你翻这些日志的窗口。理解了这条链，你就知道安全监控的数据是从哪来的。</p>
+      <h2>翻日志的基本功：先看时间线</h2>
+      <p>翻日志不要一页页漫无目的地翻，先定一个时间范围：出事前后各放宽一小时，先看这段时间的错误和警告，再按事件 ID 过滤。事件查看器的“筛选当前日志”可以按 ID、级别、时间过滤；PowerShell 的 Get-WinEvent（第 6 章）可以按 ID 批量查。</p>
+      <p>还原事件要画时间线：几点几分谁登录了、几点几分哪个进程启动了、几点几分连了哪个地址，按时间排成一条线，异常点自然就露出来了。比如“凌晨 3 点一个陌生账号登录，紧接着启动了 PowerShell，接着连了一个境外地址”——三个点连起来，就是一次入侵的轮廓。</p>
+      <p>最后提醒：日志本身也要保护。攻击者得手后第一件事常常是清日志（wevtutil cl Security）。所以重要系统的日志要异地备份、设好权限，不让普通账号有清日志的权限。日志被清过本身，就是一条重要线索。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="日志体系图：ETW 底层事件总线 feeding Sysmon 与 Windows 事件日志，事件查看器查看，时间线还原事件经过">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="180" y="10" width="200" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">ETW 事件追踪</text>
+          <text x="280" y="54" text-anchor="middle" font-size="11" fill="#666">底层事件总线</text>
+          <rect x="20" y="90" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">Sysmon 常驻监控</text>
+          <text x="140" y="134" text-anchor="middle" font-size="11" fill="#666">进程、网络、注册表</text>
+          <rect x="300" y="90" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">Windows 事件日志</text>
+          <text x="420" y="134" text-anchor="middle" font-size="11" fill="#666">系统 / 安全 / 应用</text>
+          <rect x="130" y="190" width="300" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">事件查看器 eventvwr.msc</text>
+          <text x="280" y="234" text-anchor="middle" font-size="11" fill="#666">按 ID、级别、时间筛选</text>
+          <rect x="130" y="250" width="300" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="274" text-anchor="middle" font-size="13" fill="#1a1a2e">画时间线：登录 → 进程 → 连网</text>
+          <text x="280" y="294" text-anchor="middle" font-size="11" fill="#666">异常点连起来就是轮廓</text>
+          <line x1="280" y1="54" x2="280" y2="88" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="142" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="234" x2="280" y2="248" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="330" text-anchor="middle" font-size="12" fill="#666">4624 成功、4625 失败、4688 进程创建、7045 装服务</text>
+
+        </svg>
+        <figcaption>图：ETW 是底层事件总线，Sysmon 是记录员，事件查看器是翻日志的窗口</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ 事件查看器里最常用的是系统、安全、应用三个日志，4624/4625/4688/7045 是必记的事件 ID。</p>
+      <p>□ Sysmon 把进程创建、网络连接、注册表修改等关键事件记成结构化日志，带命令行和父进程。</p>
+      <p>□ ETW 是 Windows 底层的事件总线，Sysmon 和 EDR 都靠它拿数据。</p>
+      <p>□ 翻日志先定时间范围、按 ID 过滤，最后画时间线，异常点连起来就是事件轮廓。</p>
+      <p>□ 日志要定期导出备份，攻击者得手后常会清日志，日志被清本身就是线索。</p>
+      <p>□ 把本章的命令和检查步骤抄进自己的笔记，下次遇到同类问题直接用。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>我查过的一起事件里，用户说“电脑好像被人远程控制过”，我先翻安全日志：凌晨 2 点有个 4624 登录成功，账号是管理员，登录类型是 10（远程桌面）；再翻 Sysmon 的进程创建日志：登录后一分钟启动了 PowerShell，命令行里有一串下载命令；再看网络连接日志：连了一个境外地址。三条日志一对，事情就清楚了：弱密码的远程桌面被猜中了。我的经验是：翻日志先定时间范围，再按 ID 过滤，最后画时间线——漫无目的地翻一百页，不如有目标地查十条。还有，日志要定期导出备份，等出事了才发现被覆盖或被清掉，就晚了。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：按 Win+R 输入 eventvwr.msc，展开 Windows 日志 → 安全，点右边的“筛选当前日志”，输入事件 ID 4624，看看最近的登录成功记录；再筛选 4625，看看有没有登录失败。<br>2. 在虚拟机里打开 PowerShell，运行 Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4624} -MaxEvents 5 | Format-List TimeCreated,Message，看看输出长什么样；再运行 Get-WinEvent -FilterHashtable @{LogName='System'; ID=7045} -MaxEvents 5 -ErrorAction SilentlyContinue。<br>3. 在虚拟机里安装 Sysmon（从微软官网下载，用公开的配置模板安装），装好后打开事件查看器 → 应用程序和服务日志 → Microsoft → Windows → Sysmon → Operational，随便打开一个程序，看看 Sysmon 有没有记下它的进程创建事件（ID 1），里面有没有命令行和父进程。</p>
+      <h2>避坑</h2>
+      <p>别在真实电脑、生产系统上乱装 Sysmon 练手：先在虚拟机里装，熟悉配置和日志量再说；日志满了会覆盖旧记录：重要日志定期导出保存，别等出事了才发现没了；别只看一条日志下结论：登录成功、进程创建、网络连接要三条对上，才算一条证据链；攻击者会清日志：日志被清空本身就是线索，重要日志要异地备份。</p>
+      <p>日志是电脑的记忆：事件日志记“发生了什么”，Sysmon 补上“是谁干的、怎么干的”，ETW 是它们底下的数据总线。下一章我们看访问控制的根子：<a href="windows-c9-security-model.html">第 9 章</a> Windows 安全模型——令牌、SID、ACL 与完整性级别，谁能动什么，由谁说了算。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>事件查看器里最常用的是系统、安全、应用三个日志，4624/4625/4688/7045 是必记的事件 ID。</li>
+          <li>Sysmon 把进程创建、网络连接、注册表修改等关键事件记成结构化日志，带命令行和父进程。</li>
+          <li>ETW 是 Windows 底层的事件总线，Sysmon 和 EDR 都靠它拿数据。</li>
+          <li>翻日志先定时间范围、按 ID 过滤，最后画时间线，异常点连起来就是事件轮廓。</li>
+          <li>日志要定期导出备份，攻击者得手后常会清日志，日志被清本身就是线索。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="windows-c7-sysinternals.html">← 上一章：第 7 章：Sysinternals 套件</a>
+        <a href="../course.html">课程目录</a>
+        <a href="windows-c9-security-model.html">下一章：第 9 章：Windows 安全模型：令牌、SID、ACL 与完整性级别 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

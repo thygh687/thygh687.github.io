@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux 管理专项小结：管好一台 Linux 服务器 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Linux 管理专项小结：管好一台 Linux 服务器</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · Linux 管理专项第 1–6 章</div>
+      <p>六章讲的其实是一件事：管好一台 Linux 服务器。管好，意思是三个方面都做到位：软件从可信的地方来，人只有必需的权限，门只开必需的口，出事了能翻到记录。这六章就是按这个顺序排的：第 1 章管软件来源，第 2 章管人，第 3 章管服务，第 4 章管远程登录，第 5 章管网络大门，第 6 章管日志。</p>
+      <p>这六章和 Windows 专项是对应的：Windows 的服务对应 systemd，Windows 的事件日志对应 journald，Windows 的 ACL 对应 Linux 的权限与 sudo。两边对照着学，概念记得更牢——操作系统换了一套，安全思路是同一套：最小权限、默认拒绝、多层防护、出事可查。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Linux 管理专项六章知识串联图：包管理、用户与 sudo、systemd、SSH 加固、nftables、日志自上而下">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="130" y="10" width="300" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">软件从哪来：包管理与软件源</text>
+          <text x="280" y="54" text-anchor="middle" font-size="11" fill="#666">第 1 章</text>
+          <rect x="130" y="70" width="300" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="94" text-anchor="middle" font-size="13" fill="#1a1a2e">谁能干什么：用户、组与 sudo</text>
+          <text x="280" y="114" text-anchor="middle" font-size="11" fill="#666">第 2 章</text>
+          <rect x="130" y="130" width="300" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="154" text-anchor="middle" font-size="13" fill="#1a1a2e">服务归谁管：systemd 服务深入</text>
+          <text x="280" y="174" text-anchor="middle" font-size="11" fill="#666">第 3 章</text>
+          <rect x="130" y="190" width="300" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">远程登录上锁：SSH 加固</text>
+          <text x="280" y="234" text-anchor="middle" font-size="11" fill="#666">第 4 章</text>
+          <rect x="130" y="250" width="300" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="274" text-anchor="middle" font-size="13" fill="#1a1a2e">网络大门上锁：防火墙 nftables</text>
+          <text x="280" y="294" text-anchor="middle" font-size="11" fill="#666">第 5 章</text>
+          <rect x="130" y="310" width="300" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="334" text-anchor="middle" font-size="13" fill="#1a1a2e">出事能查到：日志与 journald</text>
+          <text x="280" y="354" text-anchor="middle" font-size="11" fill="#666">第 6 章</text>
+          <line x1="280" y1="54" x2="280" y2="70" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="114" x2="280" y2="130" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="174" x2="280" y2="190" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="234" x2="280" y2="250" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="294" x2="280" y2="310" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        </svg>
+        <figcaption>图：六章管好一台服务器——软件、人、服务、远程登录、网络大门、日志</figcaption>
+      </figure>
+      <h2>这六章是怎么连起来的</h2>
+      <p>先管软件来源。<a href="linux-c1-packages.html">第 1 章</a>讲包管理与软件源：apt 与 dnf、官方源、签名验证、依赖，安全更新要尽快装，升级之前先备份、之后先验证——软件从哪来，决定了软件可不可信。</p>
+      <p>再管人。<a href="linux-c2-users-sudo.html">第 2 章</a>讲用户、组与 sudo：账号存在 /etc/passwd 和 /etc/shadow 里，sudo 是临时借管理员权限的办法，一人一个账号、服务不用 root 跑、root 不直登，是三条红线；<a href="linux-c3-systemd.html">第 3 章</a>讲 systemd 服务深入：PID 1、单元、systemctl、journalctl，服务出问题先看状态、再看日志，改完单元文件先 daemon-reload。</p>
+      <p>然后给远程登录和网络大门上锁。<a href="linux-c4-ssh-hardening.html">第 4 章</a>讲 SSH 加固：Ed25519 密钥登录、禁 root、改端口、限来源、Fail2ban 自动封禁，改配置永远留一个会话当救生绳；<a href="linux-c5-nftables.html">第 5 章</a>讲防火墙 nftables：表、链、规则三层结构，默认拒绝、按需放行，最小规则集只放行回环、已建立的连接、SSH 和网站端口。</p>
+      <p>最后是日志。<a href="linux-c6-logs-journald.html">第 6 章</a>讲日志与 journald：文本日志与 journald 互补，journalctl 按服务、按时间、按级别过滤，journald 要开持久化才能长期保存，logrotate 防写满，翻日志先定时间、画时间线——出事了能不能查到，就看这一章的功夫到没到家。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>给自己的 Linux 虚拟机配好软件源，只从官方源装软件，定期升级安全更新并验证。</li>
+        <li>一人一个账号配好 sudo 规则，关掉 root 直登，服务用低权限账号跑。</li>
+        <li>用 systemctl 管理服务，服务起不来时先看状态、再看 journalctl 日志定位原因。</li>
+        <li>给 SSH 配好 Ed25519 密钥登录，禁掉密码登录和 root 登录，装上 Fail2ban。</li>
+        <li>用 nftables 配一套默认拒绝、按需放行的防火墙，两边验证该通的通、该堵的堵。</li>
+        <li>用 journalctl 按时间线还原一次登录失败或服务异常的经过，日志开好持久化。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>下一站是模块三：网络。服务器管好了，接下来要看懂服务器之间是怎么说话的：分层模型、IP、TCP 与 UDP、DNS、HTTP 与 TLS——模块三会把网络从物理层讲到应用层。Linux 专项里用到的很多概念（端口、防火墙、SSH、日志）到了模块三会有更深的解释：端口为什么是那个数字，TLS 1.3 的握手为什么比旧版更快更安全，DNS 是怎么被攻击、又怎么防护的。去 <a href="../course.html#m3">课程目录的模块三</a>看一眼，再往前走。</p>
+      <div class="lesson-nav">
+        <a href="linux-c6-logs-journald.html">← 第 6 章：日志与 journald</a>
+        <a href="../course.html">课程目录</a>
+        <a href="../course.html#m3">下一站：模块三：网络基础 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

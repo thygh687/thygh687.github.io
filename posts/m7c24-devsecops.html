@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 24 章：安全开发生命周期 DevSecOps · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 24 章：安全开发生命周期 DevSecOps</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>前面二十二章，我们一直在“找漏洞”：SQL 注入、XSS、越权、票据攻击、API 漏洞。这一章换一个问题：<strong>为什么漏洞总是在上线之后才被发现？</strong>答案是：安全来得太晚了。传统的开发流程是：开发写代码、测试测功能、上线前安全扫一遍——扫出问题再改，改起来又贵又慢。DevSecOps 的意思就是把安全放进开发流程的每一步，让问题在写代码的那一刻就被发现，而不是在上线前夜被发现。记住一句话：<strong>漏洞发现得越晚，修起来越贵。</strong></p>
+      <p>先讲开发流程本身。现代软件开发大多是这样的流水线：写代码 → 提交到代码仓库 → 自动构建 → 自动测试 → 部署上线，整个过程叫 CI/CD（持续集成 / 持续部署）。DevSecOps 就是在这条流水线上，每一步都加一个安全检查：写代码时有安全编码规范，提交代码时自动跑静态扫描，构建时检查第三方组件有没有已知漏洞，部署前跑动态扫描，上线后持续监控。这条流水线上的安全检查，要像工厂流水线上的质检员——每一道工序都检，而不是等产品出厂了再一次性返工。</p>
+
+      <h2>流水线上的四种扫描</h2>
+      <p><strong>SAST（静态应用安全测试）</strong>：不运行程序，直接读源代码找问题——比如发现某处把用户输入直接拼进 SQL 语句，立刻报警。它发现得早（写代码时就能发现），但误报多，需要人去确认。<strong>DAST（动态应用安全测试）</strong>：把程序跑起来，从外面发请求去“打”它，像黑盒测试一样找漏洞——比如对着登录接口试注入。它发现的是真实能利用的问题，但发现得晚（要等程序能跑起来）。<strong>SCA（软件成分分析）</strong>：检查项目里用的第三方组件（开源库、框架）有没有已知漏洞——第 26 章的 A03 软件供应链失效讲的就是这个：你自己写的代码没问题，但你引用的某个开源库有高危漏洞，整个系统就跟着有漏洞。SCA 会生成一张“物料清单”（SBOM），列出所有用到的组件和版本，出新漏洞时一查就知道自己中没中招。<strong>IaC 扫描（基础设施即代码扫描）</strong>：检查部署用的配置文件——比如云服务器的配置有没有把存储桶设成公开、有没有把数据库端口暴露在公网。配置即代码，配置错了，等于部署错了。</p>
+      <p>四种扫描的分工要记清：SAST 看代码、DAST 打运行中的程序、SCA 查第三方组件、IaC 查配置文件。缺了任何一种，流水线就有一个盲区。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DevSecOps流水线四种扫描图">
+          <rect x="20" y="20" width="120" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="42" text-anchor="middle" font-size="13" fill="#1a1a2e">写代码</text>
+          <text x="80" y="60" text-anchor="middle" font-size="11" fill="#666">安全编码规范</text>
+          <rect x="150" y="20" width="120" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="210" y="42" text-anchor="middle" font-size="13" fill="#1a1a2e">提交代码</text>
+          <text x="210" y="60" text-anchor="middle" font-size="11" fill="#666">SAST 静态扫描</text>
+          <rect x="280" y="20" width="120" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="340" y="42" text-anchor="middle" font-size="13" fill="#1a1a2e">构建</text>
+          <text x="340" y="60" text-anchor="middle" font-size="11" fill="#666">SCA 查第三方组件</text>
+          <rect x="410" y="20" width="130" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="475" y="42" text-anchor="middle" font-size="13" fill="#1a1a2e">部署上线</text>
+          <text x="475" y="60" text-anchor="middle" font-size="11" fill="#666">DAST + IaC 扫描</text>
+          <rect x="20" y="120" width="160" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">SAST：读代码找问题</text>
+          <text x="100" y="160" text-anchor="middle" font-size="11" fill="#666">发现早、误报多</text>
+          <rect x="200" y="120" width="160" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">DAST：跑起来打一打</text>
+          <text x="280" y="160" text-anchor="middle" font-size="11" fill="#666">发现的是真问题</text>
+          <rect x="380" y="120" width="160" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">SCA：查第三方组件</text>
+          <text x="460" y="160" text-anchor="middle" font-size="11" fill="#666">生成 SBOM 物料清单</text>
+          <rect x="140" y="220" width="280" height="56" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="244" text-anchor="middle" font-size="14" fill="#1a1a2e">密钥管理：密钥绝不进代码仓库</text>
+          <text x="280" y="264" text-anchor="middle" font-size="11" fill="#666">用密钥管理系统，泄露了立刻轮换</text>
+          <text x="280" y="312" text-anchor="middle" font-size="12" fill="#666">漏洞发现得越晚，修起来越贵</text>
+        </svg>
+        <figcaption>图：CI/CD 流水线上的四种扫描与密钥管理——安全检查要像质检员一样每道工序都在</figcaption>
+      </figure>
+
+      <h2>密钥管理与安全门禁</h2>
+      <p>流水线里最容易出大事的，是<strong>密钥泄露</strong>：开发把数据库密码、API 密钥、云账号密钥直接写进代码，一提交就进了代码仓库——代码仓库一旦泄露（或者被设成公开），密钥就等于公开了。第 23 章讲过 JWT 密钥不能写代码里，这里的道理一样：<strong>密钥要放进专门的密钥管理系统，代码里只留一个引用</strong>；流水线要自动扫描代码仓库，发现疑似密钥立刻报警；密钥一旦泄露，立刻轮换（换一把新的，旧的作废）。</p>
+      <p>最后是<strong>安全门禁（Security Gate）</strong>：流水线上设几道“关卡”，高危漏洞没修好就不许往下走——比如 SAST 扫出高危问题，构建直接失败；SCA 发现引用的组件有 CVSS 9 分以上的漏洞，部署直接拦截。门禁要设得合理：太松等于没设，太严会把开发逼得绕过流程。好的门禁是分级的：高危必拦，中危限期修，低危记下来排期。还有一条：安全团队不是“拦路的人”，而是“帮开发一次写对的人”——提供安全的代码模板、现成的加密库、写好的检查清单，让开发不用每次都从零想安全问题。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我见过最贵的漏洞，都是“上线前夜才发现”的那种：有一次，一个系统上线前一天，扫描发现一个高危 SQL 注入，开发连夜改代码、重新测试，整个团队熬到凌晨三点——而这个注入在写代码的第一天，SAST 就能扫出来，改起来只要五分钟。从那以后，我给所有团队提的要求都一样：流水线先跑起来，哪怕一开始只开 SAST 和密钥扫描两项，也比“上线前扫一次”强一百倍。还有一句：DevSecOps 的“Sec”不是安全团队一个部门的事——开发写代码时多想一步“这个输入可不可信”，比安全团队事后扫一百次都有用。安全左移，移的不是工具，是意识。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：找一个你写过的小项目（或课程里的示例代码），用一款免费的 SAST 工具（比如开源的静态扫描工具）扫一遍，记录它报了哪些问题，再逐个判断是真问题还是误报。<br>2. 只在你自己的虚拟机里：给这个项目列一张第三方组件清单（用了哪些库、什么版本），对照公开的漏洞数据库查一遍，看有没有已知的高危漏洞——这就是一次手工的 SCA。<br>3. 只在你自己的虚拟机里：在代码里故意写一句有问题的代码（比如把用户输入拼进查询语句），再跑一次 SAST，确认它能报警；然后改成参数化查询，再跑一次，确认报警消失。<br>4. 写一页纸的“安全左移清单”：一个项目从写代码到上线，安全检查应该出现在哪些环节、每个环节用什么工具、什么问题必须拦住。</p>
+      <h2>避坑</h2>
+      <p>别只在上线前扫一次：发现得越晚修得越贵，安全要进每一步；别只开一种扫描：SAST、DAST、SCA、IaC 各管一个盲区，缺一个就漏一片；别把密钥写进代码：密钥进密钥管理系统，泄露了立刻轮换；别把门禁设成摆设：高危必拦，但分级要合理，别逼开发绕过流程；别把安全当成安全团队一个部门的事：开发多想一步，顶得上事后扫一百次。</p>
+      <p>开发流程的安全讲完了：四种扫描各管一个盲区，密钥绝不进代码仓库，门禁分级拦截，安全意识要左移。下一章（<a href="m7c25-wireless-pentest.html">第 25 章</a>）换到无线：Wi-Fi 渗透——只针对你自己的路由器和实验环境，看看无线网络是怎么被攻破、又该怎么守的。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>DevSecOps 是把安全放进开发流程的每一步：漏洞发现得越晚，修起来越贵。</li>
+          <li>四种扫描：SAST 读代码、DAST 打运行中的程序、SCA 查第三方组件、IaC 查配置文件。</li>
+          <li>SCA 生成 SBOM 物料清单，出新漏洞时一查就知道自己中没中招；这是供应链安全的基础。</li>
+          <li>密钥绝不进代码仓库：放密钥管理系统，泄露了立刻轮换；流水线要自动扫描疑似密钥。</li>
+          <li>安全门禁分级拦截：高危必拦，中危限期修；安全团队是帮开发一次写对的人，不是拦路的人。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c23-api-deep.html">← 上一章：第 23 章：API 安全深入：GraphQL 与 JWT 攻击</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c25-wireless-pentest.html">下一章：第 25 章：无线渗透 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

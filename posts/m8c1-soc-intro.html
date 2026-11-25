@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块八第 1 章：SOC 是干什么的 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块八第 1 章：SOC 是干什么的</h1>
+      <div class="meta"><span class="tag">安全运营与应急响应</span>2026-11-25 · 模块八</div>
+      <p>想象一个房间：墙上挂满了屏幕，屏幕上滚动着来自全公司电脑、服务器、防火墙的告警；房间里坐着一排人，7×24 小时轮班盯着这些屏幕——半夜三点有人登录了财务服务器，凌晨四点一台电脑开始往外传大量数据，他们要在几分钟里判断：这是真攻击，还是误报？这个房间就叫 <strong>SOC</strong>，全称 Security Operations Center，安全运营中心。它是企业安全的心脏，也是很多安全工程师的第一份工作岗位。</p>
+      <p>模块七我们学的是怎么攻击一个网站、怎么找漏洞，那是“进攻视角”。模块八换一个视角：<strong>防守视角</strong>。攻击者 24 小时都可能来，防守方也必须 24 小时有人看着。SOC 就是干这个的：持续监控、快速发现、及时响应。本模块我们会走完一条完整的防守链：SOC 是什么、日志怎么看、怎么用 ATT&amp;CK 做检测、出了事按什么流程响应、怎么做取证、威胁情报怎么用、漏洞怎么管、备份怎么做、报告怎么写。学完，你就知道安全团队每天真正在忙什么。</p>
+
+      <h2>SOC 的三件日常工作</h2>
+      <p><strong>第一，监控。</strong>SOC 收集全公司安全设备的告警：防火墙拦下了什么、EDR（终端检测）发现了什么可疑进程、防病毒软件报了什么毒、服务器有没有异常登录。监控不是“盯着每一条日志看”——一天的日志可能是几百万条，人看不过来，所以 SOC 靠工具先过滤、聚合，只把可疑的推给人看。</p>
+      <p><strong>第二，分诊（Triage）。</strong>告警推过来之后，分析师要像急诊医生一样分诊：这是真攻击（True Positive），还是误报（False Positive）？严重程度如何？一台员工电脑报了个广告软件，是低优先级；一台服务器半夜被境外 IP 登录成功，是最高优先级。分诊的关键是<strong>上下文</strong>：谁的电脑、在干什么、平时正不正常——没有上下文的告警，基本没法判断。</p>
+      <p><strong>第三，响应与上报。</strong>确认是真问题后，分析师按流程处理：隔离被感染的电脑、封掉恶意的 IP、通知相关负责人，严重的要升级给二线、三线分析师或应急响应团队（第 4 章会讲这套流程）。处理完还要写记录：发现了什么、怎么处理的、结果如何——没有记录，等于没处理。</p>
+
+      <h2>SOC 里的三个层级</h2>
+      <p>SOC 分析师一般分三个层级，像医院的分诊台、普通门诊和专家门诊。<strong>一线（Tier 1）</strong>是新人最常起步的位置：值班监控、处理已知的常见告警、按剧本（Playbook）做标准操作，比如收到钓鱼邮件告警就按步骤封发件人、删邮件。<strong>二线（Tier 2）</strong>处理一线解决不了的复杂告警：深入分析日志、关联多个事件、判断是不是一次有组织的攻击。<strong>三线（Tier 3）</strong>是专家：做威胁狩猎（第 3 章）、写检测规则、分析新型攻击手法、参与重大事件响应。三个层级之间靠<strong>工单（Ticket）</strong>流转：每个告警都是一张工单，有编号、有状态、有负责人、有处理记录，谁接手、做了什么、什么时候关闭的，全都留痕。</p>
+      <p>除了人，SOC 还靠三类工具撑起来：<strong>SIEM</strong>（第 2 章讲）负责收集和分析日志；<strong>SOAR</strong>（安全编排与自动化响应）负责把重复操作自动化，比如“一收到钓鱼告警就自动删邮件、封域名”；<strong>威胁情报平台</strong>（第 7 章讲）负责告诉你哪些 IP、域名、文件哈希是已知的坏东西。工具再强，也代替不了人的判断——工具告诉你“可疑”，人要决定“是不是真的坏、坏到什么程度、现在该做什么”。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SOC 工作流程图：从日志来源到监控分诊再到响应">
+          <rect x="20" y="20" width="150" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="45" text-anchor="middle" font-size="13" fill="#1a1a2e">防火墙 / EDR</text>
+          <text x="95" y="65" text-anchor="middle" font-size="11" fill="#666">告警与日志来源</text>
+          <rect x="205" y="20" width="150" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="45" text-anchor="middle" font-size="13" fill="#1a1a2e">SIEM</text>
+          <text x="280" y="65" text-anchor="middle" font-size="11" fill="#666">收集、关联、聚合</text>
+          <rect x="390" y="20" width="150" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="45" text-anchor="middle" font-size="13" fill="#1a1a2e">告警队列</text>
+          <text x="465" y="65" text-anchor="middle" font-size="11" fill="#666">按严重程度排序</text>
+          <rect x="20" y="130" width="150" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="155" text-anchor="middle" font-size="13" fill="#1a1a2e">一线分析师</text>
+          <text x="95" y="175" text-anchor="middle" font-size="11" fill="#666">分诊、按剧本处理</text>
+          <rect x="205" y="130" width="150" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="13" fill="#1a1a2e">二线分析师</text>
+          <text x="280" y="175" text-anchor="middle" font-size="11" fill="#666">深入分析、关联事件</text>
+          <rect x="390" y="130" width="150" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="155" text-anchor="middle" font-size="13" fill="#1a1a2e">三线专家</text>
+          <text x="465" y="175" text-anchor="middle" font-size="11" fill="#666">狩猎、写规则、重大事件</text>
+          <rect x="130" y="240" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="263" text-anchor="middle" font-size="13" fill="#1a1a2e">响应：隔离、封禁、通知、写记录</text>
+          <text x="280" y="283" text-anchor="middle" font-size="11" fill="#666">每一步都留工单记录，可追溯</text>
+          <text x="280" y="322" text-anchor="middle" font-size="12" fill="#666">SOC 的工作就是让这条流水线 7×24 小时转下去</text>
+        </svg>
+        <figcaption>图：SOC 的工作流水线——日志进来，告警出来，分诊之后按层级处理、响应、留痕</figcaption>
+      </figure>
+
+      <h2>为什么 SOC 容易“告警疲劳”</h2>
+      <p>SOC 最常见的职业病叫<strong>告警疲劳</strong>：一天几千条告警，90% 以上是误报或低价值告警，看多了人就麻木了，真攻击混在里面反而容易漏掉。对付告警疲劳有三个办法：<strong>调优规则</strong>，把反复误报的规则修好或关掉；<strong>自动化</strong>，让 SOAR 自动处理那些“每次都一样”的低风险告警；<strong>写好剧本</strong>，常见告警的处理步骤写成清单，分析师照着做，不用每次重新想。这三件事，第 2 章和第 3 章会展开讲。</p>
+      <p>还有一点初学者容易误会：SOC 不是“坐在屏幕前等攻击”，而是“平时 mostly 在调规则、写剧本、做演练”。真正的大攻击一年碰不上几次，但准备工作每天都在做。就像消防队：不出火警的时候，消防员在检查器材、训练、巡查——SOC 也一样，<strong>平时的准备决定了出事时的速度</strong>。</p>
+
+      <h2>SOC 分析师需要什么本事</h2>
+      <p>对照前面学过的内容，SOC 一线分析师的技能清单其实你已经学了一大半：看懂网络基础（<a href="m3c5-tcp-udp.html">模块三第 5 章</a>的 TCP/UDP、<a href="m3c10-ports.html">第 10 章</a>的端口）、认得出钓鱼和恶意软件（<a href="m6c4-phishing-deep.html">模块六第 4、5 章</a>）、会看日志和事件（<a href="m6c14-security-check-lab.html">第 14 章</a>的动手检查）、知道 CVE 和 CVSS 怎么定级（<a href="m6c8-cve-cvss.html">第 8 章</a>）、理解风险管理（<a href="m6c11-risk-management.html">第 11 章</a>）。再往上走，需要的是 ATT&amp;CK（<a href="m6c22-threat-intel-frameworks.html">模块六第 22 章</a>）、取证和应急响应——正是本模块要讲的。考证方面，入门常考的是 CompTIA Security+，当前版本是 <strong>SY0-801</strong>；国内则有 <strong>CISP</strong>（国家注册信息安全专业人员，是国内认证），可以作为中长期的目标。证书是敲门砖，真正的本事还是在日志和事件里练出来的。</p>
+
+      <h2>值班的一天：从接班到交班</h2>
+      <p>SOC 的值班是有固定节奏的。接班时，先看上一班留下的交班记录：有哪些未关闭的工单、哪些告警还在跟进、今天有没有计划内的变更（比如业务系统要升级，升级期间的告警可能是正常的）。接班不看记录，就等于蒙着眼睛上岗。</p>
+      <p>值班中间，分析师按优先级处理告警队列：先处理高危和正在发生的，再处理中低危；处理不完的，要写清楚“处理到哪一步了、下一步该做什么”，不能只写“跟进中”三个字。遇到拿不准的告警，及时升级给二线——在 SOC 里，“不懂就问、该升级就升级”不是能力差，是职业素养；硬扛着不升级，拖出大事才是真的失职。</p>
+      <p>交班时，要写交班记录：今天处理了多少告警、哪些关了、哪些还没关、哪些需要下一班继续盯、今天有没有值得注意的新情况。好的交班记录让下一班的人三分钟就能进入状态，差的交班记录等于没有交班。SOC 是 7×24 小时连续运转的机器，交班记录就是这台机器的“记忆”。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我带过刚进 SOC 的新人，最常见的翻车不是技术不够，而是两个习惯问题。第一，看到告警就急着“处理”，不先看上下文：有一次新人看到一台服务器半夜有大量登录失败，立刻封了来源 IP，结果那是运维在做自动化巡检——封 IP 把巡检打断了，半夜被运维电话叫醒。所以 SOC 的铁律是：先看“这是谁、在干什么、平时是不是这样”，再动手。第二，不写记录：处理完觉得“搞定了”就关工单，一个月后同样的问题再来，没人知道上次是怎么处理的。SOC 的工作一半是技术，一半是记录——你的工单和笔记，就是下一个值班同事的眼睛。还有一句实在话：SOC 的夜班很熬人，但也是成长最快的地方，因为夜里没人替你扛，你必须自己判断、自己决定。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：打开 Windows 事件查看器（eventvwr.msc），翻一翻最近 24 小时的安全日志，数一数有多少条“审核失败”（事件 ID 4625），记下最多的来源——这就是 SOC 分析师每天面对的原始材料。<br>2. 画一张你自己的 SOC 流水线图：从“日志来源”到“响应”，标出每个环节谁负责、输出是什么，对照本章的图检查有没有漏环节。<br>3. 挑一条你虚拟机里的真实告警（或日志里的异常事件），按“分诊”写三句话：这是什么、严重程度是高/中/低、你判断的理由是什么（上下文是什么）。<br>4. 写一份你自己的 SOC 一线技能清单：对照本章列出的技能，把“已经会”和“还不会”分两列写出来，“还不会”的那一列，就是本模块接下来要补的。</p>
+      <h2>避坑</h2>
+      <p>别把 SOC 想成“看屏幕的保安”：分诊、关联、判断才是核心工作，盯屏只是表象；别一看到告警就动手封禁：先看上下文，误封正常业务的代价可能比攻击还大；别只处理不记录：没有工单记录的响应等于没发生过，下次同样问题还得从头查；别以为工具能代替判断：SIEM 只能告诉你“可疑”，“是不是真的坏”永远是人说了算；别在真实系统上练手：所有日志练习只在你自己的虚拟机里做。</p>
+      <p>模块六我们搭起了安全基础的框架——CIA、威胁建模、ATT&amp;CK、风险管理、纵深防御；模块七我们从攻击者的角度看了一个网站是怎么被打下来的。现在模块八换到防守方：SOC 就是防守的大本营。下一章我们讲 SOC 的核心工具 <a href="m8c2-siem-logs.html">SIEM 与日志分析</a>——日志会说话，关键是你得会听。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>SOC（安全运营中心）是企业安全的心脏：7×24 小时监控、分诊、响应，全年无休。</li>
+          <li>SOC 的三件日常工作：监控告警、分诊（判断真假与严重程度）、按流程响应并写记录。</li>
+          <li>SOC 分三个层级：一线按剧本处理常见告警，二线深入分析复杂事件，三线做狩猎、写规则、处置重大事件。</li>
+          <li>告警疲劳是 SOC 的头号敌人，对策是调优规则、自动化和写好剧本；平时的准备决定出事时的速度。</li>
+          <li>入门考证参考：CompTIA Security+ 当前版本 SY0-801；国内认证有 CISP，适合作为中长期目标。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="summary-module7.html">← 上一章：模块七小结</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m8c2-siem-logs.html">下一章：第 2 章：SIEM 与日志分析 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块八小结：从告警到复盘——安全运营的一天 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块八小结：从告警到复盘——安全运营的一天</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · 模块八第 1–20 章</div>
+      <p>二十章讲的其实是一天的工作，顺序就是蓝队一天的真实顺序：早上打开 SIEM 看告警，查日志确认是不是真的出事，严重的按流程响应，空闲时写检测规则、跟进漏洞、更新情报，定期做一次演练复盘。这一模块的前半部分在讲“看懂告警”，中间在讲“查清真相”，后半部分在讲“把事情做成闭环”——发现、响应、修复、复盘，每一步都有人负责、都有时限、都有记录。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="模块八二十章知识串联图">
+          <defs>
+            <marker id="arrm8" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="130" y="10" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">看懂告警：SOC、SIEM、查询语言</text>
+          <rect x="130" y="70" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">查清真相：日志、取证、时间线</text>
+          <rect x="130" y="130" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">动手响应：框架、报告、工作流</text>
+          <rect x="130" y="190" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">做成闭环：情报、漏洞、检测工程</text>
+          <rect x="130" y="250" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="275" text-anchor="middle" font-size="14" fill="#1a1a2e">练出来：演练、复盘、改进</text>
+          <rect x="130" y="310" width="300" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="335" text-anchor="middle" font-size="14" fill="#1a1a2e">合起来：一次完整应急响应演练</text>
+          <line x1="280" y1="50" x2="280" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm8)"/>
+          <line x1="280" y1="110" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm8)"/>
+          <line x1="280" y1="170" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm8)"/>
+          <line x1="280" y1="230" x2="280" y2="248" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm8)"/>
+          <line x1="280" y1="290" x2="280" y2="308" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm8)"/>
+        </svg>
+        <figcaption>图：二十章讲的是蓝队一天的工作——从看到告警，到查清真相，再到做成闭环</figcaption>
+      </figure>
+      <h2>这二十章是怎么连起来的</h2>
+      <p>先看懂告警。<a href="m8c1-soc-intro.html">第 1 章</a>讲 SOC 是干什么的：7×24 小时盯着屏幕的人，分三级配合；<a href="m8c2-siem-logs.html">第 2 章</a>讲 SIEM 与日志分析：日志会说话，SIEM 是把日志收在一起、变成可以查的东西；<a href="m8c3-attack-defense-hunting.html">第 3 章</a>讲 ATT&CK 防御、威胁狩猎与检测工程：用攻击者的手法来防守，主动去狩猎而不是等着告警响；<a href="m8c4-incident-response-framework.html">第 4 章</a>讲应急响应框架 NIST SP 800-61 Rev.3：对应 CSF 2.0 的六个职能，响应不是凭感觉，是按框架走的六个阶段。</p>
+      <p>然后是动手查真相。<a href="m8c5-simulated-intrusion-lab.html">第 5 章</a>动手分析一次模拟入侵：对着日志破案；<a href="m8c6-forensics-deep.html">第 6 章</a>讲数字取证深入：证据链、易失性顺序、Volatility，取证的第一铁律是不动原件；<a href="m8c7-threat-intel-deep.html">第 7 章</a>讲威胁情报深入：IOC、TTP 与情报生命周期，情报不是刷新闻，是有方法的跟踪；<a href="m8c8-vuln-management.html">第 8 章</a>讲漏洞管理流程：从发现到修复的闭环；<a href="m8c9-backup-bcp-dr.html">第 9 章</a>讲备份与业务连续性：BCP/DR、RTO/RPO，勒索来了怎么活下去；<a href="m8c10-incident-report.html">第 10 章</a>讲写一份安全事件报告：把一次事件讲清楚，报告的读者是一个月后回来看的人。</p>
+      <p>后半部分把手艺做深。<a href="m8c11-siem-query-language.html">第 11 章</a>讲 SIEM 查询语言：KQL 与 SPL，学会查日志的语言，自己写一条检测规则；<a href="m8c12-soc-workflow.html">第 12 章</a>讲 SOC 工作流：告警来了先分级、再分流，最后按剧本一步步处理；<a href="m8c13-log-sources-event-ids.html">第 13 章</a>讲日志源接入与 Windows 事件 ID：把各处的日志接进来，认得 4624、4625、4688 这些关键编号；<a href="m8c14-disk-forensics-timeline.html">第 14 章</a>讲取证深入：磁盘取证与时间线分析，从硬盘镜像里拼出事情的先后顺序；<a href="m8c15-network-memory-forensics.html">第 15 章</a>讲网络取证与内存取证工作流：抓包和内存里找攻击留下的痕迹，两边的证据互相印证。</p>
+      <p>最后是做成闭环。<a href="m8c16-threat-intel-platforms.html">第 16 章</a>讲威胁情报平台：STIX 是情报的通用语言，TAXII 是情报的快递，MISP 是大家的情报仓库；<a href="m8c17-vuln-management-loop.html">第 17 章</a>讲漏洞管理闭环：扫描要有节奏、修复要有时限（SLA）、修完还要回头验证；<a href="m8c18-detection-engineering.html">第 18 章</a>讲检测工程深入：把一次攻击手法变成能长期跑的检测，测试、调优、上线、维护；<a href="m8c19-ir-exercise.html">第 19 章</a>讲应急响应演练：红蓝对抗之后复盘哪里没做好，演练的目标不是赢，是找到差距。</p>
+      <p>最后是实战。<a href="m8c20-capstone.html">第 20 章</a>是模块八的结课实战：一次完整的应急响应演练——五步模拟入侵，六个阶段走完全程，从第一条告警到最后一份复盘报告。十九章的本事，在这里合起来变成一次真的做过、真的写下来的响应。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>用 KQL 或 SPL 写查询，从几十万条日志里筛出想要的结果，再把查询变成一条能自动跑的检测规则。</li>
+        <li>看到一条告警，按影响、可信度、时效和手法四个问题分级，再决定关闭、升级还是转交，每一步都留记录。</li>
+        <li>认得关键的 Windows 事件 ID：4624 登录成功、4625 登录失败、4688 新进程、4697/4698 持久化、4720 建账号、4728 加管理员组。</li>
+        <li>做磁盘取证：先做镜像算哈希，再抽时间、排时间线，讲出每个结论都有证据对应的故事。</li>
+        <li>做网络与内存取证：用 Wireshark 看统计、会话、内容，用 Volatility 看进程和注入，让两边的证据互相印证。</li>
+        <li>读懂一份 STIX 情报，判断它能不能用、该怎么用，再按 TLP 分级决定能不能分享。</li>
+        <li>走完一次完整的应急响应演练：从发现告警到遏制、清除、恢复，再到事件报告和复盘清单，并算出发现、遏制、恢复三个时间。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>模块九，进阶与新趋势。战场会扩大到云、容器、零信任和 AI 时代的新攻防：汇编与缓冲区溢出、逆向入门、云安全、容器与 Kubernetes 安全、零信任架构、AI 安全、移动安全、工控与物联网安全。模块八的本事会一直跟着你——查日志还是那套语言，分级还是那四个问题，取证还是那条证据链，闭环还是发现、修复、验证、复盘。变的只是战场：从一台电脑、一间 SOC，变成整个云和 AI 的世界。去之前，先把第 20 章的演练报告收好——那是你第一份真正的安全运营工作成果，也是以后面试时能拿出来的东西。</p>
+      <div class="lesson-nav">
+        <a href="m8c20-capstone.html">← 模块八第 20 章：动手：综合实战——完整应急响应演练</a>
+        <a href="../course.html">课程目录</a>
+        <a href="../course.html#m9">下一站：模块九：进阶与新趋势 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

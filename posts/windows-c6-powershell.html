@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows 专项第 6 章：PowerShell 安全实战 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Windows 专项第 6 章：PowerShell 安全实战</h1>
+      <div class="meta"><span class="tag">Windows 专项</span>2026-11-25 · Windows 专项</div>
+      <p>前面几章的检查，用图形界面一个个点也能做，但太慢了。PowerShell 是 Windows 的命令行外壳加脚本语言，是安全工程师每天用的主力工具：查进程、查服务、查日志、查网络连接，几行命令就能出结果，还能把结果存下来、反复跑。</p>
+      <p>这一章不讲 PowerShell 编程大全，只讲安全实战里最常用的那一小套：怎么安全地用它、怎么查系统状态、怎么从日志和网络里抓异常。目标是：学完这一章，你能用 PowerShell 给自己的虚拟机做一次快速体检。</p>
+      <p>先说安全底线：PowerShell 本身是中性的工具，攻击者也爱用它（无文件攻击、远程下载执行都离不开它），所以 Windows 给它加了很多防护：执行策略、脚本块日志、AMSI。本章先讲怎么用，再讲怎么防它被滥用。</p>
+      <h2>先把 PowerShell 用安全</h2>
+      <p>打开方式：按 Win+X → “终端（管理员）”或“Windows PowerShell（管理员）”。很多检查命令需要管理员权限才能看到完整信息，养成用管理员身份打开的习惯。分清两个版本：Windows PowerShell 5.1（系统自带）和 PowerShell 7（可另外安装），命令大部分通用，本章的命令在 5.1 里都能跑。</p>
+      <p><strong>执行策略（Execution Policy）</strong>是第一道门：它决定能不能运行脚本。默认的 Restricted 是不允许运行脚本，RemoteSigned 是允许本地脚本、远程脚本要签名。查看用 Get-ExecutionPolicy，改用 Set-ExecutionPolicy RemoteSigned。注意：执行策略不是安全边界，它防的是“不小心双击了脚本”，防不住有意绕过的人——真正的安全靠脚本块日志和 AMSI。</p>
+      <p>两个关键防护要知道：<strong>脚本块日志</strong>会把运行过的脚本内容记进事件日志（第 8 章），方便事后追查；<strong>AMSI（反恶意软件扫描接口）</strong>会在脚本运行前让杀毒软件先扫一遍。做安全检查时，脚本块日志是你找“谁在这台机器上跑过什么脚本”的好地方。</p>
+      <h2>快速体检：进程、服务、网络</h2>
+      <p>体检三件套：进程用 Get-Process | Sort-Object CPU -Descending | Select-Object -First 10；服务用 Get-Service | Where-Object Status -eq Running；网络连接用 Get-NetTCPConnection | Where-Object State -eq Listen，看机器在监听哪些端口（对照模块三第 10 章的端口表）。</p>
+      <p>查启动项和计划任务：Get-CimInstance Win32_StartupCommand 列出启动命令；Get-ScheduledTask | Where-Object State -eq Ready 列出就绪的任务。把输出存成文件方便慢慢看：命令后面加 | Out-File C:\Users\Public\check.txt。</p>
+      <p>查系统信息：Get-ComputerInfo 看系统版本和硬件；Get-HotFix 看已安装的补丁；Get-WindowsUpdateLog（或直接看设置里的更新历史）看补丁状态。补丁没打全，是体检里最常见的“高风险项”。</p>
+      <h2>从日志和事件里抓异常</h2>
+      <p>PowerShell 读事件日志用 Get-WinEvent 或 Get-EventLog。最常用的两个查询：登录失败用 Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4625} -MaxEvents 20；系统错误用 Get-WinEvent -FilterHashtable @{LogName='System'; Level=2} -MaxEvents 20。4625 是登录失败，4624 是登录成功，4672 是管理员登录——这几个事件 ID 值得背下来。</p>
+      <p>抓异常的思路是“先看正常，再找异常”：先看看平时登录成功的账号、时间、来源，再找半夜三点、陌生账号、反复失败的记录。一次两次失败可能是输错密码，一分钟内几十次失败就是有人在猜密码。</p>
+      <p>还可以用 PowerShell 查文件哈希：Get-FileHash 文件路径 -Algorithm SHA256，算出文件的指纹，再去官方公布的哈希值对照——下载的安装包是不是被篡改过，一比就知道。</p>
+      <h2>写个小脚本：把体检自动化</h2>
+      <p>把常用的检查写成一个 .ps1 脚本文件，下次体检双击运行就能出报告。脚本不用复杂：每行一个命令，输出重定向到一个文本文件，最后加一句 Write-Host '检查完成'。比如：Get-Process、Get-Service、Get-NetTCPConnection、Get-HotFix 各写一行，统一输出到 check-日期.txt。</p>
+      <p>写脚本时注意三点：只在自己的虚拟机里跑自己写的脚本；从网上复制的脚本先读懂每一行再跑，不认识的命令先查清楚；脚本里不要写密码、不要把敏感输出发到网上。脚本本身也是代码，要像对待程序一样对待它。</p>
+      <p>进阶方向：学 Select-Object、Where-Object、Sort-Object、Export-Csv 这四个命令的组合，就能把“查出来”变成“整理成表格”。比如 Get-Service | Where-Object Status -eq Running | Export-Csv services.csv，就得到一张正在运行的服务清单。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PowerShell 安全实战流程图：管理员打开 PowerShell，经执行策略与 AMSI 检查，运行体检命令，输出保存为报告">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="180" y="10" width="200" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">管理员打开 PowerShell</text>
+          <text x="280" y="54" text-anchor="middle" font-size="11" fill="#666">5.1 或 7 都可以</text>
+          <rect x="20" y="90" width="240" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">执行策略 + 脚本块日志</text>
+          <text x="140" y="134" text-anchor="middle" font-size="11" fill="#666">防误跑、留记录</text>
+          <rect x="300" y="90" width="240" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">AMSI 扫描脚本</text>
+          <text x="420" y="134" text-anchor="middle" font-size="11" fill="#666">运行前先让杀毒软件看一眼</text>
+          <rect x="20" y="190" width="240" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">体检：进程 服务 网络 日志</text>
+          <text x="140" y="234" text-anchor="middle" font-size="11" fill="#666">Get-Process 等命令</text>
+          <rect x="300" y="190" width="240" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">输出存成报告</text>
+          <text x="420" y="234" text-anchor="middle" font-size="11" fill="#666">Out-File / Export-Csv</text>
+          <line x1="280" y1="54" x2="280" y2="88" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="140" y1="134" x2="140" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="420" y1="134" x2="420" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="290" text-anchor="middle" font-size="12" fill="#666">4625 登录失败、4624 登录成功、4672 管理员登录</text>
+          <text x="280" y="315" text-anchor="middle" font-size="12" fill="#666">网上复制的脚本，先读懂每一行再跑</text>
+
+        </svg>
+        <figcaption>图：PowerShell 体检流程——先过执行策略与 AMSI，再查进程、服务、网络与日志</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ PowerShell 是命令行外壳加脚本语言，安全体检的主力工具，命令在 5.1 里都能跑。</p>
+      <p>□ 执行策略防误跑不防有意绕过，真正靠得住的是脚本块日志和 AMSI。</p>
+      <p>□ 体检三件套：Get-Process 查进程、Get-Service 查服务、Get-NetTCPConnection 查监听端口。</p>
+      <p>□ 事件 ID 要记牢：4625 登录失败、4624 登录成功、4672 管理员登录。</p>
+      <p>□ 网上复制的脚本先读懂再跑；把常用检查写成脚本，体检就能自动化。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>我每天上班第一件事，就是跑一遍自己的体检脚本：进程、服务、监听端口、最近 24 小时的登录失败，四样东西十分钟看完。最有价值的一次，是脚本发现一台测试机半夜有几百次 4625 登录失败——有人在用字典猜一个服务账号的密码，及时改了密码、封了来源，才没出事。我的建议是：别追求写多复杂的脚本，先把“每天看一遍”的习惯建立起来；命令记不住没关系，记在笔记里，用的时候翻出来，翻三次就记住了。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：以管理员身份打开 PowerShell，依次运行 Get-Process、Get-Service、Get-NetTCPConnection，把输出保存下来：Get-NetTCPConnection | Where-Object State -eq Listen | Out-File C:\Users\Public\ports.txt，打开文件，对照模块三的端口表认一认每个端口。<br>2. 在虚拟机里运行 Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4625} -MaxEvents 10 -ErrorAction SilentlyContinue，看看有没有登录失败记录；再运行 Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 10，看看最近打了哪些补丁。<br>3. 在虚拟机里写一个体检小脚本 check.ps1：把上面的三条命令写进去，输出到 check.txt，运行它（如果提示执行策略不允许，先运行 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser），打开生成的报告看看。</p>
+      <h2>避坑</h2>
+      <p>别在真实电脑、生产系统上跑来路不明的脚本：先读懂每一行，不认识的命令先查；执行策略不是安全边界：别以为设成 Restricted 就万事大吉，真正靠得住的是日志和 AMSI；别把 PowerShell 的输出随手发到网上：进程列表、网络连接里可能有你的用户名、内网地址等敏感信息；别用 PowerShell 关掉你不认识的服务或进程：先查清那是什么，再决定动不动手。</p>
+      <p>PowerShell 是把前面几章的检查变成“几行命令就能跑”的工具，也是攻击者爱用的工具——用好它、管好它，是一体两面。下一章我们认识微软官方的排障套件：<a href="windows-c7-sysinternals.html">第 7 章</a> Sysinternals——Process Explorer、Autoruns、Process Monitor，排障和取证的“三件套”。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>PowerShell 是命令行外壳加脚本语言，安全体检的主力工具，命令在 5.1 里都能跑。</li>
+          <li>执行策略防误跑不防有意绕过，真正靠得住的是脚本块日志和 AMSI。</li>
+          <li>体检三件套：Get-Process 查进程、Get-Service 查服务、Get-NetTCPConnection 查监听端口。</li>
+          <li>事件 ID 要记牢：4625 登录失败、4624 登录成功、4672 管理员登录。</li>
+          <li>网上复制的脚本先读懂再跑；把常用检查写成脚本，体检就能自动化。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="windows-c5-group-policy.html">← 上一章：第 5 章：组策略深入</a>
+        <a href="../course.html">课程目录</a>
+        <a href="windows-c7-sysinternals.html">下一章：第 7 章：Sysinternals 套件 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

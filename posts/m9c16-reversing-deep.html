@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块九第 16 章：逆向深入：x64dbg、Ghidra 与反调试 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块九第 16 章：逆向深入：x64dbg、Ghidra 与反调试</h1>
+      <div class="meta"><span class="tag">进阶与新趋势</span>2026-11-25 · 模块九</div>
+      <p>第 14 章（<a href="m9c14-crackme-lab.html">第 14 章</a>）我们第一次破解了一个简单的 crackme，找密码用了三条路：看字符串、跟比较、
+      改判断。这一章把工具升级：调试器用 x64dbg，反编译器用
+      Ghidra，再加一个新对手——反调试。程序越大、保护越多，只靠 strings 和单步跟踪就不够用了，这两件工具
+      就是为此而生的。</p>
+      <p>规矩和第 14 章一样：所有练习只在你自己的虚拟机里做，对象只限自己写的程序或公开练习用的 crackme。x64dbg 和 Ghidra 都是免费工具，装在虚拟机里用，改坏了恢复快
+      照就行。</p>
+
+      <h2>x64dbg：让程序一步一步走给你看</h2>
+      <p>x64dbg 是 Windows 上最常用的免费调试器。它的工作方式是：把程序“按住”，你让它走一步，它走一步。核心是四个窗口：<strong>反汇编窗口</strong>看程序正在
+      执行的指令；<strong>寄存器窗口</strong>看 CPU 里现在装着什么值；<strong>栈窗口</strong>看函数调用留下的痕迹；<strong>内存窗口</strong>
+      看程序正在读写的数据。最常用的三个操作是：<strong>下断点</strong>（在某一行指令上按 F2，程序跑到这里就停下）、<strong>单步执行</strong>（F7/F8，一
+      条一条往下走）、<strong>看寄存器和内存</strong>（停下来之后，比较函数的两个参数分别是什么，一看就知道答案藏在哪里）。</p>
+      <p>用 x64dbg 破解 crackme
+      的典型流程是：先静态看一眼程序调用了哪些函数（比如字符串比较函数），在比较函数上下断点，运行程序，输入密码，程序在断点处停下——这
+      时看寄存器里的两个参数，一个是你输的，一个就是正确答案。第
+      14 章“跟比较”那条路，在这里有了趁手的工具：断点让你准确停在分叉口，单步让你看清程序每一步的选择。</p>
+
+      <h2>Ghidra：把机器码翻译回“人话”</h2>
+      <p>Ghidra 是美国国家安全局开源的反编译器，免费、强大。它的本事是：把晦涩的汇编代码翻译成接近 C 语言的伪代码。你不需要逐行读汇编了——打开反编译窗口，程序的逻辑以<code>i
+      f</code>、<code>for</code>、函数调用的形式摆在面前。Ghidra 的三个常用功是：<strong>找函数</strong>（左侧的函数列表就是程序的目录，先找<code>
+      main</code>，再找它调用的函数）；<strong>改名</strong>（把<code>FUN_00401000</code>这种自动生成的名字改成<code>check_pas
+      sword</code>，把无意义的变量改成<code>user_input</code>，程序立刻好读十倍）；<strong>交叉引用</strong>（选中一个字符串或函数，按 X 看
+      看谁在用它——顺着引用链走，很快就能找到密码比较发生的位置）。</p>
+      <p>x64dbg 和 Ghidra 是搭档，不是对手：Ghidra 负责“看懂结构”——程序由哪些函数组成、逻辑是什么；x64dbg
+      负责“看清执行”——程序运行时到底走了哪
+      条路、寄存器的值是什么。先拿 Ghidra 画出地图，再拿 x64dbg 按图索骥，效率最高。</p>
+
+      <h2>反调试：程序在防着你</h2>
+      <p>有些程序不希望被调试，会在代码里埋“反调试”检查。最常见的有三种。第一种是<strong>API 检查</strong>：调用<code>IsDebuggerPresent</code>
+      问系统“我是不是正在被调试”，是就直接退出或走假逻辑。第二种是<strong>时间检查</strong>：在两段代码之间计时，正常执行只要几毫秒，被调试器单步跟踪就会慢得多——一慢就知道有
+      人在看。第三种是<strong>断点检查</strong>：扫描自己的代码，看看有没有被人插进断点指令（<code>int 3</code>），有就捣乱。</p>
+      <p>对付反调试的思路也是三条。第一，<strong>认出来</strong>：在 Ghidra 里搜<code>IsDebuggerPresent</code>、计时函数这些名字，看到就
+      知道程序在这里设了卡。第二，<strong>绕过去</strong>：在 x64dbg 里把检查的结果改掉——比如让<code>IsDebuggerPresent</code>永远返回“没
+      有调试器”，程序就乖乖往下走了。第三，<strong>用工具帮手</strong>：x64dbg 有 ScyllaHide
+      这类反反调试插件，能自动藏起调试器的痕迹。记住一点：
+      反调试不是“防破解”的万能锁，它只是抬高了门槛——分析师的工作，就是认出每一道卡，再决定绕还是拆。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="x64dbg与Ghidra配合逆向流程图：Ghidra看结构，x64dbg跟执行，反调试检查要认出来再绕过">
+          <rect x="30" y="20" width="230" height="70" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="46" text-anchor="middle" font-size="14" fill="#1a1a2e">Ghidra：看懂结构</text>
+          <text x="145" y="68" text-anchor="middle" font-size="11" fill="#666">反编译、找函数、改名、交叉引用</text>
+          <rect x="300" y="20" width="230" height="70" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="46" text-anchor="middle" font-size="14" fill="#1a1a2e">x64dbg：看清执行</text>
+          <text x="415" y="68" text-anchor="middle" font-size="11" fill="#666">下断点、单步、看寄存器和内存</text>
+          <rect x="130" y="130" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="152" text-anchor="middle" font-size="14" fill="#1a1a2e">找到关键点：输入、比较、判断</text>
+          <text x="280" y="172" text-anchor="middle" font-size="11" fill="#666">分叉口就是答案所在的地方</text>
+          <rect x="30" y="220" width="230" height="70" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="246" text-anchor="middle" font-size="14" fill="#1a1a2e">反调试检查</text>
+          <text x="145" y="268" text-anchor="middle" font-size="11" fill="#666">API 检查、时间检查、断点检查</text>
+          <rect x="300" y="220" width="230" height="70" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="246" text-anchor="middle" font-size="14" fill="#1a1a2e">认出来，再绕过去</text>
+          <text x="415" y="268" text-anchor="middle" font-size="11" fill="#666">改返回值、用 ScyllaHide 藏痕迹</text>
+          <line x1="260" y1="55" x2="298" y2="55" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="90" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="182" x2="145" y2="218" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="182" x2="415" y2="218" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="325" text-anchor="middle" font-size="12" fill="#666">先画地图，再按图索骥；遇到卡，先认再绕</text>
+        </svg>
+        <figcaption>图：Ghidra 看结构、x64dbg 跟执行——两件工具配合，再认出并绕过反调试</figcaption>
+      </figure>
+
+      <h2>一次真实的分析会话是什么样的</h2>
+      <p>把两件工具的配合串起来，一次真实的分析会话通常是这样走的。拿到程序，先不急着运行，用 Ghidra 打开它，花十分钟画地图：找到<code>main</code>函数，顺着它的调用链
+      往下走，把每个函数按作用改名——输入处理、密码比较、网络通信、文件操作，改完名，程序的结构就清楚了。再用交叉引用找到关键字符串在哪里被使用，标出两三个“值得去看的地方”，这就是你的检查清单
+      。</p>
+      <p>然后打开
+      x64dbg，按清单上的点下断点：先在程序入口下一个断点，确认程序正常启动；再在密码比较函数上下断点，输入一个测试密码，程序停下后看寄存器里的两个参数；如果程序
+      一进调试器就闪退，别慌，先去
+      Ghidra 里搜<code>IsDebuggerPresent</code>和计时函数，十有八九是反调试检查在作怪——把检查的返回值改掉，或者挂
+      上 ScyllaHide，再继续。最后把整个过程记下来：Ghidra 帮你找到了什么、x64dbg
+      帮你验证了什么、反调试检查长什么样、你是怎么绕过去的——这份笔记，就是你下一
+      次分析的起点。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>新手用 Ghidra 最容易犯的错，是把它当成“自动答案机”——反编译窗口一打开，就指望伪代码直接告诉你密码在哪。真实情况是：反编译出来的代码常常一团糟，变量名是 <code>uVar1</code>，函数名是 <code>FUN_00401230</code>，不改名根本没法读。我自己的习惯是：打开一个程序，先花十分钟只干一件事——改名。把 <code>main</code> 找出来，把它调用的函数按作用改名，把关键字符串标出来，十分钟后，程序的结构就清楚了。还有一句：反调试检查第一次遇到时很唬人，程序一进调试器就闪退，你会以为是自己操作错了——其实不是，是程序在“认”调试器。这时别慌，先去 Ghidra 里搜 <code>IsDebuggerPresent</code>，十有八九就是它在作怪。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：装好 x64dbg 和 Ghidra，拿第 14 章你自己写的 crackme 当练习对象，运行前先做快照。<br>2. 用 Ghidra 打开你的 cr
+      ackme：找到<code>main</code>函数，看反编译出的伪代码；把密码比较函数改名成<code>check_password</code>，把输入变量改名成<code>user
+      _input</code>，再用交叉引用找到密码字符串（或比较逻辑）在哪里被使用。<br>3. 用 x64dbg 打开同一个 crackme：在比较函数上下断点，运行并输入一个错误密码；程
+      序停下后，查看寄存器里的两个参数，找出正确答案，再输入正确答案验证。<br>4. 给你的 crackme 加一道反调试：在程序开头调用<code>IsDebuggerPresent</code>
+      ，如果检测到调试器就直接退出；然后再用 x64dbg 试一次，观察程序的行为变化，并试着把检查的返回值改掉，绕过这道卡。<br>5. 把整个过程写成一页笔记：Ghidra 帮你找到了什么、
+      x64dbg 帮你验证了什么、反调试检查长什么样、你是怎么绕过去的。</p>
+      <h2>避坑</h2>
+      <p>别指望反编译直接给答案：伪代码要配合改名和交叉引用才读得懂，不改名的 Ghidra 等于没用；别只用一种工具：Ghidra 看结构、x64dbg
+      看执行，两件工具配合才完
+      整；别被反调试吓住：程序闪退先去搜<code>IsDebuggerPresent</code>和计时函数，十有八九是检查在作怪；别在真机上练：所有调试都在虚拟机里做，改坏了恢复快照；别碰别
+      人的商业软件和来路不明的真实恶意软件：练习对象只限自己写的程序和公开练习用的 crackme。</p>
+      <p>这一章把逆向的工具升级了：x64dbg 让你一步一步跟着程序走，Ghidra 把机器码翻译回接近人话的伪代码，反调试则是程序设下的第一道卡——认出来、绕过去。它接上了<a href="m9c2-reversing-intro.html">
+      第 2 章</a>逆向入门和第 14 章的 crackme 实战，从“能破解一个小程序”走到了“能对付一个有防备的程序”。下一章（<a href="m9c17-binary-exploitation.html">
+      第 17 章</a>）我们从“看懂程序”走到“利用程序”：格式化字符串、堆利用与 ROP——绕过现代防护的几种经典手法。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>x64dbg 是调试器：下断点、单步执行、看寄存器和内存，让程序一步一步走给你看。</li>
+          <li>Ghidra 是反编译器：把汇编翻译成接近 C 语言的伪代码，找函数、改名、交叉引用是三个常用功。</li>
+          <li>两件工具是搭档：Ghidra 先画地图看懂结构，x64dbg 再按图索骥看清执行。</li>
+          <li>反调试有三种常见手法：API 检查、时间检查、断点检查；对策是认出来、改返回值绕过去，或用 ScyllaHide 藏起调试器痕迹。</li>
+          <li>所有练习只在虚拟机里做，只用自己写的程序或公开练习用的 crackme。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m9c15-cert-career.html">← 上一章：第 15 章：考证与求职路线</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m9c17-binary-exploitation.html">下一章：第 17 章：二进制利用深入：格式化字符串、堆与 ROP →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

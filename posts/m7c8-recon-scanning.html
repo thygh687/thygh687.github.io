@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 8 章：信息收集与扫描进阶 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 8 章：信息收集与扫描进阶</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>前面七章，我们学会了怎么打一个具体的漏洞点。从这一章开始，视角放大：真正的渗透测试不是上来就扔 payload，而是先花大量时间做信息收集。行话叫“侦察”——<a href="m6c22-threat-intel-frameworks.html">模块六第 22 章</a>的杀伤链第一步就是侦察。信息收集做得好，后面的路就顺；跳过这一步，后面全是碰运气。这一章讲三样东西：被动收集（OSINT）、主动扫描（Nmap 入门）、漏洞扫描，以及它们之间的分工。</p>
+      <p>先立一条规矩，也是本章最重要的规矩：<strong>扫描只扫自己的虚拟机。</strong>主动扫描会向目标发大量探测包，对真实网站、真实网络做扫描，未经授权就是越界行为。本章所有的动手步骤，都只针对你自己的虚拟机（比如虚拟机里搭的 DVWA、Metasploitable 靶机），绝不针对真实目标。</p>
+
+      <h2>OSINT：不用碰目标就能知道很多</h2>
+      <p>OSINT（公开来源情报）是信息收集里最“安静”的一种：只用公开渠道，不向目标发任何探测。能查到的东西比想象中多：域名注册信息（WHOIS：注册人、注册时间、DNS 服务器）、DNS 记录（子域名、邮件服务器、TXT 记录里可能写着用的服务商）、证书透明度日志（网站申请过的 HTTPS 证书会公开记录，里面常常藏着没公开的子域名）、搜索引擎（用特定语法找暴露的文件、后台地址）、代码托管平台（不小心公开的仓库里可能有配置文件、密钥、内部地址）。</p>
+      <p>做 OSINT 有两个习惯要养成。第一，<strong>记下来</strong>：域名、IP、子域名、邮箱格式、技术栈、员工信息，全部写进一张表，后面每一步都要回来看这张表。第二，<strong>交叉验证</strong>：单一来源的信息可能是旧的、错的，两个以上独立来源对得上，才把它当作事实写进报告。OSINT 收集到的很多是“公开信息”，但把它们拼起来，就能画出目标的画像——这正是防御方要做的事：定期用攻击者的眼光看一看，自己在公开渠道暴露了多少东西。</p>
+
+      <h2>Nmap 入门：先看清目标长什么样</h2>
+      <p>OSINT 是“远看”，Nmap 是“近看”。Nmap 是网络扫描的事实标准：它向目标发探测包，根据回包判断哪些端口开着、跑着什么服务、是什么操作系统。最常用的入门命令是 <code>nmap -sV -O 目标IP</code>：<code>-sV</code> 探测服务版本，<code>-O</code> 猜操作系统。只扫自己的虚拟机时，你会看到类似这样的输出：22 端口开着 OpenSSH、80 端口开着 Apache、3306 端口开着 MySQL——这张“端口与服务清单”，就是下一步漏洞扫描的输入。</p>
+      <p>理解 Nmap 的关键是理解它在“问什么”：它发一个 SYN 包过去，对方回 SYN/ACK 就是端口开着，回 RST 就是关着，超时不回可能是被防火墙拦了。端口状态有四种：open（开着）、closed（关着）、filtered（被过滤，看不到）、open|filtered（不确定）。第 9 章会把 Nmap 的扫描类型、时序和脚本讲透，这一章先建立感觉：在自己的虚拟机上跑几次，看输出、对照着理解。</p>
+
+      <h2>漏洞扫描：把已知漏洞对号入座</h2>
+      <p>有了端口和服务清单，下一步是漏洞扫描：拿着服务版本去对照已知漏洞库（CVE），看哪些服务有已知的高危漏洞。工具分两类：<strong>网络漏洞扫描器</strong>（如 Nessus、OpenVAS），扫整个网段的服务和配置；<strong>Web 漏洞扫描器</strong>（如 Nikto、Burp 的扫描功能），专门扫网站的漏洞。扫描报告会按严重程度列出发现，每个发现都带 CVE 编号和修复建议——对照<a href="m6c8-cve-cvss.html">模块六第 8 章</a>的 CVSS 评分，你就知道先修哪个。</p>
+      <p>但要清醒：扫描器只能找到“已知”的问题。它按漏洞库里的特征去匹配，匹配不上就报不出来；它也会报“误报”——看着像漏洞，实际不是。所以扫描结果必须人工验证：每个高危发现，都要亲手确认一遍，再决定写不写进报告。扫描是“找线索”，不是“下结论”。第 15 章写报告时，这个区别会再次出现。</p>
+
+      <h2>信息收集的工作流</h2>
+      <p>把三者串起来，一次标准的信息收集是这样的：第一步，被动收集——OSINT，不碰目标，先画画像；第二步，主动发现——Nmap 扫端口和服务，只扫授权范围内的目标；第三步，漏洞扫描——对发现的服务做 CVE 对照；第四步，整理成清单——域名、IP、端口、服务版本、疑似漏洞、待验证项，写成一张表，交给下一阶段。每一阶段的输出，都是下一阶段的输入；每一阶段都要记录“怎么查的、查到了什么、来源是什么”，报告里要能追溯。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="信息收集四步工作流图：OSINT被动收集、Nmap主动发现、漏洞扫描、整理成清单">
+          <rect x="20" y="30" width="120" height="64" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="54" text-anchor="middle" font-size="13" fill="#1a1a2e">1. OSINT</text>
+          <text x="80" y="74" text-anchor="middle" font-size="11" fill="#666">被动，不碰目标</text>
+          <rect x="160" y="30" width="120" height="64" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="220" y="54" text-anchor="middle" font-size="13" fill="#1a1a2e">2. Nmap 发现</text>
+          <text x="220" y="74" text-anchor="middle" font-size="11" fill="#666">端口、服务、系统</text>
+          <rect x="300" y="30" width="120" height="64" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="360" y="54" text-anchor="middle" font-size="13" fill="#1a1a2e">3. 漏洞扫描</text>
+          <text x="360" y="74" text-anchor="middle" font-size="11" fill="#666">对照 CVE 找已知漏洞</text>
+          <rect x="440" y="30" width="100" height="64" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="490" y="54" text-anchor="middle" font-size="13" fill="#1a1a2e">4. 整理清单</text>
+          <text x="490" y="74" text-anchor="middle" font-size="11" fill="#666">待验证项成表</text>
+          <line x1="140" y1="62" x2="160" y2="62" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c)"/>
+          <line x1="280" y1="62" x2="300" y2="62" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c)"/>
+          <line x1="420" y1="62" x2="440" y2="62" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c)"/>
+          <rect x="20" y="140" width="250" height="64" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="164" text-anchor="middle" font-size="13" fill="#1a1a2e">OSINT 能查到什么</text>
+          <text x="145" y="184" text-anchor="middle" font-size="11" fill="#666">域名、子域名、证书、邮箱、技术栈</text>
+          <rect x="290" y="140" width="250" height="64" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="164" text-anchor="middle" font-size="13" fill="#1a1a2e">Nmap 输出：端口状态</text>
+          <text x="415" y="184" text-anchor="middle" font-size="11" fill="#666">open / closed / filtered / 不确定</text>
+          <rect x="120" y="240" width="320" height="60" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="264" text-anchor="middle" font-size="13" fill="#1a1a2e">红线：只扫自己的虚拟机</text>
+          <text x="280" y="284" text-anchor="middle" font-size="11" fill="#666">扫描结果要人工验证，扫描器只找已知问题</text>
+          <defs><marker id="c" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#1a1a2e"/></marker></defs>
+        </svg>
+        <figcaption>图：信息收集的四步工作流——被动先行，主动在后，扫描结果必须人工验证</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>信息收集阶段，我见过最多的浪费时间是“扫了一整天，记了一堆端口，却不知道哪个值得跟”。诀窍是带着问题去扫：扫之前先写下三句话——“我想知道目标对外暴露了什么服务”“哪个服务版本最旧、最可能有已知漏洞”“哪个发现如果属实，危害最大”。扫完对照这三句话筛一遍，剩下的才是值得验证的线索。另外一个教训：OSINT 的结果一定要写来源。我曾经在一份报告里写“目标使用某云服务商”，客户问“你从哪知道的”，我翻了半天才想起来是证书记录里看到的——没有来源的情报，等于没有证据。还有，Nmap 扫自己的虚拟机时，记得先给虚拟机拍个快照，扫坏了能恢复；扫描本身虽然一般不会搞坏系统，但养成“先快照再动手”的习惯，整个模块七都用得上。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只扫自己的虚拟机：在虚拟机里搭一台靶机（如 Metasploitable 或 DVWA 所在的虚拟机），先给它拍个快照；再用 <code>nmap -sV -O 靶机IP</code> 扫它，记下开着的端口、服务和版本，整理成一张表。<br>2. 做一次 OSINT 练习：挑一个你自己的域名或本地实验项目（不要挑真实目标），查它的 WHOIS、DNS 记录和证书透明度日志，看看能拼出多少公开信息，写进你的收集表。<br>3. 跑一次漏洞扫描：在自己的虚拟机上用 OpenVAS 或 Nikto 扫靶机，把报告里的高危项挑出来，逐个亲手验证是真的还是误报。<br>4. 写一份信息收集清单：按本章的四步工作流，把你这次收集的结果写成一张表——域名、IP、端口、服务版本、疑似漏洞、待验证项，并给每一项写清来源。</p>
+      <h2>避坑</h2>
+      <p>扫描只扫自己的虚拟机：对真实网站、真实网络做未经授权的扫描是越界行为；别跳过 OSINT：被动收集不留痕、成本低，还能帮你少扫很多无用功；别把扫描报告当结论：扫描器只找已知问题，还会误报，每个高危发现都要亲手验证；别只记结果不记来源：情报没有来源就等于没有证据，报告里要能追溯；动手前先给虚拟机拍快照：扫坏了能恢复，这个习惯整个模块七都用得上。</p>
+      <p>信息收集的框架搭好了：被动 OSINT、主动 Nmap、漏洞扫描、四步工作流。下一章我们把 Nmap 单独拿出来讲透：<a href="m7c9-nmap-deep.html">第 9 章：Nmap 与扫描深入</a>——扫描的艺术，藏在扫描类型、时序和脚本选择这些细节里。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>信息收集是杀伤链的第一步：做得好，后面的路就顺；跳过它，后面全是碰运气。</li>
+          <li>OSINT 是被动收集，只用公开渠道：WHOIS、DNS 记录、证书透明度日志、搜索引擎、代码托管平台。</li>
+          <li>Nmap 入门：<code>nmap -sV -O</code> 看端口、服务版本和操作系统；端口状态分 open、closed、filtered、不确定四种。</li>
+          <li>漏洞扫描把服务版本对照 CVE 找已知漏洞，但只能找已知问题，还会误报，必须人工验证。</li>
+          <li>四步工作流：OSINT → Nmap 发现 → 漏洞扫描 → 整理成清单；扫描只扫自己的虚拟机。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c7-session-auth.html">← 上一章：第 7 章：会话与认证深入：JWT、CORS、CSP 与越权访问</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c9-nmap-deep.html">下一章：第 9 章：Nmap 与扫描深入 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

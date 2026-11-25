@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows 专项第 4 章：服务与任务计划 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Windows 专项第 4 章：服务与任务计划</h1>
+      <div class="meta"><span class="tag">Windows 专项</span>2026-11-25 · Windows 专项</div>
+      <p>电脑开机后，你什么都没点，它已经在干很多事：联网对时、检查更新、整理磁盘、同步时间。这些活儿是谁干的？答案是<strong>服务</strong>和<strong>任务计划</strong>。服务是一直在后台跑的程序，任务计划是到点就跑一次的活儿。</p>
+      <p>对安全工作来说，服务和任务计划是两个重点：第一，它们是攻击者最爱藏身的地方——装成服务、藏进任务计划，就能开机自启、悄悄运行；第二，它们也是排障的重点——电脑变慢、网络异常，很多时候是某个服务出了问题。</p>
+      <p>这一章先讲服务怎么管，再讲任务计划怎么查，最后讲怎么分辨“这是系统正常的服务”还是“这是可疑的东西”。</p>
+      <h2>服务：没有窗口的后台程序</h2>
+      <p>服务是没有界面的后台程序，由服务控制管理器（SCM，第 2 章的 services.exe）统一管理。每个服务有名字、显示名、描述、启动类型（自动、手动、禁用、自动延迟启动）、运行账号（LocalSystem、NetworkService、LocalService 或指定账号）、以及它依赖的其他服务。</p>
+      <p>打开 services.msc，你会看到几十上百个服务：Windows Update、Windows Defender、打印服务、蓝牙服务……很多服务你一辈子用不上，但它们默认开着。加固的基本思路就是：不需要的服务就停掉、禁用——每少一个服务，就少一个攻击面。</p>
+      <p>服务常以 svchost.exe 为宿主运行：一个 svchost 进程里装着一组服务。任务管理器里看到十几个 svchost.exe 是正常的。要看某个 svchost 里装了什么服务，用 tasklist /svc 或在 PowerShell 里用 Get-Process svchost 再结合 Get-Service 查。</p>
+      <h2>服务出问题怎么查</h2>
+      <p>服务起不来、反复崩溃，先看三处：第一，服务自己的状态和启动类型（services.msc 里看）；第二，事件查看器里该服务的报错（第 8 章细讲，来源常是 Service Control Manager）；第三，服务依赖的服务是不是也挂了——比如某服务依赖 RPC 服务，RPC 挂了它也起不来。</p>
+      <p>排障时一个实用命令是 sc query 服务名，看状态；sc qc 服务名，看配置。PowerShell 里 Get-Service | Where-Object {$_.Status -eq 'Running'} 可以列出所有正在跑的服务，慢慢对着看，认出哪些是你认识的、哪些不认识。</p>
+      <p>安全检查时要重点看：以 LocalSystem（最高权限）运行的第三方服务——它一旦被攻破就是系统权限；启动类型是“自动”但你不认识的服务；以及最近被新建的服务。攻击者常创建一个名字很像系统服务的新服务，比如把“Windows Update”写成“Windows Updates”。</p>
+      <h2>任务计划：到点就干活的闹钟</h2>
+      <p><strong>任务计划程序（Task Scheduler）</strong>管的是“到点干活”：每天凌晨检查更新、每周整理磁盘、用户登录时运行某个程序。任务由触发器（什么时候跑：开机、登录、每天、空闲时）和操作（跑什么程序、发什么命令）组成，还可以设条件（只在联网时跑、只在用交流电时跑）。</p>
+      <p>打开 taskschd.msc，就能看到任务库：Microsoft\Windows 下面是系统自带的几百个任务，比如 .NET 优化、磁盘诊断、时间同步。第三方软件也会在这里建任务：浏览器的更新任务、输入法的任务、云盘的同步任务。</p>
+      <p>任务计划是恶意软件持久化的重灾区：建一个每天凌晨跑一次的任务，指向一个藏在深处的脚本，就能长期潜伏。检查方法是：按“上次运行时间”和“作者”排序，重点看非 Microsoft 作者的、指向临时目录或用户目录下脚本的任务。</p>
+      <h2>服务、任务、注册表自启：三者怎么分工</h2>
+      <p>这三者都是“让程序自动跑”的机制，分工不同：服务是长期驻留、一直在后台；任务计划是定时触发、跑完就走；注册表 Run 键是用户登录时跑一次。攻击者常常三管齐下：服务保证一直在线，任务计划保证定时回连，Run 键保证登录就启动。</p>
+      <p>所以检查持久化要三处一起看，缺一不可。第 7 章的 Autoruns 工具就是把这三处（再加上驱动、浏览器插件、WMI 等）汇总到一张表里，是做这项检查最高效的工具。记住结论：只查一处就说“干净”，等于只锁了前门。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="服务与任务计划图：服务控制管理器管理长期运行的服务，任务计划程序按触发器定时运行任务">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="180" y="10" width="200" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">services.exe 服务控制管理器</text>
+          <text x="280" y="54" text-anchor="middle" font-size="11" fill="#666">统一管所有服务</text>
+          <rect x="20" y="90" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">服务：长期运行</text>
+          <text x="140" y="134" text-anchor="middle" font-size="11" fill="#666">Windows Update、杀毒软件等</text>
+          <rect x="300" y="90" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">svchost.exe 宿主</text>
+          <text x="420" y="134" text-anchor="middle" font-size="11" fill="#666">一组服务共用一个进程</text>
+          <rect x="20" y="190" width="240" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">任务计划程序</text>
+          <text x="140" y="234" text-anchor="middle" font-size="11" fill="#666">触发器 + 操作</text>
+          <rect x="300" y="190" width="240" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">触发：开机 / 登录 / 定时</text>
+          <text x="420" y="234" text-anchor="middle" font-size="11" fill="#666">跑完就走</text>
+          <line x1="280" y1="54" x2="280" y2="88" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="140" y1="142" x2="140" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="420" y1="142" x2="420" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="290" text-anchor="middle" font-size="12" fill="#666">查持久化：服务、任务计划、注册表 Run 键，三处一起看</text>
+          <text x="280" y="315" text-anchor="middle" font-size="12" fill="#666">不需要的服务就停掉：少一个服务，少一个攻击面</text>
+
+        </svg>
+        <figcaption>图：服务是长期驻留的后台程序，任务计划是到点触发的活儿——两者都是持久化的藏身处</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ 服务是没有界面的后台程序，由 services.exe 统一管理，常以 svchost.exe 为宿主运行。</p>
+      <p>□ 不需要的服务就停掉、禁用：每少一个服务，就少一个攻击面。</p>
+      <p>□ 任务计划由触发器和操作组成，是恶意软件持久化的重灾区，要看操作指向的路径。</p>
+      <p>□ 服务、任务计划、注册表 Run 键是持久化的三条路，检查要三处一起看。</p>
+      <p>□ 辨别真假服务和任务看路径和签名，不看名字——名字最容易冒充。</p>
+      <p>□ 把本章的命令和检查步骤抄进自己的笔记，下次遇到同类问题直接用。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>有一次用户电脑每天凌晨 3 点风扇狂转，我查了一圈：任务计划里有个“Adobe 更新”任务是正常的，但它的操作指向的不是 Adobe 的目录，而是一个藏在 AppData 下的脚本——恶意软件借了正经任务的名字。我的经验是：查任务计划不要只看名字，要点开看“操作”那一栏，看它到底要运行什么程序、路径对不对、签名对不对。服务也一样：名字可以叫 Windows Update，路径要是 C:\Users\xxx\update.exe，那就一定是假的。路径和签名，永远比名字诚实。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：按 Win+R 输入 services.msc，按启动类型排序，看看哪些服务是“自动”启动，把不认识的名字记下来；再按 Win+R 输入 taskschd.msc，展开任务计划程序库 → Microsoft → Windows，看看系统自带任务长什么样。<br>2. 在虚拟机里打开 PowerShell，运行 Get-Service | Where-Object {$_.StartType -eq 'Automatic' -and $_.Status -ne 'Running'}，看看哪些自动服务没跑起来；再运行 Get-ScheduledTask | Where-Object {$_.Author -notlike '*Microsoft*'} | Select-Object TaskName,Author，列出非微软作者的任务。<br>3. 在虚拟机里自己建一个无害的测试任务：任务计划程序 → 创建基本任务，设为每天运行一次记事本，建完再把它删掉，熟悉“触发器 + 操作”的结构。</p>
+      <h2>避坑</h2>
+      <p>别在真实电脑上禁用不认识的服务：有些服务名字不起眼却是系统必需的（比如 RPC），禁错了系统会出大问题，先查清再动手；别只看任务的名字：恶意任务常借用正经名字，一定要看操作指向的程序路径；别把所有 svchost.exe 都当可疑：十几个 svchost 是正常的，用 tasklist /svc 看里面装了什么服务再判断；建测试任务练手可以，建完记得删掉，别留在系统里。</p>
+      <p>服务是长期驻留的后台程序，任务计划是到点就跑的闹钟，两者加注册表自启，就是 Windows 持久化的全套拼图。下一章我们看另一套管住整台电脑的机制：<a href="windows-c5-group-policy.html">第 5 章</a>组策略深入——一条策略怎么管住整台电脑，以及策略在后台是怎么生效的。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>服务是没有界面的后台程序，由 services.exe 统一管理，常以 svchost.exe 为宿主运行。</li>
+          <li>不需要的服务就停掉、禁用：每少一个服务，就少一个攻击面。</li>
+          <li>任务计划由触发器和操作组成，是恶意软件持久化的重灾区，要看操作指向的路径。</li>
+          <li>服务、任务计划、注册表 Run 键是持久化的三条路，检查要三处一起看。</li>
+          <li>辨别真假服务和任务看路径和签名，不看名字——名字最容易冒充。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="windows-c3-registry-ntfs.html">← 上一章：第 3 章：注册表与 NTFS：配置单元、MFT 与备用数据流</a>
+        <a href="../course.html">课程目录</a>
+        <a href="windows-c5-group-policy.html">下一章：第 5 章：组策略深入 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

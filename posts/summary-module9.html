@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块九小结：新趋势里选自己的方向 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块九小结：新趋势里选自己的方向</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · 模块九第 1–24 章</div>
+      <p>二十四章讲的其实是一件事：安全世界每隔几年就换一副面孔——新的技术出来，新的风险就跟着出来，而你的任务不是追上每一次变化，是学会一套“跟上变化”的方法。模块九的前半部分在讲“看懂新东
+      西”：逆向、云、容器、零信任、AI、移动、工控、供应链；后半部分在讲“把新东西变成自己的本事”：恶意软件分析、考证求职、逆向深入、二进制利用、三大云、Kubernetes、AI
+     
+       风险清单、移动与工控的深入、PE 与 YARA，最后用一次技术分享收尾。走完这二十四章，你手里应该有两样东西：一张新趋势的地图，和一个选方向的办法。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="模块九二十四章知识串联图">
+          <defs>
+            <marker id="arrm9" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="130" y="10" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">看懂底层：汇编、溢出与逆向入门</text>
+          <rect x="130" y="70" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">看懂新战场：云、容器、零信任</text>
+          <rect x="130" y="130" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">看懂新风险：AI、移动、工控、供应链</text>
+          <rect x="130" y="190" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">变成自己的本事：分析、考证、逆向深入</text>
+          <rect x="130" y="250" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="275" text-anchor="middle" font-size="14" fill="#1a1a2e">往深处挖：云、容器、AI、移动、工控、恶意软件</text>
+          <rect x="130" y="310" width="300" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="335" text-anchor="middle" font-size="14" fill="#1a1a2e">讲出来：选一个新趋势做一次技术分享</text>
+          <line x1="280" y1="50" x2="280" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm9)"/>
+          <line x1="280" y1="110" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm9)"/>
+          <line x1="280" y1="170" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm9)"/>
+          <line x1="280" y1="230" x2="280" y2="248" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm9)"/>
+          <line x1="280" y1="290" x2="280" y2="308" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm9)"/>
+        </svg>
+        <figcaption>图：二十四章讲的其实是一件事——学会一套“跟上变化”的方法</figcaption>
+      </figure>
+      <h2>这二十四章是怎么连起来的</h2>
+      <p>先看懂底层。<a href="m9c1-assembly-buffer-overflow.html">第 1 章</a>讲汇编与缓冲区溢出：漏洞是怎么发生的，程序往一块内存里写超了会
+      怎样。<a href="m9c2-reversing-intro.html">第 2 章</a>是逆向入门：看懂别人写的程序，先找输入、比较和判断，再读细节。这两章是整个模块的地基——后面
+      所有的逆向、利用和分析，都站在这两章上。</p>
+      <p>然后看懂新战场。<a href="m9c3-cloud-basics.html">第 3 章</a>讲云安全基础：云上的责任分界线，哪些是云厂商管的、哪些是你自己管的。<a href="m9c4-cloud-deep.html">
+      第 4 章</a>讲云安全深入：云 IAM 的通用原理、最常见的错误配置、以及 CSPM 是怎么把这些问题扫出来的。<a href="m9c5-container-security.html">
+      第 5 章</a>讲容器安全：镜像、隔离与逃逸，容器和虚拟机到底有什么不一样。<a href="m9c6-kubernetes-security.html">第 6 章</a>讲容器与 K
+      ubernetes 安全：编排层面的攻防，指挥一群容器的时候，哪里最容易出问题。<a href="m9c7-zero-trust.html">第 7 章</a>讲零信任架构：不再默认信任任
+      何人，每次访问都要重新验证。</p>
+      <p>再看懂新风险。<a href="m9c8-ai-security.html">第 8 章</a>讲 AI 安全：提示注入、越狱、数据投毒，大模型不是普通软件，它的输入和指令之间没有一
+      条泾渭分明的线。<a href="m9c9-mobile-intro.html">第 9 章</a>是移动安全入门：手机 App 的安全问题，从安装到联网，哪里可能漏。<a href="m9c10-ics-iot-intro.html">
+      第 10 章</a>是工控与物联网安全入门：摄像头、路由器也不安全，工厂的系统和普通 IT 不一样。<a href="m9c11-supply-chain.html">第 11 章</a>
+      讲供应链安全：你用的软件包可信吗，依赖里藏着什么。<a href="m9c12-supply-chain-deep.html">第 12 章</a>是供应链深入：SBOM 与依赖扫描，摸清
+      软件的家底，再去扫它的漏洞。</p>
+      <p>中间是转折点。<a href="m9c13-malware-analysis.html">第 13 章</a>讲恶意软件分析：静态、动态与沙箱，拿到一个可疑程序，怎么弄清楚它到底会干
+      什么。<a href="m9c14-crackme-lab.html">第 14 章</a>动手破解一个简单的 crackme：逆向的第一次实战，在自己的虚拟机里分析自己写的或公开练习用的
+       crackme，绝不分析来路不明的真实恶意软件。<a href="m9c15-cert-career.html">第 15 章</a>讲考证与求职路线：先考 CompTIA Securi
+      ty+ SY0-801（考前去 comptia.org 再确认），更近的台阶是
+      Network+、Linux+、CySA+、Pentest+；CISP 是国内认证，不是国际路线
+      ；CISSP 是工作几年后的目标。<a href="m9c16-reversing-deep.html">第 16 章</a>是逆向深入：x64dbg、Ghidra 与反调试，用调试器和反
+      编译器一步步看穿程序。<a href="m9c17-binary-exploitation.html">第 17 章</a>是二进制利用深入：格式化字符串、堆与 ROP，绕过现代防护的几种
+      经典利用手法。</p>
+      <p>后半部分把前面讲过的战场一个一个往深处挖。<a href="m9c18-cloud-deep-three-clouds.html">第 18 章</a>讲云安全深入：三大云的身份、存
+      储与日志——AWS、Azure、Google Cloud 各自的身份体系、存储服务和日志服务有什么区别、有什么坑；它和第 4 章主标题相同但内容不同：第 4
+      章讲 IAM 通用
+      原理、错误配置与 CSPM，这一章讲三个平台各自的区别与坑。<a href="m9c19-kubernetes-deep.html">第 19 章</a>讲 Kubernetes 安全深入
+      ：RBAC、Pod 安全与运行时，谁能动什么、容器能干什么，都要管住。<a href="m9c20-ai-security-deep.html">第 20 章</a>讲 AI 安全深入：O
+      WASP LLM Top 10 逐条过，大模型应用最常见的十种风险，一个一个过。<a href="m9c21-mobile-deep.html">第 21 章</a>是移动安全深入：手机 
+      App 从安装到联网，哪里可能漏。<a href="m9c22-ics-deep.html">第 22 章</a>是工控安全深入：工厂和关键设施的系统，和普通 IT 不一样。<a href="m9c23-malware-deep.html">
+      第 23 章</a>是恶意软件分析深入：PE 格式与 YARA，读懂可执行文件的结构，用规则去认恶意软件——只分析自己写的测试样本或公开练习样本。</p>
+      <p>最后是实战。<a href="m9c24-capstone.html">第 24 章</a>是模块九的结课实战：选一个新趋势做一次技术分享——十分钟，四段结构，讲问题、讲原理、讲演示
+      、讲怎么办。二十三章的本事，在这里变成一次能讲给别人听的东西。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>看懂一个简单程序在干什么：用静态分析看字符串和导入表，用动态分析在虚拟机里看它的行为，用 Ghidra 和 x64dbg 找到它的关键逻辑。</li>
+        <li>破解一个自己写的 crackme：三条路都会走——看字符串、跟比较、改判断，并能说出为什么客户端的检查永远不能是唯一防线。</li>
+        <li>说出三大云各自的身份、存储和日志有什么不一样的坑：AWS 的 S3 两层权限、Azure 的 SAS 令牌、Google Cloud 的两种访问模式，以及三家日志默认都留不久、
+        不告警。</li>
+        <li>给一个 Kubernetes 集群上三道锁：RBAC 查谁绑了什么、Pod 安全拦住危险配置、运行时用镜像扫描、网络策略和检测盯着。</li>
+        <li>对着 OWASP LLM Top 10 的十条清单，给一个大模型应用逐条检查：提示注入、系统提示泄露、供应链、投毒、输出处理、过度代理、向量弱点、错误信息、无限制消耗。</li>
+        <li>读懂一个 PE 文件的结构，写一条能用的 YARA 规则：特征选独特的，条件留余地，写完先在正常程序上跑一遍测误报。</li>
+        <li>规划自己的考证和求职路线：先考 Security+ SY0-801，再按方向选下一张证，简历用做过的事说话，面试用做过的例子回答。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>下一站是<a href="../course.html#cloud">云与容器安全专项</a>。模块九里关于云和容器的章节——第 3、4、5、6、18、19 章——在那里会变成一套更
+      完整、更能上手的安全实践：从云账号的配置检查，到容器镜像的扫描，再到 Kubernetes
+      集群的加固，一步一步做下来。去之前，先做两件事：第一，翻回第 15 章，把你的考证计
+      划写下来——先考哪一张、什么时候报名；第二，翻回第 24
+      章，把你那次技术分享的提纲收好——那是你第一次把新趋势讲给别人听，也是你选方向的起点。新趋势会一直变，但选方向的办法不
+      会变：亲手做过、印象最深、最有感觉的那个，就是你的方向。</p>
+      <div class="lesson-nav">
+        <a href="m9c24-capstone.html">← 模块九第 24 章：动手：综合实战——选一个新趋势做一次技术分享</a>
+        <a href="../course.html">课程目录</a>
+        <a href="../course.html#cloud">下一站：云与容器安全专项 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

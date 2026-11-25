@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows 专项第 9 章：Windows 安全模型：令牌、SID、ACL 与完整性级别 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Windows 专项第 9 章：Windows 安全模型：令牌、SID、ACL 与完整性级别</h1>
+      <div class="meta"><span class="tag">Windows 专项</span>2026-11-25 · Windows 专项</div>
+      <p>谁能动什么，由谁说了算？这是所有操作系统的核心问题。Windows 的答案是一套叫“访问控制”的机制，核心是三个概念：<strong>SID</strong>（你是谁的编号）、<strong>令牌</strong>（你手里拿的通行证）、<strong>ACL</strong>（每个东西门口贴的名单）。再加一个<strong>完整性级别</strong>（你的可信度等级）。</p>
+      <p>这一章是 Windows 专项里最“原理”的一章，但也是最值得啃的一章：理解了它，前面讲过的 LSASS、权限、UAC、服务账号，全部都能串起来；后面讲的漏洞利用缓解，也是在这套模型上再加护栏。</p>
+      <p>先给一个生活比喻：SID 是你的身份证号，令牌是你进大楼时领的临时出入证（上面写着你是谁、属于哪些部门），ACL 是每个房间门口贴的“谁能进”名单，完整性级别是你的安全等级（访客只能待在一楼，管理员能上顶楼）。</p>
+      <h2>SID：每个账号和组的唯一编号</h2>
+      <p>Windows 里每个用户、每个组、每台电脑，都有一个唯一的 <strong>SID（安全标识符）</strong>，格式像 S-1-5-21-xxx-xxx-xxx-1001。用户名可以改、可以重名，SID 不会变、不会重。系统认人认的是 SID，不是名字——这就是为什么删了用户再建一个同名用户，旧文件的权限不会自动回来：SID 不同了。</p>
+      <p>几个有名的固定 SID 值得认识：S-1-5-18 是 LocalSystem（系统账号，最高权限），S-1-5-19 是 LocalService，S-1-5-20 是 NetworkService，S-1-5-32-544 是 Administrators 组，S-1-5-32-545 是 Users 组。查 SID 的命令是 whoami /user，看当前登录用户的 SID；wmic useraccount get name,sid 可以列出所有账号的 SID。</p>
+      <p>组也是靠 SID 认的：一个用户属于哪些组，就等于他拿到了哪些组的 SID。权限检查时，系统会把用户自己的 SID 和他所属组的 SID 一起算进去。</p>
+      <h2>令牌：登录时领的通行证</h2>
+      <p>你登录时，LSASS（第 2 章）验证密码通过后，会给你发一个<strong>访问令牌（Access Token）</strong>：里面装着你的 SID、你所属组的 SID、你的权限列表（比如能不能关机、能不能改时间）。之后你打开的每个程序，都会带着这个令牌的副本去访问文件、注册表、进程——系统每次都拿令牌和目标的 ACL 对一遍，才决定放不放行。</p>
+      <p>令牌有两种：主令牌（登录时发的，跟着你的整个会话）和模拟令牌（服务器程序临时借用客户端身份时用的）。还有一个关键概念是<strong>权限（Privilege）</strong>和<strong>访问权</strong>的区别：权限是系统级的特权（比如 SeDebugPrivilege 调试权限、SeShutdownPrivilege 关机权限），访问权是对某个具体文件、某个具体对象的读、写、执行。</p>
+      <p>UAC（用户账户控制）就是令牌的“分身术”：管理员登录时其实拿的是两个令牌，一个是过滤后的标准用户令牌（平时用这个），一个是完整的管理员令牌（点“是”提权时才用）。这就是为什么管理员平时打开程序也没有管理员权限，要右键“以管理员身份运行”才有。</p>
+      <h2>ACL：每个对象门口的名单</h2>
+      <p><strong>ACL（访问控制列表）</strong>是贴在每个对象（文件、目录、注册表键、进程、服务）门口的名单，分两部分：DACL（自主访问控制列表）写着“谁能对这个对象做什么”，SACL（系统访问控制列表）写着“访问这个对象时要不要记日志（审核）”。</p>
+      <p>DACL 里每一条叫 ACE（访问控制项）：写着某个 SID、允许还是拒绝、读还是写还是执行。检查顺序是：先看有没有明确的“拒绝”，再看有没有“允许”，都没有就默认拒绝。记住：<strong>拒绝优先于允许</strong>，而且“没有允许”就等于“不允许”——默认拒绝是安全模型的基石。</p>
+      <p>看 ACL 的办法：文件右键 → 属性 → 安全页；PowerShell 里用 Get-Acl 文件路径 | Format-List。排障时常见的权限问题有两种：权限给多了（普通用户能改系统文件），权限给少了（程序读不到自己该读的文件）。</p>
+      <h2>完整性级别：可信度的等级</h2>
+      <p><strong>完整性级别（Integrity Level）</strong>是 Windows 给进程和对象打的“可信度等级”，从低到高是：低（Low）、中（Medium）、高（High）、系统（System）。普通程序跑在中完整性级别，管理员提权后跑在高完整性级别，系统进程跑在系统级别。</p>
+      <p>规则是：低完整性级别的进程不能写中、高级别的对象——这就是“低不能写高”，和模块六讲过的 Biba 模型“不上写”是同一个道理。浏览器的沙箱就靠这个：浏览器标签页跑在低完整性级别，就算网页里的恶意代码跑起来了，它也写不了你用户目录下的文件。</p>
+      <p>查完整性级别用 whoami /groups，看当前令牌的完整性级别标签；Process Explorer 里也能看到每个进程的完整性级别。排障时如果一个程序“能读不能写”，先看看它的完整性级别是不是比目标文件低。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Windows 安全模型图：登录后 LSASS 发访问令牌，令牌含 SID 与组，访问对象时对照 ACL 与完整性级别决定放行">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="20" y="10" width="240" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">登录：LSASS 验证密码</text>
+          <text x="140" y="54" text-anchor="middle" font-size="11" fill="#666">第 2 章的守门人</text>
+          <rect x="300" y="10" width="240" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">发访问令牌 Token</text>
+          <text x="420" y="54" text-anchor="middle" font-size="11" fill="#666">SID + 组 + 权限</text>
+          <rect x="20" y="110" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="134" text-anchor="middle" font-size="13" fill="#1a1a2e">访问文件 / 注册表 / 进程</text>
+          <text x="140" y="154" text-anchor="middle" font-size="11" fill="#666">每次访问都要检查</text>
+          <rect x="300" y="110" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="134" text-anchor="middle" font-size="13" fill="#1a1a2e">对照 ACL 名单</text>
+          <text x="420" y="154" text-anchor="middle" font-size="11" fill="#666">拒绝优先，默认拒绝</text>
+          <rect x="130" y="210" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="234" text-anchor="middle" font-size="13" fill="#1a1a2e">再看完整性级别</text>
+          <text x="280" y="254" text-anchor="middle" font-size="11" fill="#666">低不能写高</text>
+          <line x1="280" y1="54" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="162" x2="280" y2="208" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">UAC：管理员平时拿过滤后的令牌，提权时才用完整令牌</text>
+          <text x="280" y="325" text-anchor="middle" font-size="12" fill="#666">系统认 SID 不认名字：同名新账号，旧权限不会回来</text>
+
+        </svg>
+        <figcaption>图：安全模型四件套——SID 认人、令牌是通行证、ACL 是门口名单、完整性级别是可信度</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ SID 是每个账号和组的唯一编号，系统认 SID 不认名字。</p>
+      <p>□ 登录时 LSASS 发访问令牌，里面装着 SID、所属组和权限列表。</p>
+      <p>□ ACL 是对象门口的名单：拒绝优先于允许，没有允许就等于不允许。</p>
+      <p>□ UAC 下管理员平时拿过滤后的令牌，提权时才用完整令牌。</p>
+      <p>□ 完整性级别分低、中、高、系统四级，低不能写高，浏览器沙箱就靠它。</p>
+      <p>□ 把本章的命令和检查步骤抄进自己的笔记，下次遇到同类问题直接用。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>有一次用户说“我是管理员，为什么改不了这个文件”，我一看：文件在系统目录下，所有者是 TrustedInstaller，ACL 里没有 Administrators 的写权限——管理员也不是万能的，ACL 说了算。另一个常见误会是“我是管理员，所以我能干一切”：UAC 下管理员平时拿的是过滤后的令牌，很多操作要显式提权。我的经验是：遇到“权限不够”的报错，别先想着“怎么绕过权限”，先想想“这个权限设计是不是在保护我”——很多提权漏洞，就是攻击者把这句提醒当成了耳旁风。还有，查权限用 Get-Acl 和 icacls，比在图形界面一页页点快得多。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：打开 PowerShell，运行 whoami /user 看自己的 SID，再运行 whoami /groups 看自己属于哪些组、完整性级别是什么；再运行 whoami /priv 看自己的令牌里有哪些权限。<br>2. 在虚拟机里新建一个测试文件，右键 → 属性 → 安全，看看有哪些用户和权限；再在 PowerShell 里运行 Get-Acl .\test.txt | Format-List，看看命令行下的 ACL 长什么样。<br>3. 在虚拟机里以普通用户身份打开记事本，试着保存文件到 C:\Windows\System32\ 下（会失败），再右键记事本 → 以管理员身份运行，再试一次，对比两次的不同，体会 UAC 和完整性级别的作用。</p>
+      <h2>避坑</h2>
+      <p>别在真实电脑上乱改系统文件、系统目录的 ACL：改错了系统可能无法启动，练手只在虚拟机里做；别以为管理员能干一切：ACL 和完整性级别对管理员同样生效，TrustedInstaller 拥有的文件管理员也改不了；别把“拒绝”当成摆设：DACL 里一条拒绝就能盖过十条允许，排障时先看有没有拒绝项；别用管理员账号日常上网、收邮件：管理员令牌一旦被盗就是整台机器，日常用标准用户，需要时再提权。</p>
+      <p>SID 认人、令牌是通行证、ACL 是门口名单、完整性级别是可信度——Windows 安全模型的四件套齐了。最后一章我们看系统在模型之外再加的护栏：<a href="windows-c10-mitigations.html">第 10 章</a>漏洞利用缓解——DEP、ASLR、CFG 与虚拟化安全，攻击者就算找到漏洞，也很难得手的那几道防线。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>SID 是每个账号和组的唯一编号，系统认 SID 不认名字。</li>
+          <li>登录时 LSASS 发访问令牌，里面装着 SID、所属组和权限列表。</li>
+          <li>ACL 是对象门口的名单：拒绝优先于允许，没有允许就等于不允许。</li>
+          <li>UAC 下管理员平时拿过滤后的令牌，提权时才用完整令牌。</li>
+          <li>完整性级别分低、中、高、系统四级，低不能写高，浏览器沙箱就靠它。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="windows-c8-logs-sysmon-etw.html">← 上一章：第 8 章：事件日志、Sysmon 与 ETW</a>
+        <a href="../course.html">课程目录</a>
+        <a href="windows-c10-mitigations.html">下一章：第 10 章：漏洞利用缓解：DEP、ASLR、CFG 与虚拟化安全 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

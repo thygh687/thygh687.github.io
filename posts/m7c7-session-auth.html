@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 7 章：会话与认证深入：JWT、CORS、CSP 与越权访问 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 7 章：会话与认证深入：JWT、CORS、CSP 与越权访问</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>第 1 章我们讲了会话与 Cookie 的基本原理，留了两个伏笔：JWT 是什么、越权访问是怎么回事。这一章把它们全部收束，再加上两个经常和认证一起出现、也经常被配错的机制：CORS（跨源资源共享）和 CSP（内容安全策略）。这四个东西合起来，就是 Web 认证的攻与防——攻击者怎么绕过身份验证，防御者又该怎么把门守住。</p>
+      <p>先回答一个根本问题：网站怎么知道“你是谁”？有两种主流答案。第 1 章讲过第一种：<strong>服务端会话</strong>——服务器记得你，浏览器只拿一把会话 ID 钥匙。第二种就是 <strong>JWT</strong>：服务器把“用户 ID、角色、过期时间”写进一个令牌，用密钥签名后发给你，你每次请求都带着它；服务器验签名，签名对了就认你是令牌上写的那个人。JWT 不用服务器存会话，适合分布式系统，但代价是：令牌一旦发出去，在过期之前没法单独作废——改密码、封账号都撤不回已经发出的令牌，这是它和服务端会话最大的区别。</p>
+
+      <h2>JWT 的结构与常见攻击手法</h2>
+      <p>一个 JWT 由三部分组成，用点连起来：<strong>头部（Header）</strong>——写着签名算法，比如 HS256；<strong>载荷（Payload）</strong>——写着用户 ID、角色、过期时间，注意载荷只是 Base64 编码，任何人都能解开看，别往里面放密码、身份证号这类敏感信息；<strong>签名（Signature）</strong>——用服务器的密钥对前两部分算出来的“印章”，改一个字签名就对不上。</p>
+      <p>针对 JWT 的攻击，常见有三种。第一，<strong>算法混淆（alg=none）</strong>：攻击者把头部算法改成 none（意思是“不用签名”），再把载荷里的角色改成 admin，如果服务器真的接受了无签名令牌，就等于门没锁。第二，<strong>弱密钥爆破</strong>：HS256 是对称签名，密钥就是服务器和验证方共享的一个字符串；密钥太弱（比如 “secret”、“123456”），攻击者可以离线爆破出来，自己签一个 admin 令牌。第三，<strong>密钥混淆</strong>：RS256 是非对称签名，验签用公钥；如果服务器错误地用公钥当作 HS256 的密钥来验签，攻击者拿着公开的公钥就能自己签发令牌。防御很明确：服务器只接受白名单里的算法、绝不接受 none；HS256 密钥要足够长、足够随机；RS256 和 HS256 的密钥绝不能混用；令牌有效期要短，敏感操作还要再验一次身份。</p>
+
+      <h2>CORS：谁可以跨站读我的数据</h2>
+      <p>浏览器的同源策略默认不让一个网站的 JavaScript 去读另一个网站的数据——这是安全基线。但前后端分离的网站确实需要跨站访问，于是有了 <strong>CORS</strong>：服务器通过响应头 <code>Access-Control-Allow-Origin</code> 声明“哪些来源可以读我的数据”。配错 CORS 的典型样子是：<code>Access-Control-Allow-Origin: *</code> 又加上了 <code>Access-Control-Allow-Credentials: true</code>——意思是“任何网站都能带着用户的 Cookie 来读我的数据”。攻击者做个恶意页面，受害者一打开，页面里的脚本就带着他的 Cookie 去读目标站的数据，再发回给攻击者。防御：Origin 必须写明确的白名单，绝不能是 <code>*</code>；带凭证的跨站请求，Origin 必须是具体域名；只放行确实需要的域名和方法。</p>
+
+      <h2>CSP：给浏览器立规矩</h2>
+      <p>CSP 在第 3 章已经出场过一次（防 XSS 的第二层），这里把它讲透。CSP 是服务器通过响应头给浏览器立的规矩：脚本只能从这些来源加载、图片只能从这些域名来、页面不许被嵌进 iframe（防点击劫持）。一个严格的 CSP 像这样：<code>default-src 'self'; script-src 'self'</code>——只允许本站的资源。配 CSP 的常见错误是图省事写 <code>unsafe-inline</code>（允许页面里的内联脚本），这等于把防 XSS 的门又打开了一半。正确的做法是从严开始，逐个放行确实需要的来源，配合 <code>report-uri</code> 先收集违规报告再收紧。</p>
+
+      <h2>越权访问：最常见的访问控制失效</h2>
+      <p>第 5 章讲逻辑漏洞时提到过 IDOR（不安全的直接对象引用），这里讲全：越权访问分两种。<strong>水平越权</strong>：普通用户 A 改个参数就看到了普通用户 B 的数据（<code>/order?id=124</code> 看别人的订单）。<strong>垂直越权</strong>：普通用户改个参数就干了管理员才能干的事（把请求里的 <code>role=user</code> 改成 <code>role=admin</code>，或者直接访问 <code>/admin/delete</code>）。防御的原则只有一条，<a href="m6c10-access-control-pam.html">模块六第 10 章</a>讲过：<strong>每次访问资源，都要在服务器端检查“这个身份有没有权做这件事”</strong>——不是“登录了没有”，而是“这个资源是不是他的、这个操作是不是他的角色能做的”。检查要放在服务器端、放在每个接口上，不能只靠前端隐藏按钮：前端不显示“删除”按钮，攻击者直接发请求照样能删。</p>
+      <p>还有一句要补上，关于密码。认证再强，也架不住弱密码。按 NIST SP 800-63B Rev.4 的最新要求：<strong>单独使用的密码至少 15 位</strong>，不要再迷信“大小写+数字+符号拼出来的 8 位复杂密码”——长度比复杂度重要得多；同时要强制检查泄露密码库，用户设的密码如果出现在已泄露的密码里，必须拒绝。配合<a href="m6c9-identity-sso-mfa.html">模块六第 9 章</a>的多因素认证，才是完整的认证防线。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="JWT结构与认证检查图：头部载荷签名三部分，以及每次访问都要做的权限检查">
+          <rect x="20" y="20" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="42" text-anchor="middle" font-size="13" fill="#1a1a2e">头部 Header</text>
+          <text x="100" y="62" text-anchor="middle" font-size="11" fill="#666">算法：HS256 / RS256</text>
+          <rect x="200" y="20" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="13" fill="#1a1a2e">载荷 Payload</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">用户、角色、过期时间</text>
+          <rect x="380" y="20" width="160" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="42" text-anchor="middle" font-size="13" fill="#1a1a2e">签名 Signature</text>
+          <text x="460" y="62" text-anchor="middle" font-size="11" fill="#666">密钥算出的印章</text>
+          <text x="280" y="92" text-anchor="middle" font-size="12" fill="#666">三部分用点连接；改一个字，签名就对不上</text>
+          <rect x="120" y="120" width="320" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">攻击：alg=none / 弱密钥爆破 / 密钥混淆</text>
+          <text x="280" y="162" text-anchor="middle" font-size="11" fill="#666">防御：白名单算法、强随机密钥、短有效期</text>
+          <rect x="20" y="200" width="250" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="222" text-anchor="middle" font-size="13" fill="#1a1a2e">CORS 配错 = 任意网站带 Cookie 读数据</text>
+          <text x="145" y="242" text-anchor="middle" font-size="11" fill="#666">Origin 写白名单，绝不用 * 带凭证</text>
+          <rect x="290" y="200" width="250" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="222" text-anchor="middle" font-size="13" fill="#1a1a2e">CSP 配错 = 内联脚本放行</text>
+          <text x="415" y="242" text-anchor="middle" font-size="11" fill="#666">从严开始，少用 unsafe-inline</text>
+          <rect x="120" y="280" width="320" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="308" text-anchor="middle" font-size="13" fill="#1a1a2e">每次访问：服务器端检查“身份 × 资源 × 操作”</text>
+        </svg>
+        <figcaption>图：JWT 的三段结构、三种攻击手法，以及 CORS、CSP 与越权检查的防御要点</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>测认证，最忌讳“只测登录框”。登录框只是认证的入口，真正的检查点散落在每一个接口上：改个 ID 看别人的数据、改个角色参数提权、把 JWT 的算法改成 none、把过期令牌再发一次。我养成了一个习惯：拿到一个网站，先不急着找注入，而是把所有接口按“要不要登录、要什么角色、返回了谁的数据”列一张表，再逐个改参数试。越权漏洞就是这样被“数”出来的。还有一句：测 JWT 时，先把令牌贴到解码工具里看一眼载荷——很多令牌里明明白白写着 <code>"role": "user"</code>，改成 admin 再发回去，服务器如果只看载荷不验签名，你就进去了。这个测试五分钟就能做完，却经常有大发现。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在自己的虚拟机里：找一个 JWT 解码工具（或用 Python 的 base64 解开），看一个靶场发给你的令牌：头部算法是什么、载荷里写了哪些字段、有没有敏感信息；再试着把算法改成 none、把角色改成 admin 发回去，记录服务器的反应。<br>2. 在 DVWA 或自己写的测试网站里做越权测试：登录普通账号，把订单 ID、用户 ID 逐个改成别人的，看能不能看到别人的数据；再试着直接访问管理员接口，记录哪一次被拦住了、哪一次没拦住。<br>3. 检查 CORS 配置：用 curl 看一个本地站点的响应头，记下 <code>Access-Control-Allow-Origin</code> 的值，判断它是白名单还是 <code>*</code>，有没有同时允许凭证。<br>4. 按 NIST SP 800-63B Rev.4 写三条密码策略：单独使用的密码至少 15 位、强制查泄露密码库、配合多因素认证，并说明为什么“长度比复杂度重要”。</p>
+      <h2>避坑</h2>
+      <p>只在自己的靶场里测认证和越权：改真实网站的参数去看别人的数据、提权，是越界行为；别把 JWT 载荷当秘密：它只是编码，任何人都能解开，敏感信息绝不能放进去；别接受 alg=none：服务器必须只认白名单里的算法；CORS 的 Origin 绝不能是 <code>*</code> 又带凭证；权限检查必须在服务器端每个接口上做，前端隐藏按钮不算防御；密码按 NIST SP 800-63B Rev.4：单独使用至少 15 位，强制查泄露密码库，别再迷信短而复杂的密码。</p>
+      <p>会话与认证这一章讲完，Web 漏洞的“攻击面”基本讲全了：从注入、脚本、伪造请求，到上传、逻辑、XXE、反序列化，再到今天的认证与越权。下一章我们换一个角色：从“打一个点”变成“看一张网”——<a href="m7c8-recon-scanning.html">第 8 章：信息收集与扫描进阶</a>，讲讲动手之前的信息收集：Nmap、漏洞扫描和 OSINT。记住本章反复出现的原则：检查要放在服务器端做——这个原则在扫描和利用阶段同样适用。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>JWT 由头部、载荷、签名三部分组成；载荷只是编码不是加密，签名才是防篡改的关键；常见攻击有 alg=none、弱密钥爆破、密钥混淆。</li>
+          <li>CORS 配错（Origin 为 * 又允许凭证）等于让任意网站带着用户 Cookie 读数据；Origin 必须写白名单。</li>
+          <li>CSP 是服务器给浏览器立的规矩，从严配置，少用 unsafe-inline；它是防 XSS 的重要纵深防线。</li>
+          <li>越权分水平（看别人的数据）和垂直（干管理员的活）；防御是每次访问都在服务器端检查“身份 × 资源 × 操作”。</li>
+          <li>密码按 NIST SP 800-63B Rev.4：单独使用的密码至少 15 位，强制查泄露密码库，长度比复杂度重要，配合多因素认证。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c6-xxe-deserialization.html">← 上一章：第 6 章：XXE 与反序列化</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c8-recon-scanning.html">下一章：第 8 章：信息收集与扫描进阶 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

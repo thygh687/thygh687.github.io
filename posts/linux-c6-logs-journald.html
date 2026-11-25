@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux 管理专项第 6 章：日志与 journald · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Linux 管理专项第 6 章：日志与 journald</h1>
+      <div class="meta"><span class="tag">Linux 管理专项</span>2026-11-25 · Linux 管理专项</div>
+      <p>出了问题去哪翻记录？Linux 的答案是日志：谁登录过、哪个服务崩了、防火墙拦了谁、SSH 被谁试过密码，全记在日志里。这一章讲 Linux 的日志体系：传统的文本日志、systemd 的 journald、日志轮转和长期保存。</p>
+      <p>日志是安全工作的“黑匣子”：出事之前看日志能发现苗头，出事之后看日志能还原经过。不会看日志的管理员，出事了只能靠猜；会看日志的，出事了按时间线一捋，事情就清楚了。</p>
+      <p>这一章和 Windows 专项第 8 章是对应的：那边是事件查看器 + Sysmon，这边是文本日志 + journald。两边的思路一样：先定时间范围、按服务过滤、画时间线。</p>
+      <h2>日志存在哪：文本日志与 journald</h2>
+      <p>传统 Linux 日志是 /var/log/ 下的文本文件：auth.log（登录与 sudo 记录，Debian/Ubuntu）、secure（RHEL 系的同类日志）、syslog（系统总日志）、kern.log（内核日志）、各服务的专属日志（比如 nginx 的 access.log、error.log）。这些文件用 cat、less、grep 就能看。</p>
+      <p>systemd 的机器上还有 <strong>journald</strong>：它收集所有服务的日志，存在二进制的 journal 文件里（/var/log/journal/），用 journalctl 命令查。journald 的好处是：日志带结构化字段（服务名、优先级、时间戳精确到微秒），能按服务、按时间、按级别过滤，比 grep 文本文件方便得多。</p>
+      <p>两者不是互相替代，而是互相补充：journald 是 systemd 服务的日志总入口，文本日志是各服务的原始记录。查问题时两个地方都要会看。</p>
+      <h2>journalctl：最常用的查日志命令</h2>
+      <p>journalctl 的常用姿势：journalctl -u 服务名看某个服务的日志（比如 journalctl -u ssh）；journalctl --since "2026-11-25 09:00" --until "2026-11-25 10:00" 按时间范围查；journalctl -p err 只看错误级别；journalctl -f 实时跟随（像 tail -f）；journalctl --no-pager | grep 关键词全文搜索。</p>
+      <p>查登录记录：journalctl -u ssh | grep Failed 看 SSH 登录失败；last 命令看最近的登录记录（从 /var/log/wtmp 读）；sudo grep sudo /var/log/auth.log 看谁用 sudo 干了什么。这三条是服务器安全检查的日常。</p>
+      <p>journalctl 的日志默认存在内存里（重启就丢），要长期保存得改配置：/etc/systemd/journald.conf 里 Storage=persistent，再建 /var/log/journal/ 目录。生产服务器一定要开持久化，否则重启之后出事了就没日志可查。</p>
+      <h2>日志轮转与长期保存</h2>
+      <p><strong>日志轮转（logrotate）</strong>是防止日志把磁盘写满的机制：日志文件长到一定大小或一定天数，就压缩归档、开新文件，旧文件按配置保留几份、删几份。配置在 /etc/logrotate.conf 和 /etc/logrotate.d/ 下。</p>
+      <p>安全上的要点是：日志要保留足够久（至少能覆盖一次事件调查的时间窗口，一般建议几个月），重要日志要异地备份（只存在本机上的日志，攻击者得手后可以删掉、改掉）。有条件的服务器会把日志实时发到集中的日志服务器（比如 rsyslog 远程收集），本机日志被清了，远端还有一份。</p>
+      <p>还要定期检查磁盘空间：df -h 看看 /var/log 占了多少，日志把磁盘写满会导致服务起不来——这本身就是一种故障。</p>
+      <h2>翻日志的基本功：时间线</h2>
+      <p>和 Windows 那边一样，翻日志先定时间范围、按服务过滤、最后画时间线：几点几分谁登录了、几点几分哪个服务重启了、几点几分防火墙拦了谁，按时间排成一条线，异常点自然就露出来了。</p>
+      <p>举个例子：凌晨 3 点 auth.log 里出现大量 SSH 登录失败（Fail2ban 的日志里能看到封了哪个 IP），紧接着 SSH 登录成功了一次，接着 sudo 日志里出现一条新建用户的记录——三个点连起来，就是一次入侵的轮廓。单看任何一条，都可能觉得“只是失败了几次”，连起来看才知道出事了。</p>
+      <p>最后提醒：日志本身也要保护。/var/log/ 的权限要设好，不让普通用户读敏感日志、更不让普通用户清日志。日志被清过本身，就是一条重要线索。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Linux 日志体系图：服务日志进入 journald 与 var log 文本日志，journalctl 按时间与服务过滤，画时间线还原事件">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="20" y="10" width="240" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">文本日志 /var/log/</text>
+          <text x="140" y="54" text-anchor="middle" font-size="11" fill="#666">auth.log、syslog、服务日志</text>
+          <rect x="300" y="10" width="240" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">journald 结构化日志</text>
+          <text x="420" y="54" text-anchor="middle" font-size="11" fill="#666">systemd 服务的日志总入口</text>
+          <rect x="130" y="90" width="300" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">journalctl 查日志</text>
+          <text x="280" y="134" text-anchor="middle" font-size="11" fill="#666">-u 服务名、--since 时间、-p 级别</text>
+          <rect x="130" y="170" width="300" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="194" text-anchor="middle" font-size="13" fill="#1a1a2e">logrotate 日志轮转</text>
+          <text x="280" y="214" text-anchor="middle" font-size="11" fill="#666">压缩归档、防写满磁盘</text>
+          <rect x="130" y="250" width="300" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="274" text-anchor="middle" font-size="13" fill="#1a1a2e">画时间线：登录 → 服务 → 防火墙</text>
+          <text x="280" y="294" text-anchor="middle" font-size="11" fill="#666">异常点连起来就是轮廓</text>
+          <line x1="280" y1="54" x2="280" y2="88" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="134" x2="280" y2="168" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="214" x2="280" y2="248" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="330" text-anchor="middle" font-size="12" fill="#666">journald 默认存内存：开 Storage=persistent 才能长期保存</text>
+
+        </svg>
+        <figcaption>图：Linux 日志——文本日志与 journald 互补，journalctl 按时间与服务过滤</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ Linux 日志分两类：/var/log/ 下的文本日志和 systemd 的 journald 结构化日志。</p>
+      <p>□ journalctl 查日志：-u 按服务、--since 按时间、-p 按级别、-f 实时跟随。</p>
+      <p>□ journald 默认存在内存里，要开 Storage=persistent 才能长期保存。</p>
+      <p>□ logrotate 防止日志写满磁盘，重要日志要异地备份，防攻击者清日志。</p>
+      <p>□ 翻日志先定时间范围、按服务过滤、画时间线，异常点连起来就是事件轮廓。</p>
+      <p>□ 把本章的命令和检查步骤抄进自己的笔记，下次遇到同类问题直接用。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>我查过的一起事件里，服务器半夜被人新建了一个账号。翻日志的顺序是：先 last 看登录记录，找到凌晨 3 点的一次 SSH 登录成功；再 journalctl -u ssh 看那次登录前后有没有大量失败（有，Fail2ban 封过那个 IP，但攻击者换了 IP 又来了）；再 grep sudo 看新建账号的命令是谁跑的。三条日志一对，事情就清楚了：弱密码的 SSH 账号被猜中了。我的经验是：日志要平时就看，别等出事了才翻——每天花五分钟看一眼登录失败和服务报错，苗头出现的第一天就能发现。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的 Linux 虚拟机里：运行 journalctl --since "1 hour ago" --no-pager | head -30，看看最近一小时的日志；再运行 journalctl -u ssh --no-pager | tail -20，看看 SSH 服务的日志。<br>2. 在虚拟机里运行 last | head -10，看看最近的登录记录；再运行 sudo grep -i failed /var/log/auth.log | tail -10（或 journalctl -u ssh | grep -i failed），看看有没有 SSH 登录失败。<br>3. 在虚拟机里看看日志轮转配置：cat /etc/logrotate.conf，再 ls /etc/logrotate.d/，看看哪些服务配了轮转；再运行 df -h，看看 /var/log 占了多少磁盘。</p>
+      <h2>避坑</h2>
+      <p>别在生产系统、别人的服务器上练日志命令：动手只在你自己的虚拟机里做；journald 默认存在内存里：不开持久化，重启之后日志就没了，重要服务器一定要开；日志要定期看、定期备份：只存在本机上的日志，攻击者得手后可以删掉；别只看一条日志下结论：登录、服务、防火墙三条对上，才算一条证据链。</p>
+      <p>Linux 管理专项到这里就走完了：从第 1 章的包管理，到第 6 章的日志——你已经能管好一台 Linux 服务器的基本盘了。去<a href="summary-linux.html">Linux 管理专项小结</a>里看一眼这六章是怎么连成一条线的，再往前走：下一站是模块三，网络的世界在等你。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>Linux 日志分两类：/var/log/ 下的文本日志和 systemd 的 journald 结构化日志。</li>
+          <li>journalctl 查日志：-u 按服务、--since 按时间、-p 按级别、-f 实时跟随。</li>
+          <li>journald 默认存在内存里，要开 Storage=persistent 才能长期保存。</li>
+          <li>logrotate 防止日志写满磁盘，重要日志要异地备份，防攻击者清日志。</li>
+          <li>翻日志先定时间范围、按服务过滤、画时间线，异常点连起来就是事件轮廓。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="linux-c5-nftables.html">← 上一章：第 5 章：防火墙 nftables</a>
+        <a href="../course.html">课程目录</a>
+        <a href="summary-linux.html">下一章：Linux 管理专项小结：管好一台 Linux 服务器 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 20 章：活动目录防御与加固 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 20 章：活动目录防御与加固</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>上一章（<a href="m7c19-ad-attacks.html">第 19 章</a>）我们站在攻击者的角度，把 AD 的攻击路线走了一遍：立足、发现、提权、拿下域控，票据和哈希是最好偷的东西，BloodHound 负责算路。这一章换到防守方：怎么守住域控。先给一个总原则：<strong>守域控不是买一款产品，而是把“权限、凭据、路径”三件事收拾干净，再用监控盯着剩下的口子。</strong>产品能帮你发现攻击，但权限乱、凭据乱、路径乱，产品是救不回来的。</p>
+      <p>第一件事是<strong>分层管理（Tiering）</strong>：把域里的资产分成三层。最高层是域控和身份系统（Tier 0），只有域管理员能碰；中间层是服务器（Tier 1），由服务器管理员管；最下层是普通客户端（Tier 2），由桌面支持管。铁律是：<strong>高层的账号绝不登录低层的机器</strong>——域管理员绝不在普通客户端上登录，服务器管理员绝不在客户端上登录。为什么？因为第 19 章讲过，哈希和票据会留在登录过的机器内存里：域管理员一旦在普通客户端上登过录，他的哈希和票据就留在了那台机器上，攻击者拿下那台客户端就等于拿到了域管理员的钥匙。分层就是切断这条路。</p>
+
+      <h2>凭据保护：让偷到的东西没法用</h2>
+      <p>第二件事是保护凭据。Windows 自带几样好工具：<strong>Credential Guard</strong> 把密码哈希和票据锁进虚拟化隔离的环境里，普通程序（包括攻击工具）读不到内存里的凭据；<strong>LAPS（本地管理员密码解决方案）</strong>给每台电脑的本地管理员账号生成一个随机且不同的密码，并定期更换——这样攻击者就算偷到一台电脑的本地管理员密码，也没法拿着它去登录别的电脑；<strong>受限管理模式与 Protected Users 组</strong>让高权限账号登录时不把凭据留在内存里。再加上第 19 章提过的服务账号管理：服务账号用长而随机的密码（按 NIST SP 800-63B Rev.4，单独使用的密码至少 15 位），定期更换，并且绝不给服务账号域管理员权限。</p>
+      <p>第三件事是<strong>收拾权限和路径</strong>：定期用 BloodHound 给自己的域“体检”，找出“普通用户几步就能到域管理员”的路径，一条一条堵掉——收回多余的组成员身份、删掉没人用的旧账号和服务账号、清理嵌套过深的组。旧账号尤其危险：离职员工的账号、多年没人登录的服务账号，都是攻击者最爱用的落脚点。模块六第 10 章的最小权限原则，在这里变成一句日常功课：<strong>每个账号、每个组，都要能说出“为什么需要这个权限”，说不出来的就收回。</strong></p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="活动目录分层管理与防御三件事图">
+          <rect x="180" y="20" width="200" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">Tier 0：域控与身份系统</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">只有域管理员能碰</text>
+          <rect x="180" y="92" width="200" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="114" text-anchor="middle" font-size="14" fill="#1a1a2e">Tier 1：服务器</text>
+          <text x="280" y="134" text-anchor="middle" font-size="11" fill="#666">服务器管理员管</text>
+          <rect x="180" y="164" width="200" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="186" text-anchor="middle" font-size="14" fill="#1a1a2e">Tier 2：普通客户端</text>
+          <text x="280" y="206" text-anchor="middle" font-size="11" fill="#666">桌面支持管</text>
+          <rect x="20" y="250" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="272" text-anchor="middle" font-size="13" fill="#1a1a2e">凭据保护</text>
+          <text x="100" y="290" text-anchor="middle" font-size="11" fill="#666">Credential Guard / LAPS</text>
+          <rect x="200" y="250" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="272" text-anchor="middle" font-size="13" fill="#1a1a2e">收拾权限</text>
+          <text x="280" y="290" text-anchor="middle" font-size="11" fill="#666">BloodHound 体检、堵路</text>
+          <rect x="380" y="250" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="272" text-anchor="middle" font-size="13" fill="#1a1a2e">监控告警</text>
+          <text x="460" y="290" text-anchor="middle" font-size="11" fill="#666">盯住异常票据与登录</text>
+          <text x="280" y="328" text-anchor="middle" font-size="12" fill="#666">铁律：高层账号绝不登录低层机器</text>
+        </svg>
+        <figcaption>图：分层管理三层加凭据保护、权限收拾、监控告警——守住域控的三件事</figcaption>
+      </figure>
+
+      <h2>监控：盯住那些“不该发生的事”</h2>
+      <p>权限收拾得再干净，也不可能一点口子不留，所以第四件事是监控：盯住那些“正常情况下不该发生的事”。AD 监控至少要盯四类告警：第一，<strong>异常的票据请求</strong>——比如短时间内大量申请服务票据（可能是 Kerberoasting）、票据加密方式异常（可能是伪造票据）；第二，<strong>异常的登录</strong>——域管理员在半夜登录、域管理员从一台普通客户端登录（违反分层铁律）、同一个账号同时在两地登录；第三，<strong>敏感组的变化</strong>——有人被加进域管理员组、有人改了组策略；第四，<strong>域控本身的异常</strong>——有人试图从域控导出账号数据库（第 21 章的 DCSync 就是这个动作）、域控上出现不该有的进程。这些告警要进安全日志，并且要有人看——模块六第 11 章讲过，日志开了没人看，等于没开。</p>
+      <p>最后是补丁与加固基线：域控要及时打补丁，关闭不需要的服务和端口，只允许必要的管理通道访问域控（比如只有堡垒机能远程登录域控）。第 13 章模块六的安全基线在这里同样适用：域控上线前先按基线检查一遍，定期再查一遍。记住模块六第 17 章的纵深防御：分层、凭据保护、权限收拾、监控、补丁，五层叠加，攻击者要同时穿过五层才到得了域控。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我参与过一次真实的域加固（授权项目），印象最深的是：技术活只占一半，另一半是“跟人打交道”。我们发现三位管理员图方便，长期用域管理员账号登录自己的办公电脑——分层铁律的第一天就被违反了。改这件事不能靠发一封邮件，要靠给每个人配好专用的管理账号、配好专用的管理机（PAW，特权访问工作站），让“按规矩做事”比“图方便”更容易。还有一句：BloodHound 体检不要只做一次——域是活的，每天都有人加组、改策略、建账号，体检要变成每月的固定动作，像体检一样定期做。最后提醒一句：域控的备份一定要有，而且要离线存一份——万一域控被攻破、被加密，能恢复的备份就是最后的救命绳。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的 lab.local 实验环境里：给实验域画一张分层图——哪台机器是 Tier 0、哪台是 Tier 1、哪台是 Tier 2，并写下“域管理员绝不在客户端登录”这条铁律贴在你的实验笔记里。<br>2. 只在你自己的实验环境里：在一台客户端上启用 Credential Guard（或确认它的状态），再给客户端的本地管理员账号设一个随机长密码，体会 LAPS “每台电脑密码都不一样”的思路。<br>3. 只在你自己的实验环境里：故意制造一个权限问题（比如把普通实验用户加进一个高权限组），用 BloodHound 重新收集数据，确认这条新路径被画出来了，再把权限收回、重新收集，确认路径消失——完整走一遍“发现问题、堵路、验证”的闭环。<br>4. 写一份一页纸的“域控加固清单”：分层、凭据保护、权限收拾、监控四类、补丁基线，每类写 3 条具体检查项，以后每次检查都按这张清单来。</p>
+      <h2>避坑</h2>
+      <p>别只买产品不收拾权限：权限乱，产品救不回来；别让域管理员登录普通客户端：这是最常见的破口，没有之一；别忽视旧账号：离职账号、僵尸服务账号要定期清理；别只开日志不看日志：告警要有人看、有响应流程；别忘了备份域控：离线备份是最后的救命绳；别在实验环境里练“关监控”：监控是防线，练攻击时也别养成关监控的习惯。</p>
+      <p>防守的三件事讲完了：分层切断登录路径，凭据保护让偷到的东西没法用，收拾权限堵掉攻击路径，再加上监控和补丁兜底。下一章（<a href="m7c21-ad-attacks-advanced.html">第 21 章</a>）回到攻击方进阶：黄金票据、横向移动、委派滥用——看看在防御收紧之后，攻击者还有哪些更深的路，以及这些路在防御眼里长什么样。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>分层管理：Tier 0 域控、Tier 1 服务器、Tier 2 客户端；铁律是高层账号绝不登录低层机器。</li>
+          <li>凭据保护：Credential Guard 隔离凭据，LAPS 让每台电脑的本地管理员密码都不同，服务账号用长随机密码。</li>
+          <li>收拾权限：定期用 BloodHound 体检，堵掉“普通用户几步到域管理员”的路径，清理旧账号。</li>
+          <li>监控四类告警：异常票据请求、异常登录、敏感组变化、域控本身的异常；日志要有人看。</li>
+          <li>域控要打补丁、按基线加固、限制管理通道，并留一份离线备份作为最后的救命绳。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c19-ad-attacks.html">← 上一章：第 19 章：活动目录攻击</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c21-ad-attacks-advanced.html">下一章：第 21 章：活动目录攻击进阶 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

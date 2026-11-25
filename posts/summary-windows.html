@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows 专项小结：把 Windows 从里到外看一遍 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Windows 专项小结：把 Windows 从里到外看一遍</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · Windows 专项第 1–10 章</div>
+      <p>十章讲的其实是一条线：从最底层往上走，一层一层把 Windows 看明白。第 1 章搭分层地图，第 2 章认开机就在跑的关键进程，第 3 章看配置和文件存在哪，第 4 章看后台干活的服务和任务，第 5 章看一条策略怎么管住整台电脑，第 6 章拿起 PowerShell 这件趁手的工具，第 7 章用上微软官方的排障套件，第 8 章学会翻日志还原经过，第 9 章弄懂谁能动什么的规则，第 10 章再看系统自带的防攻击护栏。</p>
+      <p>这条线走下来，你看 Windows 的眼光会变：任务管理器不再是一堆天书，注册表不再是碰不得的禁区，日志不再是翻不完的流水账。每一章都是一块拼图，拼在一起，就是一台 Windows 电脑从里到外的完整画像。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Windows 专项十章知识串联图：分层架构、系统进程、注册表与文件、服务与任务、组策略、PowerShell、Sysinternals、日志、 安全模型、漏洞缓解自上而下">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="130" y="10" width="300" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">分层地图：架构、内核、HAL</text>
+          <text x="280" y="54" text-anchor="middle" font-size="11" fill="#666">第 1 章</text>
+          <rect x="130" y="70" width="300" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="94" text-anchor="middle" font-size="13" fill="#1a1a2e">开机现场：系统进程、注册表、NTFS</text>
+          <text x="280" y="114" text-anchor="middle" font-size="11" fill="#666">第 2–3 章</text>
+          <rect x="130" y="130" width="300" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="154" text-anchor="middle" font-size="13" fill="#1a1a2e">后台干活：服务、任务计划、组策略</text>
+          <text x="280" y="174" text-anchor="middle" font-size="11" fill="#666">第 4–5 章</text>
+          <rect x="130" y="190" width="300" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">趁手工具：PowerShell、Sysinternals</text>
+          <text x="280" y="234" text-anchor="middle" font-size="11" fill="#666">第 6–7 章</text>
+          <rect x="130" y="250" width="300" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="274" text-anchor="middle" font-size="13" fill="#1a1a2e">找证据：事件日志、Sysmon、ETW</text>
+          <text x="280" y="294" text-anchor="middle" font-size="11" fill="#666">第 8 章</text>
+          <rect x="130" y="310" width="300" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="334" text-anchor="middle" font-size="13" fill="#1a1a2e">规则与护栏：安全模型、漏洞缓解</text>
+          <text x="280" y="354" text-anchor="middle" font-size="11" fill="#666">第 9–10 章</text>
+          <line x1="280" y1="54" x2="280" y2="70" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="114" x2="280" y2="130" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="174" x2="280" y2="190" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="234" x2="280" y2="250" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="294" x2="280" y2="310" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        </svg>
+        <figcaption>图：十章从底层往上走，一层一层把 Windows 看明白</figcaption>
+      </figure>
+      <h2>这十章是怎么连起来的</h2>
+      <p>先搭地图。<a href="windows-c1-architecture.html">第 1 章</a>讲 Windows 架构：NT Executive、内核与 HAL——用户态与内核态的分界、NT Executive 的管理角色、HAL 的翻译作用，这张分层地图是后面九章的底图。<a href="windows-c2-system-processes.html">第 2 章</a>讲系统进程 SMSS、CSRSS、LSASS：开机第一棒搭台、管窗口的管家、管身份的守门人，顺带认识 winlogon 和 services；<a href="windows-c3-registry-ntfs.html">第 3 章</a>讲注册表与 NTFS：五个根键与配置单元、开机自启藏在哪、MFT 账本与备用数据流——配置和文件存在哪，这里讲全了。</p>
+      <p>再看后台怎么干活。<a href="windows-c4-services-tasks.html">第 4 章</a>讲服务与任务计划：长期驻留的后台程序和到点就跑的闹钟，两者加注册表自启，就是持久化的全套拼图；<a href="windows-c5-group-policy.html">第 5 章</a>讲组策略深入：写一次规则、到处生效，策略落到注册表 Policies 位置，gpupdate 刷新、gpresult 查结果，安全基线就是这么落地的。</p>
+      <p>然后是工具。<a href="windows-c6-powershell.html">第 6 章</a>讲 PowerShell 安全实战：执行策略、脚本块日志、AMSI，再加进程、服务、网络、日志的体检三件套；<a href="windows-c7-sysinternals.html">第 7 章</a>讲 Sysinternals 套件：Process Explorer 看进程树、Autoruns 看全部自启项、Process Monitor 实时记录，再加 TCPView、streams、Sigcheck 几个小工具。</p>
+      <p>最后是证据、规则与护栏。<a href="windows-c8-logs-sysmon-etw.html">第 8 章</a>讲事件日志、Sysmon 与 ETW：ETW 是底层事件总线，Sysmon 是记录员，事件查看器是翻日志的窗口，翻日志先定时间、按 ID 过滤、画时间线；<a href="windows-c9-security-model.html">第 9 章</a>讲 Windows 安全模型：SID 认人、令牌是通行证、ACL 是门口名单、完整性级别是可信度，UAC 的分身术也在这里讲明白了；<a href="windows-c10-mitigations.html">第 10 章</a>讲漏洞利用缓解：DEP、ASLR、CFG 与虚拟化安全，四道护栏各管一面，补丁才是根本。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>认出任务管理器里的系统进程，用路径、父进程、签名三件套分辨真假系统进程。</li>
+        <li>翻注册表找到开机自启项，用 PowerShell 查看文件的备用数据流，读懂 MFT 时间戳的含义。</li>
+        <li>列出服务和任务计划，找出可疑的持久化项，说出每条“自动运行”的东西是谁放的。</li>
+        <li>用组策略配一套安全基线，用 gpresult 查策略到底生没生效。</li>
+        <li>用 PowerShell 给虚拟机做快速体检，用 Sysinternals 三件套定位“是谁在搞鬼”。</li>
+        <li>翻事件日志和 Sysmon 日志，按时间线还原一次异常登录或可疑进程的经过。</li>
+        <li>用 SID、令牌、ACL、完整性级别解释一条“权限不够”的报错到底卡在哪一层。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>下一站是 Linux 管理专项。战场从一台 Windows 电脑换成一台 Linux 服务器：包管理、用户与 sudo、systemd、SSH 加固、nftables 防火墙、日志与 journald。很多概念是相通的——Windows 的服务对应 Linux 的 systemd 服务，Windows 的事件日志对应 Linux 的 journald，Windows 的 ACL 对应 Linux 的 rwx 与 sudo——带着 Windows 这边的地图去学 Linux，会发现很多东西一点就通。先去 <a href="../course.html#linux">课程目录的 Linux 管理专项</a>看一眼，再往前走。</p>
+      <div class="lesson-nav">
+        <a href="windows-c10-mitigations.html">← 第 10 章：漏洞利用缓解：DEP、ASLR、CFG 与虚拟化安全</a>
+        <a href="../course.html">课程目录</a>
+        <a href="../course.html#linux">下一站：Linux 管理专项 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

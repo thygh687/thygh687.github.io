@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块八第 11 章：SIEM 查询语言：KQL/SPL 与检测规则编写 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块八第 11 章：SIEM 查询语言：KQL/SPL 与检测规则编写</h1>
+      <div class="meta"><span class="tag">安全运营与应急响应</span>2026-11-25 · 模块八</div>
+      <p><a href="m8c2-siem-logs.html">第 2 章</a>我们认识了 SIEM：它把各处的日志收在一起，变成可以查的东西。但“可以查”和“会查”是两回事——一台服务器一天就能产生几十万条日志，靠眼睛翻是翻不完的。这一章学查日志的语言：KQL 和 SPL。它们是安全分析师的“筛子”，学会它们，你就能从几十万条日志里，一句话筛出你想要的那几条；学完还会把一句查询变成一条检测规则，让 SIEM 以后自动帮你盯着。</p>
+      <p>先把概念说清：SIEM 像一个大仓库，日志是仓库里的货；查询语言就是你跟仓库管理员说话的方式。“把昨天所有登录失败的记录找出来”是一句人话，翻译成查询语言，SIEM 才能执行。KQL 是微软 Sentinel 用的语言，SPL 是 Splunk 用的语言。它们长得不一样，但思路完全一样：<strong>先指定查哪张表（哪类日志），再一层一层加条件，最后决定输出什么样子。</strong>学会一种，另一种一看就懂。</p>
+
+      <h2>KQL 入门：像搭积木一样查日志</h2>
+      <p>KQL 的写法像搭积木，用竖线 <code>|</code> 把一步步操作串起来，读起来就是一句流水账。举个例子，查“昨天登录失败的记录”：</p>
+      <p><code>SigninLogs | where TimeGenerated &gt; ago(1d) | where ResultType != 0 | project TimeGenerated, UserPrincipalName, IPAddress</code></p>
+      <p>拆开读：第一段 <code>SigninLogs</code> 是说查登录日志这张表；第二段 <code>where TimeGenerated &gt; ago(1d)</code> 是说只要最近一天的；第三段 <code>where ResultType != 0</code> 是说只要结果不是成功的（在微软的登录日志里，结果类型 0 代表成功，其他数字代表各种失败原因）；最后一段 <code>project</code> 是说输出时只要时间、用户名、IP 这三列，别的不用给我看。每一竖线都是一次筛选，越往后结果越少、越准。</p>
+      <p>KQL 里最常用的几个操作要记住：<code>where</code> 是过滤（只要满足条件的行）；<code>project</code> 是选列（只要这几列）；<code>count</code> 是计数；<code>summarize</code> 是汇总，比如 <code>summarize count() by UserPrincipalName</code> 就是“按用户名分组数一数，每个人失败了多少次”。这一个操作最能帮你发现暴力破解：正常人输错密码两三次就停了，一个账号一小时失败上百次，基本就是有人在猜密码——这正是<a href="m8c5-simulated-intrusion-lab.html">第 5 章</a>模拟入侵里要复原的那种痕迹。</p>
+
+      <h2>SPL 入门：Splunk 的说法</h2>
+      <p>SPL 的思路和 KQL 一模一样，只是写法不同。同样是“查登录失败”，SPL 大概长这样：</p>
+      <p><code>index=windows EventCode=4625 | stats count by Account_Name, Source_Network_Address | sort -count</code></p>
+      <p>拆开读：<code>index=windows</code> 是说查 Windows 日志这个索引；<code>EventCode=4625</code> 是说只要事件编号 4625——这是 Windows 里“登录失败”的编号，<a href="m8c13-log-sources-event-ids.html">第 13 章</a>会专门讲这些编号；<code>stats count by ...</code> 是说按账号和来源 IP 分组计数；<code>sort -count</code> 是说按次数从多到少排。排在最前面的，就是失败次数最多的账号和 IP，第一眼就能看到可疑目标。</p>
+      <p>两种语言对照着记效果最好：KQL 的 <code>where</code> 对应 SPL 的搜索条件，KQL 的 <code>summarize</code> 对应 SPL 的 <code>stats</code>，KQL 的 <code>project</code> 对应 SPL 的 <code>fields</code>。工作中用哪个，取决于公司买了哪家的 SIEM；但面试和自学时，两种都见过、都能读懂，比只会一种要强得多。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="从原始日志到检测规则的流水线图">
+          <rect x="20" y="30" width="120" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="55" text-anchor="middle" font-size="13" fill="#1a1a2e">原始日志</text>
+          <text x="80" y="73" text-anchor="middle" font-size="11" fill="#666">几十万条 / 天</text>
+          <rect x="160" y="30" width="120" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="220" y="55" text-anchor="middle" font-size="13" fill="#1a1a2e">查询语言</text>
+          <text x="220" y="73" text-anchor="middle" font-size="11" fill="#666">KQL / SPL 筛选</text>
+          <rect x="300" y="30" width="120" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="360" y="55" text-anchor="middle" font-size="13" fill="#1a1a2e">可疑结果</text>
+          <text x="360" y="73" text-anchor="middle" font-size="11" fill="#666">几条到几十条</text>
+          <rect x="440" y="30" width="100" height="56" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="490" y="55" text-anchor="middle" font-size="13" fill="#1a1a2e">检测规则</text>
+          <text x="490" y="73" text-anchor="middle" font-size="11" fill="#666">定时自动跑</text>
+          <line x1="140" y1="58" x2="158" y2="58" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="58" x2="298" y2="58" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="420" y1="58" x2="438" y2="58" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="80" y="140" width="400" height="60" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="165" text-anchor="middle" font-size="13" fill="#1a1a2e">一条检测规则 = 一句查询 + 触发条件 + 告警动作</text>
+          <text x="280" y="185" text-anchor="middle" font-size="12" fill="#666">例如：10 分钟内同一账号登录失败 ≥ 10 次，就产生告警</text>
+          <rect x="80" y="230" width="180" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="170" y="255" text-anchor="middle" font-size="13" fill="#1a1a2e">好规则：准、少误报</text>
+          <text x="170" y="273" text-anchor="middle" font-size="11" fill="#666">响了就是真有事</text>
+          <rect x="300" y="230" width="180" height="56" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="390" y="255" text-anchor="middle" font-size="13" fill="#1a1a2e">坏规则：太松、太多误报</text>
+          <text x="390" y="273" text-anchor="middle" font-size="11" fill="#666">响多了就没人理了</text>
+          <text x="280" y="320" text-anchor="middle" font-size="12" fill="#666">查询是手艺，规则是把手艺变成自动化</text>
+        </svg>
+        <figcaption>图：从原始日志到检测规则——查询筛出可疑结果，规则让筛选定时自动跑</figcaption>
+      </figure>
+
+      <h2>从查询到检测规则</h2>
+      <p>一条查询是你手动跑一次；一条检测规则是让 SIEM 定时替你跑，跑出结果就自动产生告警。一条完整的规则有四部分：<strong>查询</strong>（查什么）、<strong>触发条件</strong>（查出多少算有问题，比如 10 分钟内失败 10 次以上）、<strong>严重程度</strong>（高/中/低）、<strong>动作</strong>（产生告警、发通知、交给谁处理）。写规则之前，先问自己三个问题：第一，我要抓的攻击手法是什么？（对照<a href="m8c3-attack-defense-hunting.html">第 3 章</a>的 ATT&CK 手法，比如暴力破解是 T1110）；第二，正常情况下这件事会发生吗？（管理员偶尔输错密码很正常，所以阈值不能设成 2 次）；第三，响了之后，值班的人知道该怎么办吗？（不知道怎么办的规则，等于没写）。</p>
+      <p>举一个完整的例子——检测“暴力破解登录”。KQL 写法：先按账号和 IP 分组，数最近 10 分钟的失败次数，超过 10 次就告警：</p>
+      <p><code>SigninLogs | where TimeGenerated &gt; ago(10m) | where ResultType != 0 | summarize FailCount = count() by UserPrincipalName, IPAddress | where FailCount &gt;= 10</code></p>
+      <p>这个规则的好处是思路透明：任何人读一遍都知道它在抓什么。它的弱点也要知道：如果攻击者慢慢猜（每小时只试几次），就躲过了阈值；如果攻击者换很多 IP 来猜，分组计数也会被冲淡。所以真实的 SOC 里，一条规则很少单打独斗，往往是几条规则互相配合——这正是<a href="m8c18-detection-engineering.html">第 18 章</a>检测工程要深入讲的事。</p>
+
+      <h2>写查询的三个习惯</h2>
+      <p>第一个习惯是<strong>先小后大</strong>：先写一句最简单的查询，确认它能跑出结果，再一层一层往上加条件。一次性写十层管道，出错了都不知道是哪一层的问题。第二个习惯是<strong>先数数再下结论</strong>：查到可疑结果，先数一数它出现了多少次、涉及多少账号——一次是偶然，一百次是模式。第三个习惯是<strong>把查询存下来</strong>：每条查出过真问题的查询，都值得存进你的“查询手册”，下次遇到类似告警，直接拿出来改两个条件就能用。很多资深分析师的效率，一半来自他们攒了多年的查询手册。</p>
+      <p>还有一个习惯是给查询起名字。SIEM 里存了上百条查询，没有名字的查询，过三个月连自己都认不出来。起名字有个简单的格式：手法 + 数据源 + 目的，比如“暴力破解-登录日志-10分钟失败10次”。名字起好了，别人接手你的工作时，一眼就知道这条查询是干什么的。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我刚做 SOC 分析师的时候，写的第一条规则一晚上响了 400 多条告警，值班的同事第二天差点把规则删了。问题出在我把阈值设成了“失败 3 次就告警”——正常人早上刚睡醒输错三次密码太常见了。后来我学到一个土办法：写规则之前，先用查询在过去 7 天的数据上跑一遍，看看它每天会响多少次；如果一天超过 20 次，先别急着上线，把阈值调高、把条件收紧，或者加一个白名单（比如排除掉公司内部的扫描器 IP）。还有一条：规则上线后第一个星期，每天都要回头看它产生的告警，问一句“这条是真的吗”；连续三天全是误报的规则，要么改，要么关。告警的信用是攒出来的——响得准，大家才会在它响的时候真的去看。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机或实验环境里：打开 Windows 事件查看器，找几条真实的登录失败记录（事件 4625），抄下它的时间、账号、来源 IP，理解每一条日志长什么样。<br>2. 在纸上（或记事本里）写出三句查询：查“今天所有登录失败”、查“失败次数最多的前 5 个账号”、查“某个 IP 一小时内失败了多少次”，先用中文写思路，再试着翻译成 KQL 或 SPL 的样子。<br>3. 把第 2 步里“失败次数最多的账号”那句查询，改写成一条完整的检测规则：写出查询、触发条件（几分钟内失败几次）、严重程度和告警后第一步该做什么。<br>4. 用过去 7 天的思路检验你的规则：如果它每天会响 100 次，说明阈值太松了，把条件收紧一档再算一遍，直到一天响的次数降到个位数。</p>
+      <h2>避坑</h2>
+      <p>别一上来就写复杂查询：先从一句 where 开始，跑通了再加一层，十层查询一次写出来，出错了都不知道哪一层错了；别把阈值拍脑袋定下来：先在历史数据上跑一遍，看它每天会响多少次再上线；别只学一种语言就以为够了：KQL 和 SPL 思路相通，工作中遇到另一种要能读懂；别把检测规则当成一劳永逸：攻击手法会变、业务会变，规则要定期回顾，长期没响过的规则也要检查是不是已经失效了；别在真实生产系统上练手：所有查询练习都在自己的虚拟机或实验日志上做。</p>
+      <p>上一章<a href="m8c10-incident-report.html">第 10 章</a>我们学了怎么写一份事件报告——报告里写的“证据”，很多就是从这样的查询里筛出来的。这一章你学会了筛日志的语言和写检测规则的方法。下一章<a href="m8c12-soc-workflow.html">第 12 章</a>我们换一个角度：规则响了、告警来了，SOC 里的人是怎么分轻重缓急、按剧本一步步处理的——查询是手艺，工作流是让一群人配合起来的办法。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>KQL 和 SPL 思路相同：先指定查哪类日志，再一层层加条件，最后决定输出什么样子。</li>
+          <li>KQL 常用操作：where 过滤、project 选列、summarize 分组汇总；SPL 对应的是搜索条件、stats、fields。</li>
+          <li>按账号分组数登录失败次数，是发现暴力破解最直接的办法；Windows 登录失败的事件编号是 4625。</li>
+          <li>一条检测规则 = 查询 + 触发条件 + 严重程度 + 动作；写规则前先在历史数据上跑一遍，看每天会响多少次。</li>
+          <li>好规则的标准是响得准：误报太多，告警的信用就没了；规则上线后要定期回顾，长期不响的也要检查。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m8c10-incident-report.html">← 上一章：第 10 章：写一份安全事件报告</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m8c12-soc-workflow.html">下一章：第 12 章：SOC 工作流：分级、告警分流与剧本 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块九第 21 章：移动安全深入 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块九第 21 章：移动安全深入</h1>
+      <div class="meta"><span class="tag">进阶与新趋势</span>2026-11-25 · 模块九</div>
+      <p><a href="m9c9-mobile-intro.html">第 9 章</a>我们入门了移动安全：手机 App 也有安全问题。这一章沿着一个 App 的一生走一遍——安装、运行
+      、存数据、联网、更新——每个环节哪里可能漏。手机和电脑不一样：它天天连着陌生的
+      Wi-Fi、装着几十个 App、存着你的照片、通讯录和支付信息，丢一部手机的损失，可能比丢一台电
+      脑还大。</p>
+
+      <h2>安装：从哪里装，决定了第一道防线</h2>
+      <p>App 的第一道防线是安装来源。官方应用商店（App Store、Google Play）会对上架的 App 做审核，虽然审核拦不住所有坏 App，但至少拦住了大部分。风险来自<strong>
+      侧载</strong>：从浏览器、聊天软件、第三方网站直接装安装包——安装包可能被改过，里面加了料；也可能根本就是个冒牌 App，图标和名字都和正版一模一样。安卓上侧载很方便，iOS
+  
+          上要难得多，这也是两种系统安全模型的区别之一。还有一种更隐蔽的：<strong>应用分身和“破解版”App</strong>——号称免费解锁了付费功能的版本，往往在里面埋了广告、挖
+      矿甚至偷数据的代码。规矩很简单：只从官方商店装 App，非要侧载，先问一句“这个安装包从哪来的、谁签的名”。</p>
+      <p>装完之后是<strong>权限</strong>：App 申请的每个权限都要问一句“它真的需要吗”。一个手电筒 App 要通讯录权限、一个壁纸 App
+      要读取短信权限，都
+      是不合理的申请。两个系统的权限模型都在往“用时再问、只给一次”的方向走——善用它们：定位选“仅使用时允许”，照片选“仅选中的照片”，不用的权限定期收回来。</p>
+
+      <h2>运行与存储：App 在手机里能看到什么</h2>
+      <p>App 运行时，系统会给它一个沙箱：每个 App
+      有自己的小房间，只能碰自己的文件。但沙箱不是万能的：两个系统都留了一些“共享区域”——相册、剪贴板、共享文件。最常见的泄
+      露就发生在这里：App 把密码、令牌明文存在共享存储里，别的 App
+      读到了；或者 App 把敏感数据写进日志，任何能读日志的工具都能看到。正确做法是：敏感数据（密码、令牌、密
+      钥）存在系统提供的安全存储里——iOS 的钥匙串（Keychain）、安卓的
+      Keystore，数据要加密存，密钥别和数据放一块。</p>
+      <p>还有一个容易被忽略的点：<strong>剪贴板</strong>。你复制过密码吗？很多 App 会在后台读剪贴板——你刚复制的密码、验证码，可能正被某个 App 悄悄读走。新版系统已
+      经会在 App 读剪贴板时提示你，看到提示先问一句：这个 App
+      为什么要读我的剪贴板。</p>
+
+      <h2>联网：TLS 1.3 与证书锁定</h2>
+      <p>App 联网的安全，核心是传输加密。现代 App 应该用<strong>TLS 1.3</strong>：它是目前最新、最安全的 TLS 版本，握手更快、去掉了老版本里不安全的加密算
+      法，服务器和 App 都应该优先用它。检查一个 App 联网安不安全，可以看三点：第一，有没有用
+      HTTPS，有没有明文 HTTP 的流量——登录、支付这些操作走明文，等于把密
+      码写在明信片上寄出去；第二，有没有做<strong>证书锁定（Certificate Pinning）</strong>：App 只信任指定的服务器证书，哪怕有人用假证书做中间人也连不上—
+      —银行类 App 普遍会做；第三，密码和令牌的规矩和别处一样：按 NIST SP 800-63B
+      Rev.4，单独使用的密码至少 15 位，不迷信复杂度，强制查泄露密码库——手
+      机 App 的账号密码，也按这个标准来。</p>
+      <p>公共 Wi-Fi 是移动场景特有的风险：机场、咖啡店的免费 Wi-Fi，任何人都能接入，同一个网络里的攻击者可以尝试中间人攻击。规矩是：在公共 Wi-Fi
+      上只做不敏感的
+      事，重要的操作（登录银行、转账）等回到可信网络再做，或者走你自己的移动数据。</p>
+
+      <h2>更新与退役：App 的晚年也很重要</h2>
+      <p>App 的安全不是装完就结束的：<strong>更新</strong>是最后也是最容易被忽略的一环。开发者修了漏洞、发了新版，用户不更新，漏洞就一直在那里。两个系统都支持自动更新，开
+      着它；长期不更新的 App（开发者已经不维护了），要考虑换掉——没人修的
+      App，漏洞只会越来越多。反过来，App 自己的更新通道也要安全：更新包要签名校验，防止有人半路掉包。
+      最后是<strong>退役</strong>：不用的 App 及时卸载，卸载之前先在 App 里退出登录、清除数据——卸载不等于数据清零，有些 App 的残留数据还会留在手机里。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="手机App一生五个环节安全图：安装、运行、存储、联网、更新">
+          <rect x="20" y="20" width="95" height="90" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="67" y="52" text-anchor="middle" font-size="13" fill="#1a1a2e">1. 安装</text>
+          <text x="67" y="74" text-anchor="middle" font-size="11" fill="#666">官方商店</text>
+          <text x="67" y="92" text-anchor="middle" font-size="11" fill="#666">别侧载来路不明</text>
+          <rect x="130" y="20" width="95" height="90" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="177" y="52" text-anchor="middle" font-size="13" fill="#1a1a2e">2. 权限</text>
+          <text x="177" y="74" text-anchor="middle" font-size="11" fill="#666">用时再问</text>
+          <text x="177" y="92" text-anchor="middle" font-size="11" fill="#666">不合理就拒绝</text>
+          <rect x="240" y="20" width="95" height="90" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="287" y="52" text-anchor="middle" font-size="13" fill="#1a1a2e">3. 存储</text>
+          <text x="287" y="74" text-anchor="middle" font-size="11" fill="#666">钥匙串 / Keystore</text>
+          <text x="287" y="92" text-anchor="middle" font-size="11" fill="#666">敏感数据加密存</text>
+          <rect x="350" y="20" width="95" height="90" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="397" y="52" text-anchor="middle" font-size="13" fill="#1a1a2e">4. 联网</text>
+          <text x="397" y="74" text-anchor="middle" font-size="11" fill="#666">TLS 1.3 + 证书锁定</text>
+          <text x="397" y="92" text-anchor="middle" font-size="11" fill="#666">公共 Wi-Fi 要小心</text>
+          <rect x="460" y="20" width="80" height="90" rx="8" fill="#f3e8ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="500" y="52" text-anchor="middle" font-size="13" fill="#1a1a2e">5. 更新</text>
+          <text x="500" y="74" text-anchor="middle" font-size="11" fill="#666">开自动更新</text>
+          <text x="500" y="92" text-anchor="middle" font-size="11" fill="#666">不用就卸载</text>
+          <rect x="30" y="150" width="500" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="174" text-anchor="middle" font-size="13" fill="#1a1a2e">剪贴板、相册、共享文件：沙箱之外的共享区域最容易漏</text>
+          <text x="280" y="194" text-anchor="middle" font-size="11" fill="#666">复制过的密码、验证码，可能正被某个 App 悄悄读走</text>
+          <rect x="30" y="240" width="500" height="60" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="264" text-anchor="middle" font-size="13" fill="#1a1a2e">密码按 NIST SP 800-63B Rev.4：单独使用的密码至少 15 位</text>
+          <text x="280" y="284" text-anchor="middle" font-size="11" fill="#666">不迷信复杂度，强制查泄露密码库</text>
+        </svg>
+        <figcaption>图：一个 App 一生的五个环节——每个环节都有自己的漏点</figcaption>
+      </figure>
+
+      <h2>企业里的移动设备：MDM 是怎么管的</h2>
+      <p>个人手机靠自觉，企业手机靠管理。企业里管手机的工具叫<strong>MDM（移动设备管理）</strong>：员工的手机装上管理软件，公司就能统一做几件事——强制锁屏密码和加密、统一
+      装公司要求的 App、禁止从不明来源安装、远程擦除丢了的手机里的数据。MDM
+      不是监视员工的聊天记录，它管的是设备的安全状态：系统是不是最新、有没有越狱、有没有装来路不明的应用
+      。</p>
+      <p>企业移动管理里最容易踩的坑是“自带设备”（BYOD）：员工用自己的手机处理工作，工作数据和个人数据混在一部手机里。正确做法是把两者隔开：工作数据放在加密的工作区里，员工离职时只擦除工
+      作区、不动个人照片；工作
+      App 只能从公司指定的渠道装，工作数据的复制、截屏、分享要有限制。个人用户也可以借鉴这个思路：工作和生活尽量分开——工作账号用单独的 App、单独的
+      浏览器配置，别和娱乐账号混在一起。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>移动安全检查里，我查出问题最多的一次，不是某个 App 有漏洞，而是一个人的手机里装了 40 多个 App，其中 6 个已经两年没更新、3 个是“破解版”、还有 2 个是早就不用了也没卸载的。手机安全的真相是：风险很少来自某一个精心设计的攻击，更多来自“装得多、管得少”。所以我给自己的规矩是每季度做一次“手机大扫除”：翻一遍 App 列表，不用的卸载；翻一遍权限列表，不合理的收回；翻一遍更新列表，全部更到最新。十分钟，效果比装任何安全软件都实在。还有一句：看到“App 正在读取剪贴板”的提示别随手关掉——先问一句它为什么要读，你复制过密码吗？这个问题问一次，就能挡住一类偷数据的行为。</div>
+
+      <h2>动手做</h2>
+      <p>1. 给自己的手机做一次“大扫除”：翻一遍全部 App，卸载半年没用过的；翻一遍权限设置，把不合理的权限收回来（手电筒要通讯录？收回）；检查更新，把所有 App 更到最新版。<br>
+      2. 检查你最常用的三个 App 的权限：每个权限问一句“它真的需要吗”——定位、通讯录、照片、麦克风，分别是什么情况下才需要；把“仅使用时允许”和“仅选中的照片”这两档用起来。<br>3
+      . 做一次公共 Wi-Fi 演练：连上一个公共 Wi-Fi，打开浏览器访问一个网站，观察地址栏的锁形标志；再试着访问一个纯 HTTP 网站（如果找得到的话），对比两者的区别，写下你在公共
+
+            Wi-Fi 上“能做”和“不能做”的事。<br>4. 检查你的重要账号密码：按 NIST SP 800-63B Rev.4 的标准，单独使用的密码至少 15
+      位；去
+      查一次你的密码有没有出现在已知的泄露库里（用公开的泄露查询服务，只查、不改别人的），有泄露的立刻换掉。<br>5. 写一张“手机安全清单”贴在备忘录里：只从官方商店装、权限用时再问、敏感数
+      据不存剪贴板、公共 Wi-Fi 不做敏感操作、开自动更新、每季度大扫除一次。</p>
+      <h2>避坑</h2>
+      <p>别侧载来路不明的安装包：只从官方商店装 App，“破解版”往往是加了料的版本；别给 App
+      不合理的权限：手电筒要通讯录、壁纸要读短信，都要拒绝；别把敏感数据存进剪贴板和
+      共享存储：密码、令牌放进钥匙串或 Keystore，加密存；别在公共 Wi-Fi
+      上做敏感操作：登录银行、转账等回到可信网络再做；别让 App 长期不更新：开自动更新，没人维护
+      的 App 及时换掉；别忘了退役：不用的 App 先退出登录、清除数据，再卸载。</p>
+      <p>这一章沿着 App 的一生走了一遍：安装看来源、权限用时再问、存储进安全区、联网用 TLS 1.3 和证书锁定、更新开自动、不用就卸载。它接上了<a href="m9c9-mobile-intro.html">
+      第 9 章</a>的移动安全入门：那时你知道了手机 App 也有安全问题，现在你能从安装到退役逐个环节说出漏点和防法。下一章（<a href="m9c22-ics-deep.html">第
+       22 章</a>）我们离开消费电子，走进工厂和关键设施：工控安全——那里的系统，和普通 IT 很不一样。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>安装看来源：只从官方商店装 App，侧载和“破解版”是最常见的加料渠道。</li>
+          <li>权限用时再问：每个权限都要问“它真的需要吗”，不合理的申请要拒绝，不用的权限定期收回。</li>
+          <li>存储进安全区：敏感数据放进钥匙串或 Keystore 并加密存，别写进共享存储和日志；小心剪贴板被后台读取。</li>
+          <li>联网用 TLS 1.3，重要 App 做证书锁定；公共 Wi-Fi 上不做登录银行、转账这类敏感操作。</li>
+          <li>密码按 NIST SP 800-63B Rev.4：单独使用的密码至少 15 位，不迷信复杂度，强制查泄露密码库。</li>
+          <li>更新开自动，没人维护的 App 及时换掉；不用的 App 先退出登录、清除数据，再卸载；每季度做一次手机大扫除。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m9c20-ai-security-deep.html">← 上一章：第 20 章：AI 安全深入：OWASP LLM Top 10 逐条过</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m9c22-ics-deep.html">下一章：第 22 章：工控安全深入 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

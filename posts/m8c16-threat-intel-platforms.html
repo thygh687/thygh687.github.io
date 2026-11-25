@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块八第 16 章：威胁情报平台：STIX/TAXII 与 MISP · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块八第 16 章：威胁情报平台：STIX/TAXII 与 MISP</h1>
+      <div class="meta"><span class="tag">安全运营与应急响应</span>2026-11-25 · 模块八</div>
+      <p>第 7 章我们讲过威胁情报的基本概念：IOC、TTP 和情报生命周期。这一章讲情报是怎么在组织之间流动的：当一家公司发现了一个新的恶意域名、一伙攻击者的新手法，它怎么把这个发现告诉别人？别人收到之后，怎么直接用到自己的防火墙和 SIEM 里？答案是标准格式加共享平台：STIX 是情报的“通用语言”，TAXII 是情报的“快递”，MISP 是大家用来存、分享和管理情报的“仓库”。</p>
+      <p>先想想没有标准会怎么样：A 公司发邮件说“有个坏 IP 是 203.0.113.10”，B 公司收到邮件，要人工把 IP 抄进防火墙；C 公司用的是另一套系统，格式又不一样，抄都抄不进去。情报一多，人工就跟不上了。标准就是为了解决这个问题：大家用同一种格式写情报，机器就能自动读、自动用。这和第 13 章日志要统一格式才能进 SIEM，是同一个道理——安全工作里，格式统一是自动化的前提。</p>
+
+      <h2>STIX：情报的通用语言</h2>
+      <p>STIX（结构化威胁信息表达式）规定了威胁情报怎么写。它把情报拆成一堆有关系的“对象”：攻击者（Threat Actor）是谁，用了什么手法（Attack Pattern，对应 ATT&CK 里的技术），留下了哪些痕迹（Indicator，比如恶意域名、文件哈希），攻击了谁（Identity）、用了什么工具（Malware）。这些对象之间还有关系：比如“这个攻击者 → 使用 → 这个手法”、“这个手法 → 产生 → 这个 Indicator”。这样写的好处是，机器读到一份 STIX 情报，不只能知道“203.0.113.10 是坏的”，还能知道“它坏在哪、是谁在用它、用的什么手法”——上下文全在里面，分析师不用再去猜。</p>
+      <p>STIX 里最常用的是 Indicator 对象：它描述的是“如果你看到这个东西，就要警惕”。一个 Indicator 会写清楚类型（IP、域名、文件哈希、URL）、具体的值、有效期、置信度。比如“域名 evil.example.com，置信度高，有效期 30 天”。有效期很重要：恶意域名常常几天就换了，过期的 Indicator 还留在防火墙里，只会越攒越多、拖慢系统，还可能误伤后来被正常网站重新注册的域名。</p>
+
+      <h2>TAXII：情报的快递</h2>
+      <p>STIX 解决了“怎么写”，TAXII 解决了“怎么送”。TAXII 是一种情报交换协议，工作方式很像订阅：你的 SIEM 或情报平台向一个 TAXII 服务器说“我要订阅你们的情报”，服务器就定期把新的 STIX 情报推送给你。很多公开的情报源（比如一些厂商和社区维护的 TAXII 服务器）提供免费的订阅，订阅之后，新的恶意 IP、域名、文件哈希会自动流进你的系统，再由检测规则去比对——这就是<a href="m8c18-detection-engineering.html">第 18 章</a>检测工程里“情报驱动检测”的原材料。</p>
+      <p>交换情报还有一个绕不开的问题：<strong>分级与信任</strong>。不是所有情报都能公开分享：有的情报来自内部调查，公开了会暴露自己被攻击过；有的情报涉及客户信息，分享出去就是泄密。所以情报共享常用 TLP（流量灯协议）来分级：红色是只能在小范围内看，黄色是组织内部加可信伙伴，绿色是社区内分享，白色是公开。分享之前，先看 TLP 颜色，再决定能发给谁——这既是规矩，也是信任的基础：别人敢把情报给你，是因为相信你不会乱传。</p>
+
+      <h2>MISP：大家的情报仓库</h2>
+      <p>MISP（开源威胁情报共享平台）是最常用的开源情报平台，你可以把它理解成一个专门存威胁情报的“数据库加社区”。它的基本单位叫<strong>事件</strong>（Event）：一次攻击、一次发现，就是一个事件；事件下面挂着一堆<strong>属性</strong>（Attribute）：IP、域名、哈希、URL 这些具体的 IOC。MISP 的厉害之处在三点：第一，它能自动给 IOC 打分和去重，同一个恶意域名被十个组织上报，它只存一份，但会标出“十个组织都见过”；第二，它能和其他 MISP 实例同步——你信任的伙伴更新了情报，你这边自动就有了；第三，它能直接把情报推送给 SIEM、防火墙和 EDR，变成正在生效的检测和拦截规则。</p>
+      <p>对初学者来说，不用一上来就自己搭 MISP。先学会用它的思路：看到一条情报，先问五个问题——它是什么类型的 IOC？置信度多高？有效期到什么时候？是谁发布的（来源可信吗）？和我有什么关系（我的系统里出现过吗）？这五个问题问完，一条情报能不能用、该怎么用，心里就有数了。等以后有自己的实验环境了，可以在虚拟机里搭一个 MISP，订阅几个公开的情报源，亲眼看看情报是怎么自动流进来、又怎么被推到检测规则里去的。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="威胁情报从发现到共享再到检测的流转图">
+          <rect x="20" y="30" width="150" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="55" text-anchor="middle" font-size="13" fill="#1a1a2e">发现：调查与取证</text>
+          <text x="95" y="73" text-anchor="middle" font-size="11" fill="#666">IOC、TTP</text>
+          <rect x="205" y="30" width="150" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="55" text-anchor="middle" font-size="13" fill="#1a1a2e">写成 STIX</text>
+          <text x="280" y="73" text-anchor="middle" font-size="11" fill="#666">统一格式、带上下文</text>
+          <rect x="390" y="30" width="150" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="55" text-anchor="middle" font-size="13" fill="#1a1a2e">TAXII 交换</text>
+          <text x="465" y="73" text-anchor="middle" font-size="11" fill="#666">订阅、推送</text>
+          <line x1="170" y1="56" x2="203" y2="56" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="355" y1="56" x2="388" y2="56" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="130" y="130" width="300" height="56" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="13" fill="#1a1a2e">MISP：存起来、去重、打分、同步</text>
+          <text x="280" y="173" text-anchor="middle" font-size="11" fill="#666">TLP 分级：红 / 黄 / 绿 / 白</text>
+          <line x1="280" y1="82" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="60" y="230" width="200" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="160" y="255" text-anchor="middle" font-size="13" fill="#1a1a2e">推给 SIEM 做检测</text>
+          <rect x="300" y="230" width="200" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="400" y="255" text-anchor="middle" font-size="13" fill="#1a1a2e">推给防火墙做拦截</text>
+          <line x1="200" y1="186" x2="160" y2="228" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="360" y1="186" x2="400" y2="228" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="320" text-anchor="middle" font-size="12" fill="#666">情报的终点不是“知道”，是“拦住”</text>
+        </svg>
+        <figcaption>图：威胁情报的流转——发现后写成 STIX，经 TAXII 交换，在 MISP 里管理，最后变成检测和拦截</figcaption>
+      </figure>
+
+      <h2>情报的生命周期：从收集到退役</h2>
+      <p>一条情报不是写出来就永远有效的，它有自己的生命周期：第 7 章讲过的情报生命周期是收集、处理、分析、分发、反馈，到了平台这一层，还要加一个环节——<strong>退役</strong>。恶意域名几天就换，恶意 IP 几周就换主人，文件哈希一旦被改就失效。过期的情报不退役，会越攒越多：防火墙规则越来越长，SIEM 比对越来越慢，还可能误伤后来被正常网站重新注册的域名。</p>
+      <p>退役的做法是给每条情报设有效期，到期自动下线；或者定期跑一次“过期检查”：把所有超过 90 天没被命中过的 Indicator 列出来，人工确认一遍，该续的续、该下的下。还有一个反馈环节常被忽略：当一条情报在你的环境里命中了，要把“命中了”这个反馈传回给情报源——发布者知道自己的情报真的帮到了别人，才会继续分享；你的命中记录，也会成为别人判断这条情报可信度的依据。情报共享是双向的，只进不出，信任迟早会耗尽。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我见过两种对待情报的极端，都是坑。一种是“来者不拒”：订阅了十几个情报源，几十万条 IOC 一股脑推进防火墙，结果防火墙规则爆炸，正常业务被误拦，运维天天投诉，最后只好把情报全关了。另一种是“一个都不信”：觉得公开情报都是别人嚼过的，没价值——结果自己被攻击时，用的正是公开情报里早就写明的域名和手法。正确的做法在中间：情报进来先过三道关——来源可信吗（是不是靠谱的发布者）、和我有关吗（我的系统里出现过吗、我的行业是目标吗）、过期了吗（超过有效期的先下线）。还有一条实战经验：最有价值的情报往往不是“某个 IP 是坏的”，而是“这伙攻击者最近换了什么手法”——IP 和域名几天就换，手法几个月才变一次。追手法，比追 IP 划算得多。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机或实验环境里：找一份公开的 STIX 情报样本（网上有公开的示例文件），打开看看它里面有哪些对象（攻击者、手法、Indicator），以及对象之间是怎么连起来的。<br>2. 给一条假想的情报写 STIX 式描述：假设你在实验里发现域名 bad.example.com 是恶意的，写出它的类型、值、置信度、有效期，再写一句它和哪个攻击手法有关。<br>3. 画一张你自己的情报流转图：从“发现”到“检测”要经过哪几步，每一步是谁负责、用什么工具，标出 TLP 分级在哪个环节起作用。<br>4. 做一次情报“过三关”练习：找三条公开的威胁情报（比如安全厂商的博客或公告），按“来源可信吗、和我有关吗、过期了吗”打分，决定哪条值得变成检测规则。</p>
+      <h2>避坑</h2>
+      <p>别来者不拒：几十万条 IOC 全推进防火墙，只会拖慢系统、误拦正常业务；别一个都不信：公开情报里早就写明的手法，值得认真对待；别忘了有效期：过期的 Indicator 要下线，否则会越攒越多；别乱分享：先看 TLP 颜色，红色情报不能往外传，分享前确认来源和授权；别只追 IOC：IP 和域名几天就换，攻击手法几个月才变，追手法更划算。</p>
+      <p>上一章<a href="m8c15-network-memory-forensics.html">第 15 章</a>我们学会了从网络和内存里找攻击的痕迹；这一章我们学会了把这些发现写成标准格式、和别人交换、再变成自动化的检测。下一章<a href="m8c17-vuln-management-loop.html">第 17 章</a>我们换一个闭环：发现漏洞只是开头，修完还要回头验证——漏洞管理的完整循环是怎么转起来的。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>STIX 是威胁情报的通用语言：把情报拆成攻击者、手法、Indicator 等对象，对象之间用关系连起来，机器能直接读。</li>
+          <li>TAXII 是情报交换协议：像订阅一样，定期把新的 STIX 情报推送给订阅者。</li>
+          <li>MISP 是开源情报平台：存情报、自动去重打分、和其他 MISP 同步、把情报推给 SIEM 和防火墙。</li>
+          <li>情报分享要看 TLP 分级（红/黄/绿/白），分享前确认能发给谁，这是信任的基础。</li>
+          <li>情报进来要过三关：来源可信吗、和我有关吗、过期了吗；追攻击手法比追单个 IP、域名更划算。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m8c15-network-memory-forensics.html">← 上一章：第 15 章：网络取证与内存取证工作流</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m8c17-vuln-management-loop.html">下一章：第 17 章：漏洞管理闭环：扫描节奏、SLA 与修复验证 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

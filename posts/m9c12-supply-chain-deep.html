@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块九第 12 章：供应链深入：SBOM 与依赖扫描 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块九第 12 章：供应链深入：SBOM 与依赖扫描</h1>
+      <div class="meta"><span class="tag">进阶与新趋势</span>2026-11-25 · 模块九</div>
+<p>上一章说，供应链攻击藏在“依赖的依赖”里。问题是：你怎么知道自己的软件里到底装了什么？靠记忆、靠感觉，都不靠谱。答案是 SBOM——软件物料清单（Software 
+Bill of Materials）
+。如果把软件比作一道菜，SBOM 就是它的“配料表”：每一味配料（组件）的名字、版本、来源、许可证，一行一行写清楚。有了配料表，哪个配料出了问题，你立刻就能知道这道菜受不受影响。
+      </p>
+<p>SBOM 不是一个新概念，它是食品、药品行业“配料表”思想在软件行业的翻版。近年来它从“好习惯”变成了“硬要求”：越来越多的大客户、监管要求在采购软件时附带要一份 
+SBOM——没有配料表，就不知道里面装了什么，
+      也就没法信任它。</p>
+
+      <h2>SBOM 里写什么：三种主流格式</h2>
+<p>一份 SBOM 至少要写清：每个组件的名字、版本号、来源（从哪下载的）、哈希值（校验它没被换过）、许可证，以及组件之间的依赖关系。主流格式有三种：SPDX（Linux 
+基金会主导，偏重许可证与合规）
+、CycloneDX（OWASP 主导，偏重安全场景，漏洞信息接得最好）、SWID（偏老的标准，现在用得较少）。对初学者来说，不用纠结选哪个——重要的是“有”，
+      而不是“用哪种格式”；团队里统一一种，
+      工具能生成、能消费，就可以了。</p>
+<p>SBOM 怎么来？三种办法：构建时自动生成（最推荐——构建工具在打包时顺手把配料表打出来，最新、最准）；用工具扫描已有的软件包或容器镜像反推（适合老项目补课，
+但可能漏掉构建时才引入的东西）；供应商提供（买软件时让对方给，
+      你再验证）。一份好的 SBOM 要跟着软件版本走：版本一变，SBOM 就要重新生成，拿着旧配料表对新版本，是对不上的。</p>
+
+      <h2>依赖扫描：拿着配料表去对漏洞库</h2>
+<p>有了 SBOM，依赖扫描就有了“靶子”：扫描器拿 SBOM 里的每一个组件、每一个版本，去对照漏洞数据库（CVE、GitHub Advisory、OSV 
+等），告诉你哪些组件带已知漏洞、严重程度是多少、
+有没有修复版本。这和<a href="m6c8-cve-cvss.html">模块六第 8 章</a>的 CVE 与 CVSS 直接接上：扫描结果里的 CVSS 
+      评分，就是你排优先级的依据——先修能被外部触发的高危漏洞，
+      再修其他的。</p>
+<p>依赖扫描要做成持续的，而不是一次性的。原因很简单：漏洞是每天新出的——今天扫着没问题的组件，明天可能就爆出高危漏洞。所以扫描要进持续集成：每次提交代码、每次构建、
+每次发布都自动扫；还要定期重扫已经发布的版本——因为“发布时没问题”不等于“现在没问题”。
+      扫描结果还要能“分流”：真正影响你的漏洞优先修，不在触发路径上的漏洞可以降级、有计划地修，而不是被几百条告警淹没后干脆不看。</p>
+
+      <h2>从 SBOM 到应急响应：一个漏洞爆出来之后</h2>
+<p>SBOM 真正值钱的时刻，是某个广泛使用的组件爆出高危漏洞的那天。没有 SBOM 的团队要花几天时间到处问“我们哪用了这个组件”；有 SBOM 的团队几分钟就能查出来：
+哪些产品、哪些版本受影响，
+      影响面多大，先修哪一个。这就是 SBOM 被称为“应急响应加速器”的原因。</p>
+<p>完整的流程是：平时维护 SBOM（构建时自动生成、随版本更新）→ 持续扫描（进 CI、定期重扫）→ 漏洞爆出时用 SBOM 快速定位影响面 → 按 CVSS 
+和可触发性排优先级修复 → 修复后重新生成
+SBOM、重新扫描验证。这一套流程跑起来，供应链安全就从“凭感觉”变成了“有账可查”。最后提醒一句：SBOM 本身也是敏感信息——它写着你的软件用了什么、哪个版本有漏洞，
+      泄露出去等于给攻击者发了一份“攻击指南”，
+      要像保管其他敏感文件一样保管它。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SBOM与依赖扫描流程图：生成清单、对照漏洞库、定位修复">
+<rect x="40" y="24" width="220" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="150" y="48" text-anchor="middle" font-size="13" fill="#1a1a2e">1. 生成 SBOM（配料表）</text>
+          <text x="150" y="68" text-anchor="middle" font-size="11" fill="#666">构建时自动生成，随版本更新</text>
+<rect x="300" y="24" width="220" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="410" y="48" text-anchor="middle" font-size="13" fill="#1a1a2e">2. 依赖扫描对照漏洞库</text>
+          <text x="410" y="68" text-anchor="middle" font-size="11" fill="#666">CVE / GitHub Advisory / OSV</text>
+<rect x="130" y="120" width="300" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">3. 漏洞爆出：用 SBOM 快速定位影响面</text>
+          <text x="280" y="162" text-anchor="middle" font-size="11" fill="#666">哪些产品、哪些版本受影响，几分钟查清</text>
+<rect x="40" y="200" width="220" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="150" y="224" text-anchor="middle" font-size="13" fill="#1a1a2e">4. 按 CVSS + 可触发性排序修复</text>
+          <text x="150" y="244" text-anchor="middle" font-size="11" fill="#666">先修能被外部触发的高危漏洞</text>
+<rect x="300" y="200" width="220" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="410" y="224" text-anchor="middle" font-size="13" fill="#1a1a2e">5. 重新生成 SBOM 再扫描验证</text>
+          <text x="410" y="244" text-anchor="middle" font-size="11" fill="#666">确认修复生效，形成闭环</text>
+          <text x="280" y="292" text-anchor="middle" font-size="12" fill="#666">SBOM 本身也是敏感信息：它写着你哪里有洞，要妥善保管</text>
+          <text x="280" y="316" text-anchor="middle" font-size="12" fill="#666">格式：SPDX / CycloneDX 均可，关键是“有”并且“随版本更新”</text>
+        </svg>
+        <figcaption>图：SBOM 与依赖扫描的闭环——生成清单、对照漏洞库、快速定位、排序修复、再扫描验证</figcaption>
+      </figure>
+
+
+      <h2>给你的第一个 SBOM 定个规矩</h2>
+<p>SBOM 只有配上规矩才有用。给你的项目定四条规矩。第一，生成规矩：每次构建都自动生成 SBOM，存在固定的位置，文件名带上版本号，旧版本的不删除——出事时要靠它追溯。
+</p>
+<p>第二，更新规矩：版本一变，SBOM 就重新生成；依赖一变，扫描就重新跑。第三，响应规矩：漏洞爆出时，谁负责用 SBOM 查影响面、多长时间内要给出结论、修复的优先级怎么定，
+写下来、贴在团队看得见的地方。</p>
+<p>第四，保管规矩：SBOM 写着你的软件哪里有洞，访问权限要收紧，只给需要的人；对外提供 SBOM 时，只给必要的范围。这四条规矩写下来，你的供应链安全就从“做过一次”变成了“一直在做”。
+</p>
+<div class="teacher-note"><strong>老师经验：</strong>我第一次真正体会到 SBOM 的价值，是在一个广泛使用的日志组件爆出高危漏洞的那个星期：
+没有 SBOM
+的团队花了三天才摸清影响面，有 SBOM 的团队半小时就列出了受影响的产品清单——差距就是“有没有配料表”。我的建议是：别等到“被要求提供 SBOM”才开始做，
+      从下一个小项目就开始练——构建时自动生成一份，
+扫一遍，把结果存下来。另外，扫描告警一定要分流：我见过团队被几百条“低危、不在触发路径上”的告警淹没，最后连高危的也懒得看了。先修“能被外部触发的高危漏洞”，其他的排进计划，
+      告警才不会变成噪音。
+      </div>
+
+      <h2>动手做</h2>
+<p>1. 只在自己的虚拟机或实验环境里做：挑一个你自己的练习项目，用开源 SBOM 生成工具（如 Syft 或 Trivy）给它生成一份 SBOM，打开看一看：
+里面列了多少组件、每个组件的版本和来源写清楚了没有。
+<br>2. 拿这份 SBOM 跑一次依赖扫描，对照漏洞库找出带漏洞的组件，按 CVSS 评分排个序，挑一个最高危的查修复版本。<br>3. 把其中一个有漏洞的组件升级到修复版本，
+      重新生成
+SBOM、重新扫描，确认告警消失——完整走一遍“发现 → 修复 → 验证”的闭环。<br>4. 给你的项目写一份 SBOM 管理笔记：SBOM 存在哪、谁负责更新、
+      扫描多久跑一次、漏洞爆出时谁负责定位影响面。
+      </p>
+      <h2>避坑</h2>
+<p>别拿着旧 SBOM 对新版本：版本一变就要重新生成；别只扫一次：漏洞每天新出，扫描要进持续集成、定期重扫已发布版本；别被告警淹没：按 CVSS 和可触发性分流，
+先修能被外部触发的高危漏洞；别把
+SBOM 随手乱放：它写着你的软件哪里有洞，是敏感信息；别纠结格式：SPDX 还是 CycloneDX 都可以，关键是“有”并且团队统一；别只给新项目做：老项目也要用扫描工具反推补一份 
+      SBOM，
+      补课总比没有强。</p>
+<p>这一章把<a href="m9c11-supply-chain.html">第 11 章的供应链思想</a>落成了一张看得见、查得出的配料表：SBOM 让你知道软件里装了什么，
+依赖扫描让你知道装的东西有没有已知的洞，
+两者合起来，应急响应就从“几天”变成了“几分钟”。模块九到这里进入尾声：从<a href="m9c1-assembly-buffer-overflow.html">第 
+      1 章内存里的溢出</a>，
+一路讲到云、容器、零信任、AI、移动、工控和供应链——攻击者的版图变大了，防守者的工具箱也变大了。下一章是<a href="m9c13-malware-analysis.html">第 
+      13
+      章：恶意软件分析</a>，我们回到攻防最直接的交锋点：拿到一个可疑样本，怎么一步步拆开它、看懂它、定性它。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>SBOM 是软件的“配料表”：每个组件的名字、版本、来源、哈希、许可证和依赖关系，一行一行写清楚。</li>
+          <li>主流格式有 SPDX、CycloneDX 等，关键是“有”并且团队统一；最好在构建时自动生成，随版本更新。</li>
+          <li>依赖扫描拿 SBOM 对照漏洞库（CVE、GitHub Advisory、OSV），按 CVSS 和可触发性排优先级修复。</li>
+          <li>扫描要持续：进持续集成、定期重扫已发布版本，因为漏洞每天都在新出。</li>
+          <li>SBOM 是应急响应加速器：漏洞爆出时几分钟就能定位影响面；SBOM 本身也是敏感信息，要妥善保管。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m9c11-supply-chain.html">← 上一章：第 11 章：供应链安全</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m9c13-malware-analysis.html">下一章：第 13 章：恶意软件分析 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块八第 12 章：SOC 工作流：分级、告警分流与剧本 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块八第 12 章：SOC 工作流：分级、告警分流与剧本</h1>
+      <div class="meta"><span class="tag">安全运营与应急响应</span>2026-11-25 · 模块八</div>
+      <p>上一章我们写了一条检测规则，规则响了就会产生告警。但一个真实的 SOC（安全运营中心）每天收到的告警不是几条，而是几百条、几千条。如果每条都当成大事处理，人早就累垮了；如果随便关掉，又可能把真正的入侵放过去。这一章讲 SOC 里的工作流：告警来了，先分轻重缓急（分级），再决定派给谁、按什么步骤处理（分流与剧本）。工作流就是让一群人在告警的洪水里不慌、不漏、不乱的办法。</p>
+      <p>先认识 SOC 里的人是怎么分工的。通常分三级：一级分析师是“前台”，负责看告警、做初步判断，把明显是误报的关掉，把可疑的往上报；二级分析师是“侦探”，负责深入调查——查日志、查主机、查网络，判断到底有没有入侵；三级是“专家和应急响应”，负责确认的入侵事件，做隔离、取证和恢复（对应<a href="m8c4-incident-response-framework.html">第 4 章</a>的 NIST 应急响应框架）。你现在学的，就是一级分析师的基本功：看到一条告警，能在几分钟内判断它是误报、可疑，还是必须马上升级。</p>
+
+      <h2>分级：先问四个问题</h2>
+      <p>分级不是凭感觉，而是按一套固定的问题打分。看到一条告警，先问四个问题：<strong>第一，影响有多大？</strong>告警涉及的是普通员工的办公电脑，还是存着核心数据的服务器、域控制器？后者天然就高一级。<strong>第二，可信度有多高？</strong>这条规则过去准不准？有没有其他证据佐证（比如同一 IP 既登录失败很多次，又下载了可疑文件）？<strong>第三，正在发生还是已经过去？</strong>正在进行的攻击要优先于上周的旧记录。<strong>第四，是已知的攻击手法吗？</strong>能对应上 ATT&CK 某个手法的，比“说不清是什么”的更值得重视。</p>
+      <p>四个问题的答案合起来，定出严重程度：严重（Critical）——确认的入侵或正在发生的攻击，马上处理；高（High）——很可能是攻击，需要在几小时内处理；中（Medium）——可疑，但需要更多证据，排队调查；低（Low）——大概率是误报或风险很小，记录在案、定期回顾。分级还有一个配套的东西叫 SLA（服务等级协议），就是“每级告警要在多长时间内响应”：严重的可能要求 15 分钟内有人接手，低的可以等到第二天。这个 SLA 的概念，到了<a href="m8c17-vuln-management-loop.html">第 17 章</a>漏洞管理里还会再出现一次。</p>
+
+      <h2>告警分流：决定这条告警去哪</h2>
+      <p>分级之后是分流：这条告警交给谁、走哪条路。分流有三种去向：<strong>关闭</strong>——确认是误报，写清楚为什么是误报，然后关掉；<strong>升级</strong>——可疑或严重，交给二级分析师深入调查；<strong>转交</strong>——不是安全事件，是别的问题，比如某台服务器的磁盘满了、某个账号被锁了，转给运维或 IT 支持处理。分流时最忌讳的是“默默关掉”：每一条关闭的告警都要留一句话理由——“这是内部扫描器的例行扫描，源 IP 在白名单里”。这句话就是以后的证据，也是别人复查时判断你关得对不对的依据。</p>
+      <p>分流还有一个容易被忽略的维度：<strong>告警合并</strong>。一次攻击常常会触发十几条告警——登录失败、异常进程、可疑网络连接、外联恶意域名，全是同一个人、同一台机器、同一个时间段干的。好的 SOC 不会把这十几条当成十几个案子，而是把它们合并成一个事件（Incident）来处理。合并的线索就是时间、主机、账号、IP 这四个要素对得上。不会合并的 SOC，分析师会被重复告警淹没，真正的事件反而藏在里面看不见。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SOC告警从分级到处理的工作流图">
+          <rect x="180" y="10" width="200" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="37" text-anchor="middle" font-size="15" fill="#1a1a2e">告警来了</text>
+          <rect x="20" y="80" width="120" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="102" text-anchor="middle" font-size="13" fill="#1a1a2e">严重</text>
+          <text x="100" y="122" text-anchor="middle" font-size="11" fill="#666">15 分钟内响应</text>
+          <rect x="160" y="80" width="120" height="52" rx="8" fill="#ffedd5" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="220" y="102" text-anchor="middle" font-size="13" fill="#1a1a2e">高</text>
+          <text x="220" y="122" text-anchor="middle" font-size="11" fill="#666">几小时内响应</text>
+          <rect x="300" y="80" width="120" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="360" y="102" text-anchor="middle" font-size="13" fill="#1a1a2e">中</text>
+          <text x="360" y="122" text-anchor="middle" font-size="11" fill="#666">排队调查</text>
+          <rect x="440" y="80" width="100" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="490" y="102" text-anchor="middle" font-size="13" fill="#1a1a2e">低</text>
+          <text x="490" y="122" text-anchor="middle" font-size="11" fill="#666">记录在案</text>
+          <rect x="20" y="170" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="192" text-anchor="middle" font-size="13" fill="#1a1a2e">关闭（误报）</text>
+          <text x="100" y="212" text-anchor="middle" font-size="11" fill="#666">写清关闭理由</text>
+          <rect x="200" y="170" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="192" text-anchor="middle" font-size="13" fill="#1a1a2e">升级（深入调查）</text>
+          <text x="280" y="212" text-anchor="middle" font-size="11" fill="#666">交给二级分析师</text>
+          <rect x="380" y="170" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="192" text-anchor="middle" font-size="13" fill="#1a1a2e">转交（非安全问题）</text>
+          <text x="460" y="212" text-anchor="middle" font-size="11" fill="#666">交给运维处理</text>
+          <rect x="130" y="260" width="300" height="44" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="287" text-anchor="middle" font-size="13" fill="#1a1a2e">按剧本处理：每一步都有检查项和记录</text>
+          <text x="280" y="325" text-anchor="middle" font-size="12" fill="#666">分级定优先级，分流定去向，剧本定步骤</text>
+        </svg>
+        <figcaption>图：SOC 工作流——告警先分级，再分流，最后按剧本处理</figcaption>
+      </figure>
+
+      <h2>剧本：把经验写成步骤</h2>
+      <p>剧本（Playbook）就是“如果遇到 X，就按这几步做”的标准操作清单。比如“可疑登录告警”的剧本可能是：第一步，查这个账号过去一周的登录记录，是不是第一次从这个 IP 登录；第二步，查这个 IP 在威胁情报里有没有恶意记录（<a href="m8c7-threat-intel-deep.html">第 7 章</a>的情报）；第三步，联系账号本人确认是不是他登录的；第四步，如果不是本人，立即重置密码、强制下线所有会话；第五步，写事件记录，决定要不要升级成事件。剧本的好处是：新人照着做也不会漏步骤，半夜三点被叫醒的人不用靠脑子想，事后复盘也有据可查。</p>
+      <p>剧本还要分两种：<strong>调查剧本</strong>和<strong>响应剧本</strong>。调查剧本管“搞清楚发生了什么”，响应剧本管“已经确认了，动手止血”——比如隔离主机、封禁 IP、禁用账号。响应剧本里的每一步都要想清楚权限和后果：隔离一台域控制器和隔离一台普通办公电脑，完全是两回事；封禁一个 IP 之前，要确认它不是公司出口的公网 IP，否则等于把全公司断网。剧本不是写完就锁进抽屉的，要定期演练——<a href="m8c19-ir-exercise.html">第 19 章</a>的应急响应演练，就是检验这些剧本到底管不管用。</p>
+
+      <h2>值班表与交接班：工作流里的人</h2>
+      <p>工作流不只是流程图，还有人。SOC 是 7×24 小时运转的，告警不会等你上班才响，所以值班表和交接班是工作流的一部分。值班表要写清楚：这个时间段谁是一级值班、谁是二线备勤、遇到严重事件打谁的电话。交接班时，接班的人要先看三样东西：上一班没处理完的告警有哪些、正在调查的事件进展到哪一步、有没有需要特别留意的系统（比如正在打补丁的服务器，告警可能和补丁有关）。</p>
+      <p>交接班还有一个容易被忽略的细节：<strong>口头交接要留下文字记录</strong>。上一班的人随口说一句“那条告警我看过了，是误报”，接班的人如果没看到文字记录，就不知道“看过了”是什么意思——是查过日志确认了，还是只扫了一眼标题？好的 SOC 要求，任何“看过了”的结论，都要在工单里留一句话。这一句话，就是下一班人敢不敢信任你的判断的依据。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我在 SOC 值班时学到最重要的一课是：告警疲劳是真实存在的，而且它比技术漏洞更危险。连续三天每天处理 200 条告警之后，人会不自觉地开始“批量关闭”——扫一眼标题就关掉。那次差点漏掉的，是一条标题看起来很普通的“异常登录”告警：一个平时只在白天、只在公司内网登录的账号，凌晨三点从境外 IP 登录成功了。因为标题不吓人，它在队列里躺了六个小时。后来我们改了两个做法：第一，分级时“行为异常”单独加分，哪怕规则本身级别不高，只要“这个人平时不这么干”，就往上提一级；第二，每个班次结束前，值班组长要随机抽查 5 条被关闭的告警，看看关得对不对。第二个做法一开始大家觉得是“不信任”，后来都接受了——因为抽查真的抽出过被误关的真告警。记住：关告警的时候，你关掉的可能是一次入侵，留一句话理由，就是给未来的自己留一条退路。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机或实验环境里：挑三条你之前见过的告警（比如登录失败、异常进程、可疑外联），按本章的四个问题给它们分级，写出每条的级别和打分理由。<br>2. 给“可疑登录成功”写一份你自己的调查剧本：至少 5 步，每一步写清楚查什么、用什么工具查、查出什么结果算可疑、查出什么结果可以关掉。<br>3. 做一次告警合并练习：假设同一台虚拟机在 10 分钟内产生了登录失败、异常进程和可疑外联三条告警，写出你会怎么把它们合并成一个事件，合并的依据是哪几个要素对得上。<br>4. 写三条“关闭理由”的范例：一条是内部扫描器误报、一条是管理员正常操作、一条是已知业务系统的行为，每条一句话，说清为什么可以关。</p>
+      <h2>避坑</h2>
+      <p>别凭标题判断轻重：标题普通的告警也可能是真入侵，要看行为是不是异常；别默默关掉告警：每条关闭都要留一句话理由，没有理由的关闭等于没有处理；别把所有告警都升级：升级太多，二级分析师会被淹没，真正严重的反而排不上队；别把剧本当摆设：剧本要定期演练，没演练过的剧本等于没有剧本；别忘了告警合并：同一个攻击产生的十几条告警要并成一个事件来处理，否则会被重复告警淹没。</p>
+      <p>上一章<a href="m8c11-siem-query-language.html">第 11 章</a>我们学会了写检测规则，让 SIEM 自动产生告警；这一章我们学会了告警来了之后怎么分级、分流、按剧本处理。下一章<a href="m8c13-log-sources-event-ids.html">第 13 章</a>我们往上游走一步：这些告警和日志是从哪来的？怎么把各处的日志接进 SIEM，以及 Windows 里那些关键的事件编号——认得它们，查日志时就不用每次都去翻手册了。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>SOC 通常分三级：一级做初步判断，二级深入调查，三级负责确认的入侵事件和应急响应。</li>
+          <li>分级问四个问题：影响多大、可信度多高、正在发生还是过去、是不是已知的攻击手法；级别分严重、高、中、低，每级有对应的响应时限（SLA）。</li>
+          <li>分流有三种去向：关闭（误报，要留理由）、升级（交给二级）、转交（非安全问题交给运维）。</li>
+          <li>同一攻击产生的多条告警要合并成一个事件，合并的线索是时间、主机、账号、IP 对得上。</li>
+          <li>剧本分调查剧本和响应剧本：把经验写成步骤，新人照着做也不漏，事后复盘有据可查，剧本要定期演练。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m8c11-siem-query-language.html">← 上一章：第 11 章：SIEM 查询语言：KQL/SPL 与检测规则编写</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m8c13-log-sources-event-ids.html">下一章：第 13 章：日志源接入与 Windows 事件 ID →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

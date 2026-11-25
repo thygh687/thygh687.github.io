@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux 管理专项第 4 章：SSH 加固 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Linux 管理专项第 4 章：SSH 加固</h1>
+      <div class="meta"><span class="tag">Linux 管理专项</span>2026-11-25 · Linux 管理专项</div>
+      <p>Linux 服务器大多没有显示器，管理员靠 <strong>SSH</strong> 远程登录管理。SSH 是加密的远程登录协议，替代了明文传输密码的 Telnet。但“用了 SSH”不等于“安全了”：弱密码、允许 root 登录、默认端口敞开的 SSH，是互联网上被扫描、被爆破最多的服务之一。</p>
+      <p>这一章讲 SSH 加固的全套：密钥登录、禁 root、改端口、Fail2ban、防火墙配合。目标是：按这一章做完，你的服务器的 SSH 就不再是互联网上最好欺负的那个。</p>
+      <p>动手只在你自己的虚拟机里做。改 SSH 配置之前，一定要先确认你有别的办法登录这台机器（比如虚拟机控制台），否则改错了把自己锁在外面。</p>
+      <h2>SSH 是怎么工作的</h2>
+      <p>SSH 连接分两步：第一步，客户端和服务器协商加密（现在用的是安全的密钥交换，传输全程加密）；第二步，验证身份：密码验证或密钥验证。验证通过后，你就拿到了一个加密的远程 Shell，输入的命令和返回的结果都在加密通道里走。</p>
+      <p>SSH 的配置文件是 /etc/ssh/sshd_config（服务器端）和 ~/.ssh/config（客户端）。改完服务器配置要重启 SSH 服务（sudo systemctl restart ssh 或 sshd）才生效。改配置之前先备份：sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak。</p>
+      <p>还要知道 SSH 不只是登录：它还能传文件（scp、sftp）、做端口转发、跑远程命令。加固 SSH，就是给这条远程管理通道上锁。</p>
+      <h2>密钥登录：比密码更安全</h2>
+      <p>密钥登录用一对密钥：<strong>私钥</strong>留在你自己的电脑上（绝不能给别人），<strong>公钥</strong>放在服务器的 ~/.ssh/authorized_keys 里。登录时服务器用公钥加密一个随机数，你的电脑用私钥解密，答对了就放行——全程不用传密码，密码猜不中、也截获不到。</p>
+      <p>生成密钥用 ssh-keygen -t ed25519（Ed25519 是现在推荐的算法，又快又安全）；把公钥传到服务器用 ssh-copy-id 用户名@服务器地址。私钥要设密码保护（passphrase），私钥文件权限必须是 600（只有自己能读），否则 SSH 会拒绝用它。</p>
+      <p>按 NIST SP 800-63B Rev.4 的要求，单独使用的密码至少 15 位，不迷信复杂度，强制查泄露密码库——这条同样适用于 SSH 密钥的 passphrase 和服务器上其他账号的密码。密钥登录配好后，就可以把密码登录关掉（sshd_config 里 PasswordAuthentication no），只留密钥一条路。</p>
+      <h2>禁 root、改端口、限来源</h2>
+      <p>三项基本加固：第一，<strong>禁止 root 直接登录</strong>：sshd_config 里 PermitRootLogin no，root 想干活先用普通账号登录、再 sudo 提权（第 2 章的办法）；第二，<strong>改默认端口</strong>：把 22 改成一个不常用的高位端口（比如 2222），能挡掉大部分自动化扫描——但要记住，改端口是“减少噪音”，不是“真正的安全”，真正的安全靠密钥和 Fail2ban；第三，<strong>限制登录来源</strong>：只允许你的 IP 登录（防火墙规则，第 5 章），或者只允许特定用户登录（AllowUsers 用户名）。</p>
+      <p>还有两项：<strong>禁用空密码</strong>（PermitEmptyPasswords no，默认就是 no，确认一下），<strong>限制登录失败次数和超时</strong>（MaxAuthTries 3、LoginGraceTime 30），让爆破的人试不了几次就断开。</p>
+      <p>改完配置的验证步骤：先别关掉当前 SSH 会话，新开一个窗口试登录——能登录，说明改对了；不能登录，说明改错了，用原来的会话改回来。永远留一个能用的会话当“救生绳”，这是改 SSH 配置的铁律。</p>
+      <h2>Fail2ban：自动封禁爆破者</h2>
+      <p><strong>Fail2ban</strong>是一个自动封禁工具：它盯着日志（比如 /var/log/auth.log），发现某个 IP 在短时间内登录失败太多次，就自动把这个 IP 加进防火墙黑名单一段时间（比如封 1 小时）。装上 Fail2ban，自动化爆破基本就被挡住了。</p>
+      <p>装 Fail2ban：sudo apt install fail2ban，配置文件在 /etc/fail2ban/jail.local 里写规则：哪个服务（sshd）、失败几次封（maxretry）、封多久（bantime）、观察窗口多长（findtime）。装好后用 sudo fail2ban-client status sshd 看状态、看封了谁。</p>
+      <p>Fail2ban 不是万能的：攻击者换 IP、放慢速度（每天只试几次），就能绕过它。所以 Fail2ban 要和密钥登录、禁 root、改端口一起用——多层防护，每层都挡掉一部分攻击者，剩下的就很难得手了。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SSH 加固图：密钥登录替代密码，禁止 root 登录，改端口与 Fail2ban 封禁爆破，防火墙限制来源">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="20" y="10" width="240" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">密钥登录 Ed25519</text>
+          <text x="140" y="54" text-anchor="middle" font-size="11" fill="#666">私钥在自己手里，公钥在服务器</text>
+          <rect x="300" y="10" width="240" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">禁止 root 直接登录</text>
+          <text x="420" y="54" text-anchor="middle" font-size="11" fill="#666">先普通账号登录，再 sudo</text>
+          <rect x="20" y="110" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="134" text-anchor="middle" font-size="13" fill="#1a1a2e">改端口 + 限来源</text>
+          <text x="140" y="154" text-anchor="middle" font-size="11" fill="#666">22 改高位端口，只放行你的 IP</text>
+          <rect x="300" y="110" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="134" text-anchor="middle" font-size="13" fill="#1a1a2e">Fail2ban 自动封禁</text>
+          <text x="420" y="154" text-anchor="middle" font-size="11" fill="#666">失败太多次就封 IP</text>
+          <rect x="130" y="210" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="234" text-anchor="middle" font-size="13" fill="#1a1a2e">改配置留一个会话当救生绳</text>
+          <text x="280" y="254" text-anchor="middle" font-size="11" fill="#666">新开窗口验证，能登上再关旧会话</text>
+          <line x1="280" y1="54" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="162" x2="280" y2="208" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">改端口是减少噪音，不是真正的安全——真正靠密钥和封禁</text>
+          <text x="280" y="325" text-anchor="middle" font-size="12" fill="#666">私钥权限 600，绝不能给别人；密码至少 15 位，查泄露库</text>
+
+        </svg>
+        <figcaption>图：SSH 加固四层——密钥登录、禁 root、改端口限来源、Fail2ban 自动封禁</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ SSH 是加密的远程登录协议，验证分密码和密钥两种，密钥登录更安全。</p>
+      <p>□ Ed25519 密钥对：私钥留在自己手里（权限 600），公钥放服务器的 authorized_keys。</p>
+      <p>□ 加固三项：禁止 root 直登、改默认端口、限制登录来源和用户。</p>
+      <p>□ Fail2ban 盯着日志，登录失败太多次就自动封 IP 一段时间。</p>
+      <p>□ 改 SSH 配置留一个会话当救生绳，先验证新登录能用，再关旧会话。</p>
+      <p>□ 把本章的命令和检查步骤抄进自己的笔记，下次遇到同类问题直接用。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>我见过太多 SSH 被爆破的案例：共同点都是密码登录开着、root 能直登、密码是弱密码。最惨的一台，密码是 123456，上线三天就被攻破当了矿机。我的加固顺序永远是：先配好密钥登录并验证能用，再关密码登录、禁 root，再装 Fail2ban，最后改端口。顺序不能反——先关密码登录再配密钥，配错了就把自己锁外面了。还有，改 SSH 配置永远留一个会话当救生绳，这条规矩我遵守了十年，一次都没后悔过。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的 Linux 虚拟机里：备份 SSH 配置 sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak，再 cat /etc/ssh/sshd_config | grep -E 'PermitRootLogin|PasswordAuthentication|Port'，看看现在的设置是什么。<br>2. 在虚拟机里生成一对密钥练手：ssh-keygen -t ed25519 -f ~/.ssh/test_key，看看生成的私钥和公钥长什么样，再 ls -l ~/.ssh/ 看看权限；练完把测试密钥删掉。<br>3. 在虚拟机里装 Fail2ban 练手：sudo apt install -y fail2ban，装好后运行 sudo fail2ban-client status，看它在盯哪些服务；再运行 sudo journalctl -u fail2ban --no-pager | head -20，看看它的日志。</p>
+      <h2>避坑</h2>
+      <p>改 SSH 配置前先确认有别的登录办法（虚拟机控制台）：改错了把自己锁外面，是最常见的 SSH 事故；改配置永远留一个会话当救生绳：新开窗口验证通过，再关旧会话；私钥绝不能给别人、不能传到网上：私钥泄露等于家门钥匙被人复制了；别以为改端口就安全了：改端口只挡自动化扫描，真正的安全靠密钥登录和 Fail2ban；别在生产服务器上直接练手：先在虚拟机里把流程走通。</p>
+      <p>SSH 加固的核心是：密钥登录代替密码、禁 root、Fail2ban 封爆破、防火墙限来源，四层一起上。下一章我们讲防火墙本身：<a href="linux-c5-nftables.html">第 5 章</a>防火墙 nftables——给 Linux 的网络大门上锁，规则怎么写、怎么查、怎么排障。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>SSH 是加密的远程登录协议，验证分密码和密钥两种，密钥登录更安全。</li>
+          <li>Ed25519 密钥对：私钥留在自己手里（权限 600），公钥放服务器的 authorized_keys。</li>
+          <li>加固三项：禁止 root 直登、改默认端口、限制登录来源和用户。</li>
+          <li>Fail2ban 盯着日志，登录失败太多次就自动封 IP 一段时间。</li>
+          <li>改 SSH 配置留一个会话当救生绳，先验证新登录能用，再关旧会话。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="linux-c3-systemd.html">← 上一章：第 3 章：systemd 服务深入</a>
+        <a href="../course.html">课程目录</a>
+        <a href="linux-c5-nftables.html">下一章：第 5 章：防火墙 nftables →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

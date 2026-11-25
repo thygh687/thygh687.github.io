@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows 专项第 5 章：组策略深入 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Windows 专项第 5 章：组策略深入</h1>
+      <div class="meta"><span class="tag">Windows 专项</span>2026-11-25 · Windows 专项</div>
+      <p>如果你管过不止一台电脑，就会想：能不能写一次规则，让所有电脑都照着做？比如“所有电脑必须开防火墙”“不许用 U 盘”“密码至少 15 位”。Windows 的答案就是<strong>组策略（Group Policy）</strong>。</p>
+      <p>组策略是 Windows 最强大的集中管理工具，也是安全基线的落地工具。公司的 IT 管理员用它管几百台电脑；你自己的电脑上，它也能帮你把安全设置一次配好、长期生效。这一章讲组策略是什么、策略存在哪、怎么生效，以及排障时怎么查“这条策略到底生没生效”。</p>
+      <p>先说清范围：家用版 Windows 没有本地组策略编辑器（gpedit.msc），专业版、企业版才有。如果你用的是家庭版，本章的动手部分可以在虚拟机的专业版里做，或者只看概念、记下思路。</p>
+      <h2>组策略是什么：规则写一次，到处生效</h2>
+      <p>组策略是一套“配置规则 + 下发机制”。规则可以管：安全设置（密码策略、账号锁定、用户权限）、软件限制、防火墙规则、浏览器设置、驱动安装、脚本执行……几乎所有 Windows 的可配置项，都能写进策略。</p>
+      <p>策略分两级：<strong>本地组策略</strong>（一台电脑自己的策略，用 gpedit.msc 编辑，只对本机生效）和<strong>域组策略</strong>（公司域环境里，域控制器下发给所有加域电脑的策略）。本章重点讲本地组策略，因为它是你自己电脑上能直接练的；域组策略的思路是一样的，只是下发范围更大。</p>
+      <p>策略还分计算机配置（对整台电脑生效，不管谁登录）和用户配置（对某个用户生效）。比如“禁止 U 盘”可以写在计算机配置里，谁登录都禁；“桌面壁纸”写在用户配置里，不同用户可以不同。</p>
+      <h2>策略存在哪：注册表 + 文件</h2>
+      <p>组策略的配置，最终大部分落到注册表里：计算机策略写进 HKLM，策略相关的注册表值存在 HKLM\SOFTWARE\Policies 和 HKCU\Software\Policies 这两个专门的位置——和普通软件写注册表的位置分开，这样管理员一眼就能分清“这是策略规定的”还是“这是软件自己写的”。</p>
+      <p>另一部分策略存在文件里：比如软件限制策略、安全模板、脚本文件，存在 C:\Windows\System32\GroupPolicy\ 目录下。排障时如果策略死活不生效，可以到这个目录看看策略文件在不在、有没有损坏。</p>
+      <p>记住这个对应关系很有用：策略不是魔法，它就是“有人帮你把注册表和配置文件写好了，并且不让你随便改”。理解了这一点，策略和注册表（第 3 章）的知识就连起来了。</p>
+      <h2>策略怎么生效：刷新与优先级</h2>
+      <p>策略不是改完立刻生效的。默认情况下，计算机策略每 90 分钟刷新一次（加一个 0 到 30 分钟的随机偏移，避免所有电脑同时找服务器），开机和登录时也会刷新一次。想立刻生效，在管理员 PowerShell 里运行 gpupdate /force。</p>
+      <p>多条策略冲突时有优先级：本地策略最弱，域策略更强，组织单位（OU）策略最强；同一级别里，后应用的覆盖先应用的。排障时最常见的困惑就是“我明明改了本地策略，怎么没生效？”——答案常常是：上面还有一条更强的域策略把它盖住了。</p>
+      <p>查策略生效情况的工具是 gpresult /r（看应用了哪些策略）和 gpresult /h report.html（生成一份漂亮的 HTML 报告）。RSOP（策略的结果集）则是图形化的查看方式。做安全检查时，gpresult 是必跑的命令之一。</p>
+      <h2>安全基线：用组策略把安全设置一次配好</h2>
+      <p>安全基线就是“一台电脑上线前应该有的安全设置的清单”。用组策略落实基线，典型项目包括：密码长度至少 15 位（按 NIST SP 800-63B Rev.4 的要求，单独使用的密码至少 15 位，不迷信复杂度，强制查泄露密码库）、账号锁定阈值（输错几次锁定）、禁止自动登录、管理审核策略（登录成功和失败都要记日志）、关闭不必要的服务、开启防火墙、禁止可移动存储。</p>
+      <p>微软官方提供 Security Baselines（安全基线包），可以下载导入；CIS Benchmarks 也是业界常用的基线标准。初学者不必一开始就啃完整基线，先从本章列出的几项做起，在虚拟机里配一遍、验证一遍，就是很好的练习。</p>
+      <p>还要提醒一句：策略管得住配置，管不住人的行为。策略可以强制密码 15 位，但管不住用户把密码写在便签上贴在显示器上——技术控制和人的意识要一起抓，这也是模块六讲过的安全文化。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="组策略生效流程图：本地策略与域策略经优先级合并，写入注册表 Policies 位置和策略文件，gpupdate 刷新后生效">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="20" y="10" width="240" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">本地组策略 gpedit.msc</text>
+          <text x="140" y="54" text-anchor="middle" font-size="11" fill="#666">本机有效，最弱</text>
+          <rect x="300" y="10" width="240" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">域组策略（公司）</text>
+          <text x="420" y="54" text-anchor="middle" font-size="11" fill="#666">下发给所有加域电脑</text>
+          <rect x="130" y="90" width="300" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">优先级合并：OU > 域 > 本地</text>
+          <text x="280" y="134" text-anchor="middle" font-size="11" fill="#666">后应用的覆盖先应用的</text>
+          <rect x="130" y="170" width="300" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="194" text-anchor="middle" font-size="13" fill="#1a1a2e">落到注册表 Policies 位置</text>
+          <text x="280" y="214" text-anchor="middle" font-size="11" fill="#666">+ GroupPolicy 目录下的文件</text>
+          <rect x="130" y="250" width="300" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="274" text-anchor="middle" font-size="13" fill="#1a1a2e">gpupdate /force 立刻刷新</text>
+          <text x="280" y="294" text-anchor="middle" font-size="11" fill="#666">默认 90 分钟刷新一次</text>
+          <line x1="280" y1="54" x2="280" y2="88" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="134" x2="280" y2="168" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="214" x2="280" y2="248" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="330" text-anchor="middle" font-size="12" fill="#666">查生效情况：gpresult /r 或 gpresult /h report.html</text>
+
+        </svg>
+        <figcaption>图：组策略从规则到生效——优先级合并后写入注册表与策略文件，gpupdate 刷新</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ 组策略是集中管理工具：本地策略管一台电脑，域策略管所有加域电脑。</p>
+      <p>□ 策略最终落到注册表 Policies 位置和 GroupPolicy 目录的文件里，不是魔法。</p>
+      <p>□ 策略默认 90 分钟刷新一次，gpupdate /force 立刻刷新，gpresult 查生效结果。</p>
+      <p>□ 多条策略冲突时 OU > 域 > 本地，本地改了不生效常常是被更强的策略盖住了。</p>
+      <p>□ 安全基线可以用组策略一次配好：15 位以上密码、账号锁定、审核日志、防火墙等。</p>
+      <p>□ 把本章的命令和检查步骤抄进自己的笔记，下次遇到同类问题直接用。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>我见过最常见的组策略事故，是管理员在域里推了一条“禁止运行某某软件”的策略，结果把财务软件也禁了，全公司停摆半小时。教训是：推策略之前，先在小范围试点，先用 gpresult 看结果集，再全量下发；推完之后，留好回滚的办法。另一个经验是：排障时先跑 gpresult /r——很多“我改了设置怎么没生效”的问题，答案都在结果集里写着：要么是被更强的策略盖住了，要么是策略根本没应用到这台电脑。先看结果集，再动手改，能省一半时间。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机（专业版）里：按 Win+R 输入 gpedit.msc，依次展开 计算机配置 → Windows 设置 → 安全设置 → 账号策略 → 密码策略，看看密码长度、锁定阈值现在是多少，把它们记下来。<br>2. 在虚拟机里以管理员身份打开 PowerShell，运行 gpresult /r，看看应用了哪些策略；再运行 gpresult /h C:\Users\Public\gpresult.html，打开生成的报告，找找密码策略那几行。<br>3. 在虚拟机里用 gpedit 改一项无害的设置练手：比如 用户配置 → 管理模板 → 控制面板 → 个性化 → “阻止更改桌面背景”，设为已启用，运行 gpupdate /force，再看看桌面背景是不是改不动了；练完把它改回“未配置”。</p>
+      <h2>避坑</h2>
+      <p>家庭版 Windows 没有 gpedit.msc，别在网上找来路不明的“家庭版开启组策略”脚本乱装，练手请用虚拟机的专业版；别在真实电脑、公司电脑上乱改策略：一条策略可能影响整台电脑甚至整个域，动手只在虚拟机里做；策略改完不生效先别急：等 90 分钟刷新周期，或跑 gpupdate /force，再用 gpresult 查结果集；别把组策略当成万能：它管得住配置，管不住把密码贴在显示器上的人。</p>
+      <p>组策略是“写一次规则，到处生效”的管理工具，也是安全基线的落地办法。下一章我们换一件更顺手的工具：<a href="windows-c6-powershell.html">第 6 章</a> PowerShell 安全实战——用命令行查问题、抓异常，把前面几章的检查变成几行就能跑的命令。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>组策略是集中管理工具：本地策略管一台电脑，域策略管所有加域电脑。</li>
+          <li>策略最终落到注册表 Policies 位置和 GroupPolicy 目录的文件里，不是魔法。</li>
+          <li>策略默认 90 分钟刷新一次，gpupdate /force 立刻刷新，gpresult 查生效结果。</li>
+          <li>多条策略冲突时 OU > 域 > 本地，本地改了不生效常常是被更强的策略盖住了。</li>
+          <li>安全基线可以用组策略一次配好：15 位以上密码、账号锁定、审核日志、防火墙等。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="windows-c4-services-tasks.html">← 上一章：第 4 章：服务与任务计划</a>
+        <a href="../course.html">课程目录</a>
+        <a href="windows-c6-powershell.html">下一章：第 6 章：PowerShell 安全实战 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

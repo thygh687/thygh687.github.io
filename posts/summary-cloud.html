@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>云与容器安全专项小结：云上安全的第一道防线 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>云与容器安全专项小结：云上安全的第一道防线</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · 云与容器安全专项第 1–6 章</div>
+      <p>六章云与容器安全，讲的其实是一条链：先分清谁负责，再锁好门和窗，装上监控，查清容器里装了什么，管住集群里谁能干什么，最后用工具让这一切一直保持下去。云上绝大多数泄露事件的根子不是攻击者技术多高，而是配置错了、权限放宽了、日志没开——这一专项的每一章，都是冲着这些“低级错误”去的，因为低级错误恰恰是最常见的、也最致命的。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="云与容器安全专项六章知识串联图">
+          <defs>
+            <marker id="arrc" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="130" y="10" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">第 1 章 责任共担：谁管什么先分清</text>
+          <rect x="130" y="70" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">第 2 章 IAM 与存储：锁好两扇大门</text>
+          <rect x="130" y="130" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">第 3 章 日志与监控：装上眼睛和耳朵</text>
+          <rect x="130" y="190" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">第 4 章 镜像安全：上线之前先扫一遍</text>
+          <rect x="130" y="250" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="275" text-anchor="middle" font-size="14" fill="#1a1a2e">第 5 章 K8s 安全：谁能动集群、容器能干什么</text>
+          <rect x="130" y="310" width="300" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="335" text-anchor="middle" font-size="14" fill="#1a1a2e">第 6 章 CSPM 与合规：让安全一直保持下去</text>
+          <line x1="280" y1="50" x2="280" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrc)"/>
+          <line x1="280" y1="110" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrc)"/>
+          <line x1="280" y1="170" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrc)"/>
+          <line x1="280" y1="230" x2="280" y2="248" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrc)"/>
+          <line x1="280" y1="290" x2="280" y2="308" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrc)"/>
+        </svg>
+        <figcaption>图：六章云安全是一条链——分清责任、锁好门窗、装上监控、查清镜像、管住集群、持续检查</figcaption>
+      </figure>
+      <h2>这六章是怎么连起来的</h2>
+      <p>先分清责任。<a href="cloud-c1-shared-responsibility.html">第 1 章</a>讲责任共担模型深入：IaaS、PaaS、SaaS 三种模式的分界线各不相同，但账号、身份、数据永远是你管；高可用不等于备份，默认配置不等于安全配置，厂商合规不等于你合规。</p>
+      <p>再锁好两扇大门。<a href="cloud-c2-iam-storage.html">第 2 章</a>讲云 IAM 与存储安全：最小权限、不用根账号干活、MFA 必开、程序用角色与临时凭证；存储默认不公开、传输加密（TLS 1.3）加静态加密、开版本控制、按密级分类存放。</p>
+      <p>然后装上眼睛和耳朵。<a href="cloud-c3-logs-monitoring.html">第 3 章</a>讲云日志与监控：审计日志、服务日志、安全告警三种日志，先开、集中存放、留够时间；五类必设告警——根账号登录、MFA 变更、策略变更、公开存储桶、异常用量；告警响了按调查、止血、复盘、新规则的链子走。</p>
+      <p>接着查清容器里装了什么。<a href="cloud-c4-image-security.html">第 4 章</a>讲容器镜像安全：镜像上线之前先扫一遍，构建时扫、入仓库时扫、上线后定期重扫；只用可信的基础镜像，越精简越好；构建时锁版本、不写密钥；推进仓库时签名，部署时验证签名。</p>
+      <p>再管住集群。<a href="cloud-c5-k8s-rbac-pod.html">第 5 章</a>讲 Kubernetes RBAC 与 Pod 安全：RBAC 管谁能动集群，Pod 安全管容器能干什么；命名空间是隔离墙；非 root 运行、禁止提权、只读文件系统、限制资源是 Pod 安全的底线；网络策略做微隔离，密钥用 Secret 对象挂载并开静态加密。</p>
+      <p>最后让安全一直保持下去。<a href="cloud-c6-cspm-compliance.html">第 6 章</a>讲 CSPM 与云合规：错误配置是云上第一大风险，要用 CSPM 持续检查；检查规则来自 CIS 基准、云厂商最佳实践和法律法规；合规是底线，不是天花板；落地四步是接进来、分优先级、修掉并验证、防漂移。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>画一张责任清单：对一项云服务写清“云厂商管什么、我管什么、怎么验证”，分界线以官方文档为准。</li>
+        <li>检查云账号的 IAM：根账号开了 MFA 没有、有没有长期有效的密钥、权限是不是按角色给、离职人员的权限收回来了没有。</li>
+        <li>检查云存储：存储桶是不是公开的、加密开了没有、版本控制开了没有、机密数据是不是单独存放。</li>
+        <li>确认云日志开了没有、集中存放在哪里、保留多久，并列出五类必设告警和每类告警响了先做什么。</li>
+        <li>给一个容器镜像做扫描：读懂扫描报告，先修严重、高危和能从网络直接利用的漏洞，每个漏洞都有处置决定。</li>
+        <li>审计一个 K8s 实验集群：有几个 cluster-admin 绑定、默认服务账号能干什么、有没有 Pod 在用 root 或特权模式跑。</li>
+        <li>打开云厂商自带的安全中心跑一次检查，把问题按严重程度排序，先修公开暴露和高危项，并把关键检查变成“变坏就告警”的规则。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>模块十。云安全不是孤立的一块，它要放进更大的安全体系里：企业的整体安全架构、风险管理、安全运营是怎么把云、终端、网络、应用串起来的。这个专项给你的，是一套上云之后立刻能用的检查清单和工作方法——带着它去模块十，你会发现那里的每一章，都在回答“这些检查在一个真实的组织里，是谁来做、怎么做、做到什么程度”的问题。去之前，先把第 2 章的 MFA 和第 3 章的五类告警清单抄进你的笔记——那是云上安全的第一道防线，也是最便宜的一道。</p>
+      <div class="lesson-nav">
+        <a href="cloud-c6-cspm-compliance.html">← 云与容器安全专项第 6 章：CSPM 与云合规</a>
+        <a href="../course.html">课程目录</a>
+        <a href="../course.html#m10">下一站：模块十 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

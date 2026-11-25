@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块十第 14 章：动手：综合实战——给一家小公司写一份安全治理方案 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块十第 14 章：动手：综合实战——给一家小公司写一份安全治理方案</h1>
+      <div class="meta"><span class="tag">治理、风险、合规与韧性</span>2026-11-25 · 模块十</div>
+      <p>模块十的十三章讲完了：治理与政策、风险管理、NIST CSF、ISO 27001、第三方风险、审计评估、业务连续性、安全意识、风险量化、附录 A 的 93 项控制、隐私法、尽调问卷、SOC 2 与 NIS2。这一章是结课实战：把这些本事合起来，<strong>给一家小公司写一份真正的安全治理方案</strong>。方案的对象是一家假想的 20 人小网店——有网站、有客户数据、有两家供应商、有财务和客服岗位。写完这一章，你手里会有一份能交出去的方案、一张风险登记表和一份 90 天行动计划。</p>
+      <p>先定规矩：这份方案是写在文档里的治理方案，只在你自己的虚拟机或实验环境里做练习——写政策草案、填风险登记表、做桌面推演，绝不在真实公司系统上练手，不碰任何真实公司的账号、数据和系统。</p>
+
+      <h2>方案的七个部分</h2>
+      <p>一份完整的治理方案有七个部分，缺一个就不完整。<strong>一、背景与范围</strong>：这家公司是干什么的、方案管哪些部门和系统、哪些不在范围里（第 4 章 ISMS 定范围的思路）。<strong>二、治理结构</strong>：谁负责什么——老板定方向、兼任的安全负责人管执行、各部门负责人管落实，画一张 RACI 表（第 1 章）。<strong>三、资产与风险</strong>：资产清单（网站、订单系统、客户数据库、财务电脑）、风险登记表（第 2 章的四步流程，至少列出 8 个风险，每个写清等级、处置办法、负责人、期限）。</p>
+      <p><strong>四、政策与标准</strong>：一页纸的信息安全政策草案，再加两条标准——密码标准（单独使用的密码至少 15 位，查泄露密码库，开 MFA）和加密标准（对外服务用 TLS 1.3）。<strong>五、控制措施</strong>：对照 NIST CSF 六个职能（第 3 章）和 ISO 27001 附录 A（第 10 章），每个职能写两到三条具体措施，比如“保护：管理员开 MFA、每周打补丁；检测：每周看一次日志”。<strong>六、第三方与合规</strong>：第三方清单（第 5 章）、尽调结论（第 12 章）、隐私合规要点（第 11 章：只收必需的数据、用完就删、泄露 72 小时内通知）。<strong>七、连续性与改进</strong>：备份 3-2-1 方案、RTO/RPO（第 7 章）、培训计划（第 8 章）、审计与复查安排（第 6 章：内审每半年一次、演练每季度一次）。</p>
+
+      <h2>风险登记表：方案的心脏</h2>
+      <p>方案里最重要的一张表是风险登记表。给这家小网店列 8 个风险当例子：财务电脑系统过旧、员工点钓鱼链接导致转账被骗、备份从没做过恢复演练、外包客服权限过大、云服务商宕机导致网站停摆、客户数据被供应商泄露、离职员工账号没收回、网站没有 TLS 1.3 还是旧版本。每个风险写清可能性、影响、等级，再用第 9 章的办法给排前三的风险算一算 ALE——比如钓鱼转账单次损失 20 万到 60 万、每年可能发生 0.2 次，ALE 大约每年 4 万到 12 万；一套“转账双人复核 + 模拟钓鱼培训”每年成本不到 1 万，值不值？一算就清楚了。</p>
+      <p>登记表里的每个高风险都要有负责人和期限，没有负责人和期限的风险，等于没人管的风险。写完登记表，再对照第 3 章的 CSF 画像：六个职能里，哪个最弱？答案往往是“检测”和“恢复”——小公司最容易缺的，就是“发现”和“恢复”的能力。90 天计划就先补这两块。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="安全治理方案七个部分与90天行动计划图">
+          <rect x="20" y="15" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="38" text-anchor="middle" font-size="13" fill="#1a1a2e">1. 背景与范围</text>
+          <text x="100" y="56" text-anchor="middle" font-size="11" fill="#666">管什么、不管什么</text>
+          <rect x="200" y="15" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="38" text-anchor="middle" font-size="13" fill="#1a1a2e">2. 治理结构</text>
+          <text x="280" y="56" text-anchor="middle" font-size="11" fill="#666">谁负责、RACI 表</text>
+          <rect x="380" y="15" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="38" text-anchor="middle" font-size="13" fill="#1a1a2e">3. 资产与风险</text>
+          <text x="460" y="56" text-anchor="middle" font-size="11" fill="#666">资产清单、风险登记表</text>
+          <rect x="20" y="90" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="113" text-anchor="middle" font-size="13" fill="#1a1a2e">4. 政策与标准</text>
+          <text x="100" y="131" text-anchor="middle" font-size="11" fill="#666">密码 15 位、TLS 1.3</text>
+          <rect x="200" y="90" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="113" text-anchor="middle" font-size="13" fill="#1a1a2e">5. 控制措施</text>
+          <text x="280" y="131" text-anchor="middle" font-size="11" fill="#666">CSF 六职能、附录 A</text>
+          <rect x="380" y="90" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="113" text-anchor="middle" font-size="13" fill="#1a1a2e">6. 第三方与合规</text>
+          <text x="460" y="131" text-anchor="middle" font-size="11" fill="#666">尽调、隐私、SOC 2</text>
+          <rect x="20" y="165" width="520" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="188" text-anchor="middle" font-size="13" fill="#1a1a2e">7. 连续性与改进：备份 3-2-1 · RTO/RPO · 培训 · 内审每半年 · 演练每季度</text>
+          <text x="280" y="206" text-anchor="middle" font-size="11" fill="#666">方案的心脏是风险登记表：每个高风险都要有负责人和期限</text>
+          <rect x="20" y="240" width="520" height="56" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="263" text-anchor="middle" font-size="13" fill="#1a1a2e">90 天计划：第 1–30 天补高风险 · 第 31–60 天建流程 · 第 61–90 天演练复查</text>
+          <text x="280" y="283" text-anchor="middle" font-size="11" fill="#666">先补最弱的“检测”和“恢复”，再补其他的</text>
+        </svg>
+        <figcaption>图：安全治理方案的七个部分与 90 天行动计划</figcaption>
+      </figure>
+
+      <h2>90 天行动计划：先做什么，后做什么</h2>
+      <p>方案写完，要变成一张 90 天的行动计划，不然就是纸面文章。<strong>第 1–30 天，补高风险</strong>：管理员开 MFA、财务转账加双人复核、离职账号全部复查一遍、网站升级到 TLS 1.3、备份先做一份异地拷贝。<strong>第 31–60 天，建流程</strong>：政策发下去、全员做一次 10 分钟的安全培训、风险登记表第一次开会过一遍、第三方尽调问卷发给两家供应商。<strong>第 61–90 天，演练复查</strong>：做一次桌面推演（假设订单系统被勒索加密）、做一次备份恢复演练、做一次内审自查、向老板汇报一次：哪些做完了、哪些没做完、下一步是什么。</p>
+      <p>90 天结束时，方案要更新一次：风险登记表里的状态要改、演练发现的问题要进整改清单、CSF 画像要重新画一张。治理不是写一份方案就完事，是每 90 天转一圈的循环——第 4 章的 PDCA、第 3 章的 CSF 闭环、第 2 章的风险循环，说的都是同一件事。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我帮小公司写治理方案，最大的教训是：方案不能写给“审核员”看，要写给“老板和员工”看。写给审核员的方案又厚又全，没人读；写给老板的方案只有三页——“我们最怕什么、现在哪里最弱、90 天先干哪五件事、要多少钱”，老板看完就能拍板。还有一句：方案里的每一项措施，都要写清“谁来做、什么时候做完、做完怎么证明”——没有这三样，措施就是一句空话。最后，方案写完别锁进抽屉：贴在墙上、发到群里、每次开会打开看——一份被天天翻的方案，比一份完美的方案有用得多。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机或实验环境里做：按本章的七个部分，给假想的 20 人小网店写一份完整的安全治理方案，每部分至少写三句话，写在文档里。<br>2. 填一张风险登记表：至少 8 个风险，每行写清编号、描述、可能性、影响、等级、处置办法、负责人、期限；给排前三的风险算一算 ALE。<br>3. 写一份 90 天行动计划：分第 1–30 天、第 31–60 天、第 61–90 天三段，每段至少列出四项行动，每项写清负责人和完成标准。<br>4. 做一次桌面推演：假设“勒索软件加密了订单系统”，按第 7 章的剧本走一遍，写下演练中发现的三个问题和整改办法；再对照第 3 章的 CSF 画像，写出六个职能里最弱的两个和补强的第一步。</p>
+      <h2>避坑</h2>
+      <p>别把方案写给审核员看：写给老板和员工看，三页能说清的别写三十页；别只列措施不写责任：每项措施都要写清谁来做、什么时候做完、做完怎么证明；别让高风险没有负责人和期限：没有这两样的风险等于没人管；别写完方案就锁进抽屉：贴出来、发出去、每次开会打开看，被天天翻的方案才有用；别在真实公司系统上练手：本章的动手做只写文档、填表格、做桌面推演，绝不在真实公司系统上练手。</p>
+      <p>模块十到这里就结束了：从<a href="m10c1-governance-policy.html">第 1 章</a>的第一份政策草案，到这一章的一份完整治理方案，你已经从“会做技术”走到了“会管安全”。<a href="m6c11-risk-management.html">模块六第 11 章</a>的风险管理思路、模块八的应急响应与业务连续性，都在这份方案里汇合了——治理，就是把技术、流程和人拧成一股绳。去<a href="summary-module10.html">模块十小结</a>里看一眼这十四章是怎么连成一条线的，再往前走：全课程的收官，是回顾十个模块加四个专项，选一个方向深入下去。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>一份完整的治理方案有七个部分：背景与范围、治理结构、资产与风险、政策与标准、控制措施、第三方与合规、连续性与改进。</li>
+          <li>方案的心脏是风险登记表：至少列出 8 个风险，每个高风险都要有负责人和期限；排前三的风险要算 ALE。</li>
+          <li>90 天行动计划：前 30 天补高风险，中间 30 天建流程，后 30 天演练复查；先补最弱的“检测”和“恢复”。</li>
+          <li>方案要写给老板和员工看：三页能说清的别写三十页，每项措施都要写清谁来做、什么时候做完、做完怎么证明。</li>
+          <li>治理是循环：90 天转一圈，更新登记表、整改演练问题、重画 CSF 画像，PDCA 不停转。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m10c13-other-frameworks.html">← 上一章：第 13 章：其他合规框架：SOC 2 与 NIS2</a>
+        <a href="../course.html">课程目录</a>
+        <a href="summary-module10.html">下一章：模块十小结：安全不只是技术，更是治理 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

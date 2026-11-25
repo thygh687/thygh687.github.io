@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 21 章：活动目录攻击进阶 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 21 章：活动目录攻击进阶</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>上一章（<a href="m7c20-ad-defense.html">第 20 章</a>）我们把域控的防线搭起来了：分层、凭据保护、收拾权限、监控、补丁。这一章回到攻击方，看进阶手法——攻击者在防线收紧之后，还有哪些更深的路。同样先说边界：只在你自己的 lab.local 实验环境里理解和演示，绝不在真实域、真实网络上尝试；学这些，是为了在防御时认得出它们长什么样。进阶有三个主题：<strong>伪造票据、横向移动、委派与中继滥用</strong>。</p>
+      <p>先讲<strong>黄金票据（Golden Ticket）</strong>。第 18 章说过，Kerberos 的票据由域控签发，签发用的钥匙叫 krbtgt 账号的密钥——它是整个域的“印章”。攻击者一旦拿到域控、偷到这把印章，就能自己伪造任意票据：想当谁就当谁、想进哪台服务器就进哪台，而且票据有效期可以设得很长（比如十年）。这就是黄金票据：不是偷一张票，是偷了印票的印章。防御黄金票据的办法只有一个：<strong>定期更换 krbtgt 账号的密码（换两次）</strong>，换了印章，旧印章印的票就作废了。这是域控被攻破之后最重要的善后动作之一，没有之一。</p>
+      <p>与黄金票据相对的是<strong>白银票据（Silver Ticket）</strong>：攻击者偷的是某个具体服务账号的密钥，伪造一张只针对这一个服务的票据。比如偷到文件服务器服务账号的密钥，就能伪造票据进这台文件服务器。白银票据的权限比黄金票据小（只能进一个服务），但更难发现——因为它根本不经过域控，域控的日志里看不到这次“发票”的记录。防御靠两点：服务账号用长随机密码、定期更换；监控要覆盖服务端的异常登录，而不只盯着域控。</p>
+
+      <h2>横向移动：从一台机器到另一台机器</h2>
+      <p>拿到一台机器的权限之后，怎么去下一台？这就是<strong>横向移动（Lateral Movement）</strong>。最常见的三条路：第一，<strong>用偷到的凭据登录</strong>——拿着偷来的哈希或票据，直接去登录别的机器（第 19 章的哈希传递、票据窃取就是干这个的）；第二，<strong>用系统自带的管理通道</strong>——PsExec、WMI、WinRM 这些都是 Windows 自带的远程管理工具，管理员用它们批量管电脑，攻击者用它们批量“逛”电脑，流量看起来和正常管理一模一样；第三，<strong>用计划任务和服务</strong>——在别的机器上悄悄建一个计划任务或服务，定时执行自己的程序。防御横向移动，靠的是第 20 章的分层（管理员账号不在低层机器登录，就没有凭据可偷）加上网络隔离（客户端之间默认不许互相访问管理端口）和监控（盯住“某台客户端突然去登录很多台别的机器”这种异常行为）。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="黄金票据白银票据与横向移动图">
+          <rect x="20" y="20" width="240" height="60" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="44" text-anchor="middle" font-size="14" fill="#1a1a2e">黄金票据：偷了印章</text>
+          <text x="140" y="64" text-anchor="middle" font-size="11" fill="#666">伪造任意票据 · 换 krbtgt 密码作废</text>
+          <rect x="300" y="20" width="240" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="44" text-anchor="middle" font-size="14" fill="#1a1a2e">白银票据：偷了服务钥匙</text>
+          <text x="420" y="64" text-anchor="middle" font-size="11" fill="#666">只进一个服务 · 不经过域控</text>
+          <rect x="20" y="120" width="160" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">横向移动 1</text>
+          <text x="100" y="160" text-anchor="middle" font-size="11" fill="#666">拿偷到的凭据登录</text>
+          <rect x="200" y="120" width="160" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">横向移动 2</text>
+          <text x="280" y="160" text-anchor="middle" font-size="11" fill="#666">用系统管理通道</text>
+          <rect x="380" y="120" width="160" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">横向移动 3</text>
+          <text x="460" y="160" text-anchor="middle" font-size="11" fill="#666">计划任务与服务</text>
+          <rect x="140" y="220" width="280" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="244" text-anchor="middle" font-size="14" fill="#1a1a2e">委派与中继：借别人的身份办事</text>
+          <text x="280" y="264" text-anchor="middle" font-size="11" fill="#666">无约束委派、NTLM 中继最危险</text>
+          <text x="280" y="312" text-anchor="middle" font-size="12" fill="#666">进阶攻击的本质：偷印章、借身份、悄悄地逛</text>
+        </svg>
+        <figcaption>图：黄金票据与白银票据的区别，以及横向移动的三条路</figcaption>
+      </figure>
+
+      <h2>委派与中继：借别人的身份办事</h2>
+      <p>第三个主题是“借身份”。<strong>委派（Delegation）</strong>是 AD 的一个正常功能：比如一个网站服务器需要替登录的用户去访问文件服务器，就要由用户“委派”它代为行事。问题出在<strong>无约束委派</strong>上：被设为无约束委派的服务器，拿到的是用户的完整票据——攻击者只要拿下这台服务器，等一个域管理员来访问它，就能把域管理员的票据“借”走，直接变成域管理员。防御：不要用无约束委派，改用约束委派（只允许访问指定的服务），并定期检查哪些服务器开了委派。</p>
+      <p><strong>NTLM 中继（Relay）</strong>是另一个“借身份”的手法：攻击者站在中间，把 A 机器发给他的身份验证请求，原样转发给 B 机器，B 机器以为是 A 在登录，就放行了。防御靠三点：开启 SMB 签名（让转发的请求没法被篡改和冒用）、尽量用 Kerberos 代替老旧的 NTLM、给敏感服务开 EPA（增强保护）。中继攻击最怕的，是网络里还留着“不签名、不加密、能中继”的老配置——第 20 章的基线加固，就是要把这些老配置一个一个清掉。</p>
+      <p>最后是 <strong>DCSync</strong>：攻击者拿到一个有“复制域数据”权限的账号后，假装自己是另一台域控，向真域控请求同步一份完整的账号数据库——包括所有用户的密码哈希。防御：严格控制谁有复制权限（正常情况下只有域控自己有），监控域控的复制请求，发现非域控的机器在请求同步，立刻告警。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>进阶攻击教会我的最大教训是：攻击者最爱用的，永远是系统自带的正常功能——委派、中继、远程管理工具、票据，样样都是管理员每天在用的东西。这意味着防御不能靠“禁掉某个工具”，而要靠“让正常功能只在正常的地方、以正常的方式被使用”。我给客户做 AD 评估时，有三张清单是必查的：开了无约束委派的服务器清单、有复制权限的账号清单、还在用 NTLM 的老系统清单——这三张清单上的每一项，都是一条现成的进阶攻击路。还有一句：krbtgt 密码要定期换，而且要换两次（换一次，旧票据还能用一段时间；换两次才彻底作废），这是域控被攻破后善后的标准动作，写进你的应急手册里。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的 lab.local 实验环境里：用 BloodHound 找出实验域里开了无约束委派的账号或电脑（如果没有，故意给一个实验服务账号配上无约束委派再看），理解“借票据”是怎么发生的。<br>2. 只在你自己的实验环境里：从一台实验客户端出发，用系统自带的远程管理方式（比如 WinRM）尝试访问另一台实验客户端，记录成功与失败的条件，再对照第 20 章的分层想一想：哪些条件一旦收紧，这条路就走不通了。<br>3. 只在你自己的实验环境里：检查实验域控上哪些账号有“复制域数据”的权限，列出来并判断每一个是否真的需要这个权限。<br>4. 写一份一页纸的“进阶攻击对照表”：黄金票据、白银票据、横向移动、无约束委派、NTLM 中继、DCSync，每行写清“偷的是什么、防御关键是什么”。</p>
+      <h2>避坑</h2>
+      <p>绝不在真实域上练进阶手法：黄金票据、DCSync 这类操作在真实环境里是严重越界行为，只在自己的实验域里理解原理；别把“能伪造票据”等同于“无敌”：换 krbtgt 密码就能作废黄金票据，防御永远有后手；别忽视老配置：NTLM、不签名的 SMB、无约束委派，都是进阶攻击的温床；别只盯着域控：白银票据不经过域控，监控要覆盖服务端；别忘了善后：域控一旦被攻破，换 krbtgt 密码两次是标准动作。</p>
+      <p>活动目录的三章攻防到这里就完整了：第 18 章讲骨架，第 19 章讲入门攻击，第 20 章讲防御，第 21 章讲进阶攻击。下一章（<a href="m7c22-api-security.html">第 22 章</a>）换一个战场：API 安全——现在的系统越来越多是“前端 + 接口”，接口才是主战场，OWASP API Top 10 就是那里的地图。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>黄金票据是偷了 krbtgt 这把印章，能伪造任意票据；防御是换 krbtgt 密码两次，让旧票作废。</li>
+          <li>白银票据只针对一个服务，不经过域控，更难发现；防御靠服务账号长密码加服务端监控。</li>
+          <li>横向移动三条路：偷到的凭据、管理通道、计划任务与服务；防御靠分层、网络隔离和行为监控。</li>
+          <li>无约束委派会让服务器拿到用户的完整票据，要改用约束委派并定期检查。</li>
+          <li>NTLM 中继靠 SMB 签名、Kerberos 和 EPA 防御；DCSync 靠严格控制复制权限并监控复制请求。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c20-ad-defense.html">← 上一章：第 20 章：活动目录防御与加固</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c22-api-security.html">下一章：第 22 章：API 安全：OWASP API Top 10 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

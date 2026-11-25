@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 26 章：动手：OWASP Top 10 逐条过 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 26 章：动手：OWASP Top 10 逐条过</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>这一章是模块七的 Web 漏洞总复习：按 OWASP Top 10 2025 版逐条过一遍，每一条都在你自己的靶场虚拟机里亲手验证。先说版本：2025 版的十条是 A01 破坏访问控制（含 SSRF）、A02 安全配置错误、A03 软件供应链失效、A04 加密失效、A05 注入、A06 不安全设计、A07 认证失效、A08 软件与数据完整性失效、A09 安全日志与监控失效、A10 异常处理不当。注意两个变化：SSRF 已经并入 A01，不再单独占一条；新增了 A03 供应链失效和 A10 异常处理不当。靶场用你自己的虚拟机里的本地靶场（比如 OWASP Juice Shop 这类开源靶场），绝不在真实网站上练手。</p>
+      <p>先把方法定下来：每一条按同样的四步走——<strong>理解原理、找到入口、验证影响、想好修复</strong>。只验证到“能证明漏洞存在”就停手：比如能看到别人的数据，就证明了越权，不需要把数据真的下载下来；能弹出一个测试弹窗，就证明了 XSS，不需要去偷别人的会话。测试的边界和第 28 章的法律边界是一回事：靶场是你的，验证是你的，证据只留在你的笔记里。</p>
+
+      <h2>A01–A05：最常被利用的五条</h2>
+      <p><strong>A01 破坏访问控制（含 SSRF）。</strong>核心问题和第 22 章的 BOLA 一样：服务器没核对“这个东西是不是你的”。练法：用两个不同权限的账号登录靶场，互相改 ID 访问对方的数据；再试试 SSRF——让服务器替你去访问一个它本不该访问的内部地址（只在靶场里，用靶场自己的内部服务做目标）。修复：每次请求都核对对象归属和用户角色，SSRF 要对服务器发出的请求做白名单限制。</p>
+      <p><strong>A02 安全配置错误。</strong>练法：检查靶场的错误页面是不是吐出了堆栈信息、目录列表开没开、有没有默认账号没改。修复：关调试、关目录列表、改默认密码、按基线检查——和模块六第 13 章的基线加固是一回事。</p>
+      <p><strong>A03 软件供应链失效。</strong>练法：列出靶场用到的第三方组件和版本，对照公开漏洞库查有没有已知高危漏洞；再想一想：如果某个组件的更新包被人动了手脚，你的系统会不会直接装上？修复：SCA 扫描、SBOM 物料清单、只从可信源更新、校验签名——第 24 章的 DevSecOps 就是管这个的。</p>
+      <p><strong>A04 加密失效。</strong>练法：检查靶场的登录是不是走 HTTPS（TLS 先讲 1.3，旧版本要禁用）、密码在数据库里是不是加盐哈希存的、敏感数据有没有明文传输。修复：全站 TLS 1.3、密码按 NIST SP 800-63B Rev.4 存（单独使用的密码至少 15 位，强制查泄露密码库）、敏感数据加密存储。</p>
+      <p><strong>A05 注入。</strong>练法：SQL 注入、命令注入、跨站脚本（XSS）各找一个入口验证——第 2 章和第 3 章讲过的手法，在这里逐个过一遍。修复：参数化查询、输出编码、输入验证，治本的办法永远是“不把输入拼进代码里执行”。</p>
+
+      <h2>A06–A10：设计、认证与运营的五条</h2>
+      <p><strong>A06 不安全设计。</strong>这条讲的是“设计时就缺了安全”：比如密码重置流程只靠一个能猜到的安全问题、转账接口没有二次确认。练法：画出靶场一个功能的流程图，问一句“哪一步缺了检查”。修复：设计阶段做威胁建模（模块六第 2 章），把检查画进流程图里。</p>
+      <p><strong>A07 认证失效。</strong>练法：试试弱密码能不能登录、登录失败有没有限流、会话令牌能不能长期使用、退出登录后令牌还有效吗。修复：强密码策略、登录限流、令牌短有效期、多因素认证。</p>
+      <p><strong>A08 软件与数据完整性失效。</strong>练法：看看靶场的更新、导入功能有没有校验签名——没校验的文件，别人换一个你就用一个。修复：签名验证、完整性校验、只从可信源获取代码和数据。</p>
+      <p><strong>A09 安全日志与监控失效。</strong>练法：故意在靶场里做几次异常操作（比如连续登录失败、越权访问），再去看日志：记下来了吗？有人会收到告警吗？修复：关键操作都要记日志，日志要有人看、有告警——模块六第 11 章讲过，日志开了没人看等于没开。</p>
+      <p><strong>A10 异常处理不当。</strong>2025 版新增的一条：程序出错时，要么把内部信息全吐给用户（泄露），要么直接崩溃（拒绝服务），要么悄悄跳过检查（绕过）。练法：给靶场传几个畸形输入，看它的报错页面和行为。修复：统一的错误处理——给用户看通用提示，给日志记详细信息，出错时默认拒绝而不是默认放行。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OWASP Top 10 2025版十条总览图">
+          <rect x="180" y="10" width="200" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="37" text-anchor="middle" font-size="15" fill="#1a1a2e">OWASP Top 10（2025 版）</text>
+          <rect x="20" y="70" width="100" height="44" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="70" y="97" text-anchor="middle" font-size="12" fill="#1a1a2e">A01 访问控制</text>
+          <rect x="130" y="70" width="100" height="44" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="180" y="97" text-anchor="middle" font-size="12" fill="#1a1a2e">A02 配置错误</text>
+          <rect x="240" y="70" width="100" height="44" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="290" y="97" text-anchor="middle" font-size="12" fill="#1a1a2e">A03 供应链失效</text>
+          <rect x="350" y="70" width="100" height="44" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="400" y="97" text-anchor="middle" font-size="12" fill="#1a1a2e">A04 加密失效</text>
+          <rect x="460" y="70" width="80" height="44" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="500" y="97" text-anchor="middle" font-size="12" fill="#1a1a2e">A05 注入</text>
+          <rect x="20" y="130" width="100" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="70" y="157" text-anchor="middle" font-size="12" fill="#1a1a2e">A06 不安全设计</text>
+          <rect x="130" y="130" width="100" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="180" y="157" text-anchor="middle" font-size="12" fill="#1a1a2e">A07 认证失效</text>
+          <rect x="240" y="130" width="100" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="290" y="157" text-anchor="middle" font-size="12" fill="#1a1a2e">A08 完整性失效</text>
+          <rect x="350" y="130" width="100" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="400" y="157" text-anchor="middle" font-size="12" fill="#1a1a2e">A09 日志监控失效</text>
+          <rect x="460" y="130" width="80" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="500" y="157" text-anchor="middle" font-size="12" fill="#1a1a2e">A10 异常处理</text>
+          <rect x="140" y="210" width="280" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="234" text-anchor="middle" font-size="14" fill="#1a1a2e">每条四步：理解原理、找到入口</text>
+          <text x="280" y="254" text-anchor="middle" font-size="11" fill="#666">验证影响、想好修复</text>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">SSRF 已并入 A01；新增 A03 与 A10</text>
+          <text x="280" y="322" text-anchor="middle" font-size="12" fill="#666">验证到“能证明存在”就停手</text>
+        </svg>
+        <figcaption>图：OWASP Top 10 2025 版十条总览——每条四步：理解原理、找到入口、验证影响、想好修复</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>Top 10 的榜单年年变，但排第一的几乎总是“访问控制”这类问题——不是因为它技术最难，而是因为它最容易被“想当然”：开发想当然地以为前端藏起来就等于拦住了，测试想当然地以为只测正常流程就够了。我带新人过 Top 10 时，要求每人交一张表：十条，每条一行，写清“在靶场里找到的入口、验证的结果、修复的办法”——写不出来的那条，就是还没真懂的那条。还有一句：A09 和 A10 是最容易被忽视的两条——日志没人看、报错瞎处理，平时看不出危害，出事那天才发现“什么都没记下来、什么都没拦住”。这两条的分量，在真实应急响应里比在榜单上重得多。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的靶场虚拟机里：按本章的十条，给你用的本地靶场做一张检查表，每条写清入口、验证结果、修复办法——十条全部走完才算完成。<br>2. 只在你自己的靶场虚拟机里：重点验证 A01——用两个不同权限的账号交叉访问，看服务器拦不拦；再验证 A05——找一个注入点，确认参数化查询能堵住它。<br>3. 只在你自己的靶场虚拟机里：验证 A09——做几次异常操作后去翻日志，确认“记下来了没有、有没有告警”；再验证 A10——传几个畸形输入，看报错页面泄露了什么。<br>4. 把十条检查表收进你的实验笔记，下一章的方法论会用到它，第 29 章的结课实战也会按它打分。</p>
+      <h2>避坑</h2>
+      <p>别在真实网站上练手：全部只在自己的靶场虚拟机里做；别只验证不记修复：每条都要写出修复办法，只会利用不会修，等于只学了一半；别忽视 A09 和 A10：日志和异常处理平时不起眼，出事那天最要命；别用旧版榜单：按 2025 版来，SSRF 在 A01 里，A03 和 A10 是新增的；验证到“能证明存在”就停手，别把数据真的拖下来。</p>
+      <p>十条过完了：A01 到 A10，每条都有入口、有验证、有修复。下一章（<a href="m7c27-pentest-methodology.html">第 27 章</a>）把这些零散的本事串成一套标准流程：一次渗透测试，从接单到交报告，到底该怎么走。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>OWASP Top 10 2025 版：A01 访问控制（含 SSRF）、A02 配置错误、A03 供应链失效、A04 加密失效、A05 注入。</li>
+          <li>A06 不安全设计、A07 认证失效、A08 完整性失效、A09 日志监控失效、A10 异常处理不当（新增）。</li>
+          <li>每条四步：理解原理、找到入口、验证影响、想好修复；验证到“能证明存在”就停手。</li>
+          <li>排第一的总是访问控制类问题：前端藏起来不等于接口拦住了，测的时候要用两个账号交叉测。</li>
+          <li>A09 和 A10 最容易被忽视：日志没人看、报错瞎处理，出事那天才发现什么都没记下来。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c25-wireless-pentest.html">← 上一章：第 25 章：无线渗透</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c27-pentest-methodology.html">下一章：第 27 章：渗透测试方法论 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

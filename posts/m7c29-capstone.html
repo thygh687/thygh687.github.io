@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 29 章：动手：综合实战——一次完整的渗透测试 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 29 章：动手：综合实战——一次完整的渗透测试</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>前面二十八章，我们一块一块地拼起了渗透测试的本事：Web 漏洞、提权、后渗透、免杀与持久化、活动目录的攻与防、API 安全、DevSecOps、无线渗透、OWASP Top 10、方法论、法律边界。这一章是模块七的结课实战：把这些本事合起来，在你自己的实验环境里做一次完整的渗透测试，从约定范围到交报告，全流程走一遍。测试对象是你自己的靶场虚拟机加你自己的 lab.local 实验域——不是真实网站，不是真实网络。做完这一章，你手里会有一份真正的渗透测试报告，和一套以后可以反复用的方法。</p>
+      <p>先定规矩：第 27 章的七个阶段，一个都不能少；第 28 章的三条红线，一条都不能碰。测试开始之前，先写好“模拟授权书”：测你的靶场虚拟机和你的实验域，时间窗口是你自己的空闲时间，禁止事项是“不碰真实网络、不碰真实数据”。授权书是写给自己的，但规矩是真的——养成“先授权、后动手”的习惯，比多打下一个漏洞重要得多。</p>
+
+      <h2>实战的五个战场</h2>
+      <p><strong>第一战场：Web 靶场。</strong>按第 26 章的 OWASP Top 10 2025 版检查表走一遍：A01 访问控制、A05 注入、A07 认证失效是重点——每条写清入口、验证结果、修复办法。工具用第 10 章的 Burp Suite 抓包改包，验证到“能证明存在”就停手。</p>
+      <p><strong>第二战场：API。</strong>按第 22 章的 API Top 10 检查：用两个不同权限的账号交叉测 BOLA 和 BFLA，检查接口返回有没有多余字段，JWT 令牌按第 23 章的方法验一遍（改载荷、改算法，看服务器拦不拦）。</p>
+      <p><strong>第三战场：活动目录实验域。</strong>回到第 17 章搭的 lab.local：用 BloodHound 重新收集数据，画出从普通实验用户到域管理员的最短路径；检查有没有无约束委派、有复制权限的账号、弱密码的服务账号——第 19 章和第 21 章的攻击路，在这里一条一条验证，再按第 20 章的防御思路写出修复建议。</p>
+      <p><strong>第四战场：无线。</strong>按第 25 章的清单检查你自己的路由器：加密方式、密码强度、WPS、PMF、固件、设备清单，六项逐项打分。</p>
+      <p><strong>第五战场：开发流程。</strong>按第 24 章的思路，找一个你自己的小项目跑一遍 SAST 和 SCA，检查密钥有没有进代码仓库——这是 DevSecOps 的迷你版。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="综合实战五个战场与七个阶段图">
+          <rect x="180" y="10" width="200" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="37" text-anchor="middle" font-size="15" fill="#1a1a2e">一次完整的渗透测试</text>
+          <rect x="20" y="70" width="100" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="70" y="92" text-anchor="middle" font-size="13" fill="#1a1a2e">Web 靶场</text>
+          <text x="70" y="110" text-anchor="middle" font-size="11" fill="#666">OWASP Top 10</text>
+          <rect x="130" y="70" width="100" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="180" y="92" text-anchor="middle" font-size="13" fill="#1a1a2e">API</text>
+          <text x="180" y="110" text-anchor="middle" font-size="11" fill="#666">BOLA / JWT</text>
+          <rect x="240" y="70" width="100" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="290" y="92" text-anchor="middle" font-size="13" fill="#1a1a2e">活动目录</text>
+          <text x="290" y="110" text-anchor="middle" font-size="11" fill="#666">BloodHound 画路</text>
+          <rect x="350" y="70" width="100" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="400" y="92" text-anchor="middle" font-size="13" fill="#1a1a2e">无线</text>
+          <text x="400" y="110" text-anchor="middle" font-size="11" fill="#666">路由器六项检查</text>
+          <rect x="460" y="70" width="80" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="500" y="92" text-anchor="middle" font-size="13" fill="#1a1a2e">开发流程</text>
+          <text x="500" y="110" text-anchor="middle" font-size="11" fill="#666">SAST / SCA</text>
+          <rect x="140" y="160" width="280" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="184" text-anchor="middle" font-size="14" fill="#1a1a2e">七个阶段：范围、收集、扫描、利用</text>
+          <text x="280" y="204" text-anchor="middle" font-size="11" fill="#666">后渗透、报告、复测，一个不能少</text>
+          <rect x="140" y="240" width="280" height="56" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="264" text-anchor="middle" font-size="14" fill="#1a1a2e">交付物：一份渗透测试报告</text>
+          <text x="280" y="284" text-anchor="middle" font-size="11" fill="#666">结论先行、证据、修复、优先级</text>
+          <text x="280" y="328" text-anchor="middle" font-size="12" fill="#666">先授权、后动手；验证到能证明存在就停手</text>
+        </svg>
+        <figcaption>图：综合实战的五个战场与七个阶段——交付物是一份渗透测试报告</figcaption>
+      </figure>
+
+      <h2>报告怎么写</h2>
+      <p>报告按第 27 章的写法，分五个部分：<strong>一、基本信息与范围</strong>——测了什么（靶场虚拟机、实验域、自己的路由器、自己的小项目）、测试时间、模拟授权书的要点；<strong>二、方法</strong>——用的什么工具、按什么检查表（OWASP Top 10 2025、API Top 10、AD 检查清单）、哪些没测；<strong>三、发现汇总表</strong>——一张表列出所有发现：编号、战场、问题、证据、严重程度（高/中/低）；<strong>四、详细发现</strong>——每个高和中风险的问题单独写一段：是什么、在哪、怎么验证的、为什么严重、怎么修；<strong>五、总结与下一步</strong>——整体结论、按优先级排好的整改清单、建议的复查时间。写完之后，按第 28 章的要求清理：测试账号、测试数据、临时文件全部清掉，虚拟机恢复到快照状态。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>结课实战我最想跟你说的是：别追求“打下来的漏洞多”。我第一次做完整测试时，打了二十多个漏洞，报告写得像流水账，客户看完只问了一句：“最严重的三个是哪个？”从那以后，我的报告永远是“三个最严重的放最前面，每个都写清不修会怎样、修起来要几步”。还有一句：实战里最值钱的不是某一个漏洞，是你走完七个阶段的“手感”——什么时候该停手、什么时候该换个思路、什么时候该写下来而不是继续打。这种手感，只有完整走一遍才能长出来。最后，记得把这份报告收好——它是你学完模块七的证明，也是你以后找工作、考 Security+ SY0-801 时能拿出来的作品。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的实验环境里：写好模拟授权书，定好五个战场和时间窗口，再开始动手——先授权、后动手。<br>2. 只在你自己的实验环境里：按七个阶段走完五个战场，每个战场写一页纸的输出（清单、截图、结论），验证到“能证明存在”就停手。<br>3. 只在你自己的实验环境里：按本章的报告模板写一份完整的渗透测试报告——基本信息、方法、发现汇总表、详细发现、总结与下一步；高和中风险问题每个都要写出具体修复步骤。<br>4. 做一次复测：按报告里的整改清单，把你实验环境里的问题修好（只修你自己的虚拟机和实验域），修完重新验证一遍，确认问题真的没了，把复测结果写进报告附录；最后按第 28 章的要求清理测试痕迹，虚拟机恢复快照。</p>
+      <h2>避坑</h2>
+      <p>别没授权就开打：模拟授权书也要先写好；别只打 Web 忘了 AD 和 API：五个战场都要走；别追求漏洞数量：最严重的三个放最前面；别只写利用不写修复：修复建议要具体到能照着做；别忘了复测和清理：没有复测不算闭环，测试痕迹要清干净；别把报告随手乱放：报告里写着哪里有洞，本身就是敏感文件。</p>
+      <p>模块七到这里就结束了：从<a href="m7c16-evasion-persistence.html">第 16 章</a>的绕过与持久化，到这一章的一份完整渗透测试报告，你已经走完了从“看懂网站”到“合法找漏洞”的全程。下一站是<a href="../course.html#m8">模块八：安全运营与应急响应</a>——在那里，角色从攻击方换成防守方：盯着、发现、出事之后怎么办。去<a href="summary-module7.html">模块七小结</a>里看一眼这 29 章是怎么连成一条线的，再往前走。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>结课实战覆盖五个战场：Web 靶场、API、活动目录实验域、无线、开发流程。</li>
+          <li>七个阶段一个不能少：约定范围、信息收集、扫描分析、漏洞利用、后渗透、报告、复测。</li>
+          <li>报告五部分：基本信息与范围、方法、发现汇总表、详细发现、总结与下一步；最严重的三个放最前面。</li>
+          <li>利用守最小影响原则：验证到能证明存在就停手；测试结束要清理痕迹、恢复快照。</li>
+          <li>复测闭环：修完重新验证，确认问题真的没了，再把复测结果写进报告附录。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c28-legal-ethics.html">← 上一章：第 28 章：法律与道德边界</a>
+        <a href="../course.html">课程目录</a>
+        <a href="summary-module7.html">下一章：模块七小结：从看懂网站到合法找漏洞 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

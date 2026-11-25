@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows 专项第 10 章：漏洞利用缓解：DEP、ASLR、CFG 与虚拟化安全 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Windows 专项第 10 章：漏洞利用缓解：DEP、ASLR、CFG 与虚拟化安全</h1>
+      <div class="meta"><span class="tag">Windows 专项</span>2026-11-25 · Windows 专项</div>
+      <p>前面几章讲的都是“谁能干什么”的规则。但如果攻击者找到了一个漏洞——比如缓冲区溢出，能把自己的代码塞进程序里执行——光靠权限规则还不够。Windows 为此准备了第二道防线：<strong>漏洞利用缓解（Exploit Mitigations）</strong>，让漏洞就算存在，也很难被利用成功。</p>
+      <p>这一章讲四种缓解技术：DEP（数据执行保护）、ASLR（地址空间布局随机化）、CFG（控制流防护），再加虚拟化安全（VBS、Credential Guard、HVCI）。它们各管一面，合起来就是一句话：让攻击者猜不中、跳不转、偷不走。</p>
+      <p>这些技术默认大多是开着的，初学者不需要去改它们，需要的是：知道它们是什么、出了问题怎么查、以及为什么“关了它们会更危险”。</p>
+      <h2>DEP：数据区不许执行代码</h2>
+      <p>缓冲区溢出的经典手法，是把恶意代码藏进数据区（比如栈、堆），再骗程序跳过去执行。<strong>DEP（数据执行保护，Data Execution Prevention）</strong>的规则很简单：标成“数据”的内存页，不许执行代码；标成“代码”的页，才能执行。攻击者把代码藏进数据区，DEP 就让它跑不起来。</p>
+      <p>DEP 有硬件版（CPU 的 NX 位支持）和软件版。现代 CPU 都支持硬件 DEP，Windows 默认对所有程序开启。个别老程序不兼容 DEP 时，可以在系统属性 → 高级 → 性能设置 → 数据执行保护里单独给它关掉——但要记住，关掉 DEP 等于拆掉一道护栏，只对确认有兼容问题的老程序这么做。</p>
+      <p>查 DEP 状态：PowerShell 里运行 Get-ProcessMitigation -Name 进程名，或者用系统信息工具 msinfo32。排障时如果一个老程序一启动就崩溃，可以先看看是不是 DEP 把它拦住了。</p>
+      <h2>ASLR：让内存地址每次都不一样</h2>
+      <p><strong>ASLR（地址空间布局随机化）</strong>对付的是另一类手法：攻击者想跳到某个系统函数（比如执行命令的函数）上，就得知道这个函数在内存里的地址。ASLR 让程序每次启动时，代码、库、栈、堆的地址都随机换地方——攻击者猜不中地址，跳转就跳错地方，攻击就失败。</p>
+      <p>ASLR 要程序配合：程序编译时要开启 /DYNAMICBASE 选项，系统库和驱动也要支持。现代 Windows 程序和系统组件基本都支持 ASLR，所以这道护栏是默认开着的。个别老程序没有 ASLR 支持时，可以用 EMET 的后继者——Windows Defender Exploit Guard 的强制 ASLR 来补。</p>
+      <p>ASLR 的弱点是信息泄露：如果攻击者能通过某个漏洞先泄露出一个地址，就能推算出其他地址的位置。所以 ASLR 不是万能的，它要和 DEP、CFG 一起用，互相补位。</p>
+      <h2>CFG：只许跳到合法的目标</h2>
+      <p><strong>CFG（控制流防护，Control Flow Guard）</strong>管的是“跳转”：程序运行时，间接调用（比如函数指针、虚函数）只能跳到编译时登记过的合法目标地址，跳到别的地方就直接终止程序。攻击者就算控制了跳转地址，也跳不到自己的恶意代码上。</p>
+      <p>CFG 需要编译器配合：程序编译时要开启 /guard:cf，系统在运行时检查每次间接调用。Windows 自带的程序和主流浏览器都支持 CFG。查某个程序支不支持 CFG，可以用 PowerShell 的 Get-ProcessMitigation -Name 进程名，看 ControlFlowGuard 一项。</p>
+      <p>DEP、ASLR、CFG 三者是互补的：DEP 管“数据区不能执行”，ASLR 管“地址猜不中”，CFG 管“跳转只能跳到合法目标”。三道护栏一起上，缓冲区溢出这类老漏洞的利用难度就大大提高了。这也是为什么现代漏洞利用常常要先找信息泄露、再绕过多道缓解，链条越长，越容易在中途被发现。</p>
+      <h2>虚拟化安全：用硬件隔离出安全区</h2>
+      <p><strong>基于虚拟化的安全（VBS，Virtualization-Based Security）</strong>是 Windows 10/11 上的新防线：用 CPU 的虚拟化功能（Hyper-V）在系统里隔出一个独立的“安全区”，把最敏感的东西放进去，和普通系统隔离开。就算攻击者拿到了内核权限，也碰不到安全区里的东西。</p>
+      <p>VBS 上跑的两个重要功能：<strong>Credential Guard</strong>——把 LSASS 里的凭据（第 2 章讲过，LSASS 是攻击者最想偷的东西）放进安全区隔离起来，Mimikatz 这类工具就掏不到了；<strong>HVCI（内存完整性，Hypervisor-Protected Code Integrity）</strong>——用虚拟化保护代码完整性，只允许签名的驱动和代码加载进内核，没签名的驱动直接拦住。</p>
+      <p>开不开 VBS，要看硬件和系统版本：需要 CPU 支持虚拟化、开启安全启动、系统是专业版或企业版。查看状态：系统信息 msinfo32 里看“基于虚拟化的安全性”一项，或者设置 → Windows 安全中心 → 设备安全性 → 内核隔离。注意：开 VBS 会有一点性能开销，游戏和虚拟机用户要自己权衡。</p>
+      <h2>缓解不是万能的：补丁才是根本</h2>
+      <p>最后要说清一个关系：缓解技术是“让漏洞难利用”，补丁是“把漏洞修掉”。两者都要有：补丁修掉已知的漏洞，缓解让未知的漏洞（零日）也难得手。只打补丁不看缓解，零日来了挡不住；只开缓解不打补丁，已知漏洞迟早被利用。</p>
+      <p>安全工作的日常，就是这两件事的循环：看补丁打了没有（第 6 章的 Get-HotFix），看缓解开着没有（Get-ProcessMitigation、msinfo32），看日志里有没有人试图绕过它们（第 8 章的 Sysmon）。三件事都做到位，一台 Windows 电脑的安全底子就有了。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="漏洞利用缓解图：DEP 禁止数据区执行，ASLR 随机化地址，CFG 只允许合法跳转，虚拟化安全隔离凭据">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="20" y="10" width="240" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">DEP 数据执行保护</text>
+          <text x="140" y="54" text-anchor="middle" font-size="11" fill="#666">数据区不许执行代码</text>
+          <rect x="300" y="10" width="240" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">ASLR 地址随机化</text>
+          <text x="420" y="54" text-anchor="middle" font-size="11" fill="#666">每次启动地址都不同</text>
+          <rect x="20" y="110" width="240" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="134" text-anchor="middle" font-size="13" fill="#1a1a2e">CFG 控制流防护</text>
+          <text x="140" y="154" text-anchor="middle" font-size="11" fill="#666">只能跳到合法目标</text>
+          <rect x="300" y="110" width="240" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="134" text-anchor="middle" font-size="13" fill="#1a1a2e">VBS 虚拟化安全</text>
+          <text x="420" y="154" text-anchor="middle" font-size="11" fill="#666">隔离区保护凭据与内核</text>
+          <rect x="130" y="210" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="234" text-anchor="middle" font-size="13" fill="#1a1a2e">补丁才是根本</text>
+          <text x="280" y="254" text-anchor="middle" font-size="11" fill="#666">缓解让漏洞难利用，补丁把漏洞修掉</text>
+          <line x1="280" y1="54" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="162" x2="280" y2="208" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">查缓解状态：Get-ProcessMitigation、msinfo32</text>
+          <text x="280" y="325" text-anchor="middle" font-size="12" fill="#666">关掉缓解等于拆护栏，只对确认兼容有问题的老程序这么做</text>
+
+        </svg>
+        <figcaption>图：四道护栏各管一面——DEP、ASLR、CFG 与虚拟化安全合起来让漏洞难利用</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ DEP 规定数据区不许执行代码，让藏进数据区的恶意代码跑不起来。</p>
+      <p>□ ASLR 让程序每次启动的内存地址都随机换地方，攻击者猜不中就跳错地方。</p>
+      <p>□ CFG 只允许跳转到编译时登记过的合法目标，跳到别处就直接终止程序。</p>
+      <p>□ VBS 用虚拟化隔出安全区，Credential Guard 保护 LSASS 凭据，HVCI 保护内核代码。</p>
+      <p>□ 缓解让漏洞难利用，补丁把漏洞修掉，两者都要有，缺一不可。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>我处理过一个案例：用户电脑中了勒索软件，排查发现它是从一个没打补丁的老漏洞进来的——补丁其实早就发布了，只是用户一直拖着没装。那次之后我养成了一个习惯：给每台管的电脑列一张表，左边是补丁状态，右边是缓解状态（DEP、ASLR、VBS 开没开），每月对一遍。缓解技术有个特点：平时感觉不到它的存在，出事的时候才知道它挡住了多少东西。所以别因为“感觉不到”就把它关掉——安全护栏的价值，恰恰在于你感觉不到它的时候。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：按 Win+R 输入 msinfo32，看看“基于虚拟化的安全性”“内存完整性”这两项是什么状态；再打开设置 → Windows 安全中心 → 设备安全性 → 内核隔离，看看内存完整性开着没有。<br>2. 在虚拟机里打开 PowerShell，运行 Get-ProcessMitigation -Name notepad.exe，看看记事本的 DEP、ASLR、CFG 各是什么状态；再运行 Get-ProcessMitigation -System，看看系统级的缓解设置。<br>3. 在虚拟机里打开系统属性 → 高级 → 性能设置 → 数据执行保护，看看 DEP 现在的设置是什么（只看不动手），再去控制面板 → 程序 → 启用或关闭 Windows 功能里看看 Hyper-V 在不在，记下你的虚拟机支不支持 VBS。</p>
+      <h2>避坑</h2>
+      <p>别在真实电脑上随便关 DEP、CFG 或内存完整性：关掉等于拆护栏，只对确认有兼容问题的老程序单独处理；别以为开了缓解就不用打补丁：缓解是让漏洞难利用，补丁是把漏洞修掉，两者都要有；VBS 需要硬件支持：CPU 不支持虚拟化、没开安全启动的机器开不了 VBS，别强求；老程序不兼容缓解时，先找新版本替代，实在没有再单独豁免，别全局关闭。</p>
+      <p>Windows 专项到这里就走完了：从第 1 章的分层架构，到第 10 章的漏洞利用缓解——你已经把 Windows 从里到外看了一遍。下一站是另一台机器：Linux。去<a href="summary-windows.html">Windows 专项小结</a>里看一眼这十章是怎么连成一条线的，再往前走。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>DEP 规定数据区不许执行代码，让藏进数据区的恶意代码跑不起来。</li>
+          <li>ASLR 让程序每次启动的内存地址都随机换地方，攻击者猜不中就跳错地方。</li>
+          <li>CFG 只允许跳转到编译时登记过的合法目标，跳到别处就直接终止程序。</li>
+          <li>VBS 用虚拟化隔出安全区，Credential Guard 保护 LSASS 凭据，HVCI 保护内核代码。</li>
+          <li>缓解让漏洞难利用，补丁把漏洞修掉，两者都要有，缺一不可。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="windows-c9-security-model.html">← 上一章：第 9 章：Windows 安全模型：令牌、SID、ACL 与完整性级别</a>
+        <a href="../course.html">课程目录</a>
+        <a href="summary-windows.html">下一章：Windows 专项小结：把 Windows 从里到外看一遍 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

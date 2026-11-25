@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块八第 4 章：应急响应框架：NIST SP 800-61 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块八第 4 章：应急响应框架：NIST SP 800-61</h1>
+      <div class="meta"><span class="tag">安全运营与应急响应</span>2026-11-25 · 模块八</div>
+      <p>凌晨三点，SOC 的电话响了：财务系统被勒索软件加密了，屏幕上留着勒索信。这时候最怕的不是攻击本身，而是<strong>没人知道接下来该干什么</strong>——谁说了算？先断网还是先取证？要不要报警？要不要告诉客户？如果每个人凭感觉行动，现场会乱成一团，证据被破坏，损失越滚越大。所以应急响应最需要的不是“更厉害的技术”，而是<strong>一套事先写好、人人都知道的流程</strong>。业界最权威的一套，就是美国国家标准与技术研究院（NIST）发布的 <strong>SP 800-61</strong>，当前版本是 <strong>Rev.3</strong>。</p>
+      <p>注意一个容易混淆的点：网上很多老资料讲应急响应是“准备、检测与分析、遏制、根除、恢复、总结”四个阶段，那是 SP 800-61 Rev.2 的旧说法。Rev.3 已经改了：它把应急响应放进更大的框架——<strong>NIST 网络安全框架 CSF 2.0 的六个职能：治理（Govern）、识别（Identify）、保护（Protect）、检测（Detect）、响应（Respond）、恢复（Recover）</strong>。也就是说，应急响应不再是“出事了才开始的四个步骤”，而是平时就要治理、识别、保护，出事时检测、响应，事后恢复——一整条线。本章按 Rev.3 的思路讲，旧的四阶段说法就不再用了。</p>
+
+      <h2>CSF 2.0 六个职能，应急时各管什么</h2>
+      <p><strong>治理（Govern）：</strong>出事之前就要定好——谁是应急负责人？出了多大的事要上报给谁？什么情况下可以断网、关系统？这些决定不能等到凌晨三点再开会讨论，要事先写进应急预案，管理层签字。治理还包括明确各部门的职责：IT 负责技术处置，法务负责合规和报警，公关负责对外口径。</p>
+      <p><strong>识别（Identify）：</strong>平时就要知道自己有什么资产、哪些最重要、最大的风险在哪。勒索来了，先问“被加密的是哪台服务器？里面是什么数据？有没有备份？”——答不上来，响应就无从下手。这就是<a href="m6c11-risk-management.html">模块六第 11 章</a>风险管理和<a href="m6c21-change-asset.html">第 21 章</a>资产管理在应急时的价值。</p>
+      <p><strong>保护（Protect）：</strong>平时的防护措施——补丁、防火墙、EDR、备份、权限控制——决定了攻击能走多远。保护做得好，应急时要处理的就是“一台机器”而不是“整个内网”。</p>
+      <p><strong>检测（Detect）：</strong>发现事件、分诊、定级。第 1、2 章讲的 SOC 监控和 SIEM 告警就是这个职能。检测阶段要回答：这是真事件还是误报？影响范围多大？严重程度是几级？</p>
+      <p><strong>响应（Respond）：</strong>确认是真事件后，开始处置：遏制（隔离被感染的机器、封恶意 IP、断开可疑连接）、根除（清除恶意程序、关掉攻击者留下的后门、改掉被盗的密码）、沟通（内部上报、必要时通知客户和监管机构）。遏制讲究“快而准”：断网太晚，勒索会扩散；断网太早、太粗暴，业务全停、证据丢失。</p>
+      <p><strong>恢复（Recover）：</strong>把系统恢复到正常：从备份恢复数据、重装被感染的机器、验证系统干净了、逐步恢复业务。恢复完了还要做<strong>事后复盘</strong>：这次事件是怎么发生的、哪个环节可以做得更好、预案要改哪几条——复盘的产出要写回预案里，下次不再犯同样的错。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="NIST CSF 2.0 六个职能应急响应流程图">
+          <rect x="20" y="30" width="160" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="53" text-anchor="middle" font-size="13" fill="#1a1a2e">治理 Govern</text>
+          <text x="100" y="72" text-anchor="middle" font-size="11" fill="#666">预案、职责、上报线</text>
+          <rect x="200" y="30" width="160" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="53" text-anchor="middle" font-size="13" fill="#1a1a2e">识别 Identify</text>
+          <text x="280" y="72" text-anchor="middle" font-size="11" fill="#666">资产、风险、重要性</text>
+          <rect x="380" y="30" width="160" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="53" text-anchor="middle" font-size="13" fill="#1a1a2e">保护 Protect</text>
+          <text x="460" y="72" text-anchor="middle" font-size="11" fill="#666">补丁、防火墙、备份</text>
+          <rect x="20" y="130" width="160" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="153" text-anchor="middle" font-size="13" fill="#1a1a2e">检测 Detect</text>
+          <text x="100" y="172" text-anchor="middle" font-size="11" fill="#666">发现、分诊、定级</text>
+          <rect x="200" y="130" width="160" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="153" text-anchor="middle" font-size="13" fill="#1a1a2e">响应 Respond</text>
+          <text x="280" y="172" text-anchor="middle" font-size="11" fill="#666">遏制、根除、沟通</text>
+          <rect x="380" y="130" width="160" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="153" text-anchor="middle" font-size="13" fill="#1a1a2e">恢复 Recover</text>
+          <text x="460" y="172" text-anchor="middle" font-size="11" fill="#666">恢复业务、复盘改进</text>
+          <rect x="130" y="230" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="253" text-anchor="middle" font-size="13" fill="#1a1a2e">事后复盘 → 改预案 → 下次更快</text>
+          <text x="280" y="273" text-anchor="middle" font-size="11" fill="#666">应急响应是循环，不是直线</text>
+          <text x="280" y="318" text-anchor="middle" font-size="12" fill="#666">平时治理识别保护，出事检测响应，事后恢复复盘</text>
+        </svg>
+        <figcaption>图：NIST CSF 2.0 六个职能——应急响应是平时就开始、事后还要复盘的循环</figcaption>
+      </figure>
+
+      <h2>严重程度分级：先定级，再动手</h2>
+      <p>不是每个事件都要半夜叫醒全公司。成熟的团队会事先定好分级标准，比如：<strong>一级（严重）</strong>——核心业务中断、数据泄露、勒索加密，立即启动应急预案，全员响应；<strong>二级（高）</strong>——单台重要服务器被入侵、内部横向移动，工作时间 1 小时内响应；<strong>三级（中）</strong>——单台普通电脑中了广告软件、一次钓鱼未遂，按正常工单处理；<strong>四级（低）</strong>——一次被拦住的扫描、一次误报，记录即可。分级标准要写清楚、贴在墙上——凌晨三点值班的人，不应该靠“感觉”决定要不要叫醒主管，而应该对照标准做决定。分级还要考虑两个维度：<strong>影响</strong>（多少业务、多少数据受影响）和<strong>范围</strong>（一台机器还是整个内网），这和<a href="m6c11-risk-management.html">第 11 章</a>的风险定级思路是一致的。</p>
+
+      <h2>应急预案长什么样</h2>
+      <p>一份能用的应急预案，不需要几百页，关键是这几页：<strong>联系人清单</strong>（应急负责人、安全团队、IT 主管、法务、公关的电话，打印出来贴墙上——系统都挂了的时候，你查不了通讯录）；<strong>分级标准</strong>（上一节的四级）；<strong>处置剧本</strong>（针对勒索、数据泄露、钓鱼、DDoS 等常见场景，每种写一页“第一步做什么、第二步做什么”）；<strong>沟通模板</strong>（内部通知、客户通知、监管上报的草稿，事发时改几个数字就能发）；<strong>证据保全要求</strong>（先拍照、先导出日志、再动手——第 6 章取证会细讲）。预案写完还不算完，要<strong>演练</strong>：每季度做一次桌面推演（大家坐下来，假设一个场景，口头走一遍流程），每年做一次实战演练。演练中发现预案写得不对的地方，当场改掉——没有演练过的预案，等于没有预案。</p>
+
+      <h2>演练：桌面推演怎么做</h2>
+      <p>预案写好了，要演练才知道管不管用。最省钱的演练叫<strong>桌面推演</strong>：不用真的断网、真的关系统，大家坐在一张桌子旁，主持人念一个场景——“财务服务器被勒索加密了，现在是凌晨三点”——然后每个人按自己的角色说“接下来我做什么”。推演的价值不在“演得像”，在“发现预案里没写清楚的地方”：谁负责通知客户？备份恢复要找谁授权？对外口径谁来定？每次推演都会暴露几个这样的问题，当场记下来、改预案，下次推演再验证。</p>
+      <p>桌面推演的流程很简单：定场景（选一种最可能的事件，比如勒索、钓鱼导致账号被盗）、定参与人（安全、IT、业务、法务、公关都要有人）、走流程（按时间线推进，主持人不断抛出新情况——“备份恢复失败了怎么办？”“媒体打电话来问怎么办？”）、做记录（记下每个暴露的问题和改进意见）。一次推演一到两个小时，每季度做一次，就能让预案一直保持“能用”的状态。</p>
+      <p>比桌面推演更进一步的是<strong>实战演练</strong>：真的在测试环境里模拟一次攻击、真的走一遍隔离和恢复流程、真的计时。实战演练成本高，一年做一次就够了，但它能发现桌面推演发现不了的问题——比如备份恢复实际要花 6 小时，而 RTO 只给了 4 小时（第 9 章会讲 RTO）。两种演练结合起来，预案才算真正“活着”。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我经历过一次真实的勒索事件，最大的教训不是技术上的，而是顺序上的：有人一上来就把被感染的服务器关机了——以为这样能止损，结果内存里的证据全没了，攻击者怎么进来的、偷了什么数据，全都查不出来。所以应急现场的第一铁律是：先保全证据，再动手处置。拍照、导出日志、做内存镜像，这些事要抢在断网、关机之前做。第二个教训是沟通：技术团队闷头处理了六个小时，业务部门完全不知道发生了什么，客户电话打进来没人能回答——后来我们规定，确认一级事件后 30 分钟内必须发出第一份内部通报，哪怕只写“正在处理，详情稍后更新”。应急响应一半是技术，一半是沟通，沟通晚了，技术再好也补不回来。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：给你的虚拟机写一份一页纸的“迷你应急预案”——假设虚拟机中了勒索软件，写清楚：第一步做什么、找谁、怎么保全证据、怎么从备份恢复。<br>2. 对照本章的四级标准，给三个场景定级：① 一台测试虚拟机中了广告软件；② 你的虚拟机半夜被境外 IP 登录成功；③ 虚拟机里的全部文件被加密并留下勒索信。写出每级的定级理由。<br>3. 在虚拟机里做一次“桌面推演”：假设场景②发生了，口头走一遍流程——先保全什么证据、隔离哪台机器、通知谁、怎么恢复，计时看看你多久能走完。<br>4. 检查你的虚拟机备份（<a href="m6c14-security-check-lab.html">模块六第 14 章</a>做过备份练习的话直接用它）：备份在不在？能不能恢复一个文件？恢复不了的备份，应急时等于没有备份。</p>
+      <h2>避坑</h2>
+      <p>别等出事了再想流程：预案、联系人、分级标准都要事先写好、演练过；别一上来就关机断网：先保全证据（拍照、导日志、内存镜像），再动手处置；别闷头处理不沟通：一级事件 30 分钟内必须发出第一份内部通报；别用旧的四阶段说法：按 NIST SP 800-61 Rev.3，对应 CSF 2.0 六个职能，治理、识别、保护平时就做，检测、响应、恢复事中事后做；别在真实系统上演练入侵：所有推演和处置练习只在你自己的虚拟机里做。</p>
+      <p>模块六的风险管理告诉我们“先评估风险再决定怎么防”，这一章把这套思路推进到了“出事了怎么办”——按 NIST SP 800-61 Rev.3 的六个职能，平时治理、识别、保护，出事检测、响应，事后恢复、复盘。光讲流程还不够，下一章我们要真刀真枪练一次：<a href="m8c5-simulated-intrusion-lab.html">动手：分析一次模拟入侵——对着日志破案</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>NIST SP 800-61 Rev.3 不再用旧的四阶段说法，而是对应 CSF 2.0 六个职能：治理、识别、保护、检测、响应、恢复。</li>
+          <li>治理、识别、保护是平时的功夫：预案、资产、防护措施决定了出事时的速度和损失大小。</li>
+          <li>检测、响应、恢复是事中事后的功夫：分诊定级、遏制根除、恢复业务，事后还要复盘并改预案。</li>
+          <li>严重程度要事先分级（一到四级），按影响和范围定级，凌晨值班的人对照标准做决定，不靠感觉。</li>
+          <li>应急现场第一铁律：先保全证据，再动手处置；一级事件 30 分钟内必须发出第一份内部通报。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m8c3-attack-defense-hunting.html">← 上一章：第 3 章：ATT&amp;CK 防御、威胁狩猎与检测工程</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m8c5-simulated-intrusion-lab.html">下一章：第 5 章：动手：分析一次模拟入侵 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

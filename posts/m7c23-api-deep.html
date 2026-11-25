@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 23 章：API 安全深入：GraphQL 与 JWT 攻击 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 23 章：API 安全深入：GraphQL 与 JWT 攻击</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>上一章（<a href="m7c22-api-security.html">第 22 章</a>）我们按 OWASP API Top 10 把接口的漏洞过了一遍。这一章往深处挖两种现在最常见的接口技术：GraphQL 和 JWT。先说一句：这两种技术本身不是漏洞，漏洞出在“用得不对”上——GraphQL 用得不对，等于把数据库的查询权交给了对方；JWT 用得不对，等于把“证明你是谁”的钥匙交给了对方。所有演示只在你自己的靶场虚拟机里做。</p>
+      <p>先讲 <strong>GraphQL</strong>。普通的 REST API 是“一接口一功能”：查订单调一个接口，查用户调另一个接口。GraphQL 是“一接口全都要”：客户端发一个查询，写明“我要订单的编号、金额、用户的手机号”，服务器按查询返回——客户端想查什么就查什么。这很灵活，但也带来一个问题：<strong>如果服务器不限制查询的内容和深度，攻击者可以一次查走整个数据库</strong>。比如一个查询里嵌套十层“用户的好友的好友的好友……”，服务器会老老实实地一层一层查下去，直到被拖垮——这叫深度查询攻击。还有<strong>内省（Introspection）</strong>：GraphQL 默认允许客户端问一句“你都有哪些字段”，服务器会把完整的接口结构（包括那些前端没用过的敏感字段）全告诉对方——攻击者连猜都不用猜，直接照着清单查。</p>
+
+      <h2>GraphQL 的攻击面</h2>
+      <p>GraphQL 有四个常见的攻击点。第一，<strong>内省泄露结构</strong>：生产环境要关掉内省，或者至少不让未登录用户问。第二，<strong>深度与复杂度攻击</strong>：不限制查询嵌套层数和字段数量，一个查询就能拖垮服务器；防御是设查询深度上限、复杂度上限和超时。第三，<strong>批量查询</strong>：一次请求里塞几百个查询，绕过按“请求次数”算的限流——限流要按“查询复杂度”算，而不是按请求数算。第四，<strong>越权换了个地方</strong>：GraphQL 里的 BOLA 和第 22 章讲的一模一样——查询里把用户 ID 一改，就查到了别人的数据；只不过这里改的不是 URL 里的数字，是查询语句里的参数。记住：<strong>换了接口形态，越权的问题一个没少</strong>。</p>
+
+      <h2>JWT 攻击：令牌是怎么被伪造的</h2>
+      <p>再讲 <strong>JWT（JSON Web Token）</strong>。JWT 是现在最常见的 API 令牌格式，它由三部分组成：头部（Header，说“我是用什么算法签名的”）、载荷（Payload，说“我是哪个用户、有什么权限、什么时候过期”）、签名（Signature，服务器用密钥对前两部分算出来的防伪标记）。服务器收到 JWT，先验签名：签名对得上，就相信载荷里写的东西。JWT 的攻击，几乎全是冲着“签名验证”来的。</p>
+      <p>第一种经典攻击是 <strong>alg none（空算法）</strong>：攻击者把头部的算法改成 none（意思是“不用签名”），再把载荷里的用户改成管理员，服务器如果接受了“不用签名的令牌”，就等于谁都能伪造身份。防御：服务器只接受白名单里的算法，绝不接受 none。第二种是<strong>弱密钥爆破</strong>：如果服务器签发 JWT 用的密钥是弱密码（比如 123456），攻击者可以离线暴力猜出密钥，然后自己签发任意令牌。防御：密钥要用长随机串，定期更换。第三种是 <strong>kid 与 jku 注入</strong>：JWT 头部有个 kid 字段（说“去哪找验证用的密钥”）和 jku 字段（说“密钥的地址是这个 URL”），如果服务器不加验证就按攻击者给的地址去取密钥，攻击者就能让服务器用攻击者自己的密钥验签——自己签、自己验，当然通过。防御：kid 只允许白名单里的值，jku 只允许信任的地址，绝不接受用户提供的密钥地址。第四种是<strong>令牌长期有效、不吊销</strong>：JWT 一旦签发，在过期之前服务器没法单独作废它——用户改了密码、丢了账号，旧令牌照样能用。防御：令牌有效期设短，重要操作重新验证身份，关键场景用服务端维护的吊销列表。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="JWT三部分结构与四种攻击手法图">
+          <rect x="20" y="20" width="160" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="42" text-anchor="middle" font-size="13" fill="#1a1a2e">头部 Header</text>
+          <text x="100" y="60" text-anchor="middle" font-size="11" fill="#666">用什么算法签名</text>
+          <rect x="200" y="20" width="160" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="13" fill="#1a1a2e">载荷 Payload</text>
+          <text x="280" y="60" text-anchor="middle" font-size="11" fill="#666">你是谁、有什么权限</text>
+          <rect x="380" y="20" width="160" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="42" text-anchor="middle" font-size="13" fill="#1a1a2e">签名 Signature</text>
+          <text x="460" y="60" text-anchor="middle" font-size="11" fill="#666">防伪标记</text>
+          <rect x="20" y="120" width="120" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">alg none</text>
+          <text x="80" y="160" text-anchor="middle" font-size="11" fill="#666">不用签名也认</text>
+          <rect x="150" y="120" width="120" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="210" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">弱密钥爆破</text>
+          <text x="210" y="160" text-anchor="middle" font-size="11" fill="#666">猜出密钥自己签</text>
+          <rect x="280" y="120" width="120" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="340" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">kid / jku 注入</text>
+          <text x="340" y="160" text-anchor="middle" font-size="11" fill="#666">骗服务器用假密钥</text>
+          <rect x="410" y="120" width="130" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="475" y="142" text-anchor="middle" font-size="13" fill="#1a1a2e">长期有效</text>
+          <text x="475" y="160" text-anchor="middle" font-size="11" fill="#666">过期前无法作废</text>
+          <rect x="140" y="220" width="280" height="56" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="244" text-anchor="middle" font-size="14" fill="#1a1a2e">GraphQL：关内省、限深度、按复杂度限流</text>
+          <text x="280" y="264" text-anchor="middle" font-size="11" fill="#666">换了接口形态，越权问题一个没少</text>
+          <text x="280" y="312" text-anchor="middle" font-size="12" fill="#666">签名验不过，载荷写什么都不能信</text>
+        </svg>
+        <figcaption>图：JWT 的三部分与四种攻击手法，GraphQL 的三条防线</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>JWT 有一个新手最容易踩的坑：以为“JWT 是加密的”。不是——JWT 默认只是编码，不是加密，载荷里的内容任何人解码都能看到（签名防的是篡改，不是偷看）。所以千万别把敏感信息（比如密码、身份证号）放进 JWT 的载荷里。另一个坑是把 JWT 当成“万能钥匙”：有效期设成 30 天、永不过期，一旦泄露就是一个月的通行证。我给开发的建议就三条：有效期按分钟算（比如 15 分钟），配一个刷新令牌机制；密钥用长随机串，放进密钥管理系统，别写在代码里；验签只认白名单算法，none 永远不接受。这三条做到了，JWT 的大部分攻击就没戏了。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的靶场虚拟机里：找一个带 JWT 的本地靶场，登录后复制你的 JWT，用在线解码思路（或本地工具）把它拆成三部分，读出头部和载荷里写了什么，确认载荷里有没有敏感信息。<br>2. 只在你自己的靶场虚拟机里：把 JWT 载荷里的用户角色改成管理员，但不改签名，再发一次请求，看服务器拦不拦得住——理解“签名防篡改”是什么意思。<br>3. 只在你自己的靶场虚拟机里：把 JWT 头部的算法改成 none（去掉签名部分），再发一次，看服务器接不接受——理解 alg none 攻击的原理（只在靶场里验证服务器行为，不用于真实系统）。<br>4. 只在你自己的靶场虚拟机里：如果靶场有 GraphQL 接口，先发一个内省查询，看服务器返回什么；再发一个嵌套很深的查询，看服务器有没有深度限制；把两次结果写进笔记。</p>
+      <h2>避坑</h2>
+      <p>别把 JWT 当加密：载荷是编码过的明文，敏感信息别往里放；别接受 alg none：验签算法只认白名单；别用弱密钥签 JWT：密钥要长随机、定期换、别写代码里；别让令牌长期有效：有效期按分钟算，重要操作重新验证；GraphQL 生产环境要关内省、限深度、按复杂度限流；所有实验只在自己的靶场虚拟机里做。</p>
+      <p>GraphQL 和 JWT 讲完了：前者的问题是“查得太多”，后者的问题是“签得太松”。下一章（<a href="m7c24-devsecops.html">第 24 章</a>）换一个视角：与其一次次在上线之后找漏洞，不如把安全放进开发流程里——DevSecOps，安全要进开发流程。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>GraphQL 一接口全都要：内省会泄露接口结构，深度查询能拖垮服务器，批量查询能绕过按次数算的限流。</li>
+          <li>JWT 由头部、载荷、签名三部分组成；签名防篡改、不防偷看，载荷里别放敏感信息。</li>
+          <li>JWT 四种攻击：alg none、弱密钥爆破、kid 与 jku 注入、令牌长期有效无法吊销。</li>
+          <li>防御：验签只认白名单算法，密钥用长随机串并定期更换，令牌有效期按分钟算。</li>
+          <li>换了接口形态，越权问题一个没少：GraphQL 里同样要查 BOLA。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c22-api-security.html">← 上一章：第 22 章：API 安全：OWASP API Top 10</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c24-devsecops.html">下一章：第 24 章：安全开发生命周期 DevSecOps →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

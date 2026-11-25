@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux 管理专项第 5 章：防火墙 nftables · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Linux 管理专项第 5 章：防火墙 nftables</h1>
+      <div class="meta"><span class="tag">Linux 管理专项</span>2026-11-25 · Linux 管理专项</div>
+      <p>服务器的网络大门，不能谁想进就进。Linux 的防火墙就是守门的：按你写的规则，决定每个网络包是放行还是丢弃。现代 Linux 的防火墙叫 <strong>nftables</strong>，替代了老一代的 iptables。</p>
+      <p>这一章讲 nftables 的基本概念：表、链、规则，怎么写一条“只放行 SSH 和网站”的规则，怎么查规则生没生效，怎么排障。目标是：学完这一章，你能给自己的虚拟机配一套“默认拒绝、按需放行”的防火墙。</p>
+      <p>先记住防火墙的第一原则：<strong>默认拒绝、按需放行</strong>。不是“先放行、再堵坏的”，而是“先全堵上，再一个个放行需要的”。这个顺序反了，安全就无从谈起。</p>
+      <h2>nftables 是什么：表、链、规则</h2>
+      <p>nftables 的结构是三层：<strong>表（table）</strong>是最外层，按协议族分（比如 ip 表管 IPv4，inet 表同时管 IPv4 和 IPv6）；<strong>链（chain）</strong>是表里的处理步骤，分 input（进来的包）、output（出去的包）、forward（转发的包）；<strong>规则（rule）</strong>是链里的每一条判断：符合条件就放行（accept）、丢弃（drop）或拒绝（reject）。</p>
+      <p>一个包从网卡进来，先过 input 链，按规则一条条比对：第一条匹配的规则决定它的命运，比对完没匹配上，就按链的默认策略处理。所以链的默认策略一般设为 drop（丢弃），再在前面加放行规则——这就是“默认拒绝、按需放行”的落地。</p>
+      <p>和 iptables 比，nftables 的语法更简洁、性能更好，还支持集合（set）和映射（map）这些高级功能。Ubuntu 22.04 之后、Debian 11 之后，nftables 是默认的防火墙后端。</p>
+      <h2>写一套基础规则：只放行需要的</h2>
+      <p>一套最小可用的服务器防火墙规则，大概是这样：放行本地回环（lo 接口，127.0.0.1 自己跟自己说话）；放行已建立的连接（ct state established,related，已建立的连接的回包要放行，否则你发出去的请求回不来）；放行 SSH（tcp 22 或你改过的端口）；放行网站（tcp 80、443）；其他全部丢弃。</p>
+      <p>写规则的命令是 nft（需要 root 或 sudo）：比如 nft add table inet filter、nft add chain inet filter input '{ type filter hook input priority 0; policy drop; }'、nft add rule inet filter input tcp dport 22 accept。规则也可以写进配置文件 /etc/nftables.conf，开机自动加载（systemctl enable nftables）。</p>
+      <p>写规则之前先想清楚：这台服务器要提供什么服务？每个服务用哪个端口？只放行这些端口，其他全堵上。不知道要放行什么就先看监听端口：ss -tlnp（预备课第 10 课讲过）列出所有监听的端口，再逐个问：这个端口是干什么的？还需要吗？</p>
+      <h2>查规则与排障</h2>
+      <p>查当前规则用 nft list ruleset，一次看全；查某个表的规则用 nft list table inet filter。改完规则要验证：从另一台机器（或虚拟机外）试着连一下该放行的端口（能连上）和不该放行的端口（连不上），两边都验证了才算配好。</p>
+      <p>排障时最常见的两种情况：第一，该放行的没放行——服务起着，但外面连不上，先看防火墙规则里有没有放行这个端口，再看服务是不是只监听了本地地址（127.0.0.1）；第二，不该放行的放行了——规则写得太宽（比如放行了所有端口），要收紧。</p>
+      <p>还有一个重要习惯：改防火墙规则之前，先确认你有别的办法进机器（虚拟机控制台），或者设一个定时恢复（比如用 at 或 systemd timer 在 10 分钟后清空规则），防止把自己锁在外面。改 SSH 配置的“救生绳”思路，在这里同样适用。</p>
+      <h2>防火墙不是万能的</h2>
+      <p>防火墙管的是“网络包能不能进出”，管不了“放进来的包里有没有恶意内容”。比如网站的 443 端口放行了，攻击者照样能通过这个端口发恶意请求——那是 Web 应用防火墙和程序本身要管的事。防火墙是第一道门，不是唯一的门。</p>
+      <p>防火墙要和前几章的措施配合：SSH 加固（第 4 章）管远程登录，包管理（第 1 章）管软件来源，用户管理（第 2 章）管谁能干什么，日志（第 6 章）管出事了能不能查到。多层防护，每层挡一部分，才是纵深防御。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="nftables 防火墙图：网络包进入 input 链，按规则逐条比对，放行本地回环、已建立连接、SSH 与网站，其余默认丢弃">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="180" y="10" width="200" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">表 table：inet</text>
+          <text x="280" y="54" text-anchor="middle" font-size="11" fill="#666">同时管 IPv4 与 IPv6</text>
+          <rect x="20" y="90" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">链 chain：input</text>
+          <text x="140" y="134" text-anchor="middle" font-size="11" fill="#666">进来的包走这条链</text>
+          <rect x="300" y="90" width="240" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">规则 rule：逐条比对</text>
+          <text x="420" y="134" text-anchor="middle" font-size="11" fill="#666">第一条匹配的说了算</text>
+          <rect x="20" y="190" width="240" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">放行：回环、已建连接、SSH、网站</text>
+          <text x="140" y="234" text-anchor="middle" font-size="11" fill="#666">只放行需要的</text>
+          <rect x="300" y="190" width="240" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">默认策略 drop</text>
+          <text x="420" y="234" text-anchor="middle" font-size="11" fill="#666">其余全部丢弃</text>
+          <line x1="280" y1="54" x2="280" y2="88" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="140" y1="142" x2="140" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="420" y1="142" x2="420" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="290" text-anchor="middle" font-size="12" fill="#666">默认拒绝、按需放行：先全堵上，再一个个放行</text>
+          <text x="280" y="315" text-anchor="middle" font-size="12" fill="#666">查规则：nft list ruleset；改规则前先留好进机器的办法</text>
+
+        </svg>
+        <figcaption>图：nftables 三层结构——表、链、规则；默认拒绝，按需放行</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ nftables 是现代 Linux 防火墙，三层结构：表、链、规则。</p>
+      <p>□ 防火墙第一原则：默认拒绝、按需放行，先全堵上，再一个个放行需要的。</p>
+      <p>□ 最小规则集：放行回环、已建立的连接、SSH、网站端口，其余全部丢弃。</p>
+      <p>□ 查规则用 nft list ruleset，改完要两边验证：该通的通、该堵的堵。</p>
+      <p>□ 改防火墙前先留好进机器的办法，防火墙只管包的进出，不管包里的恶意内容。</p>
+      <p>□ 把本章的命令和检查步骤抄进自己的笔记，下次遇到同类问题直接用。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>我配防火墙的习惯，是先写在纸上：这台服务器要提供什么服务、每个服务哪个端口、谁可以连。写清楚了再敲命令，敲完两边验证（该通的通、该堵的堵）。有一次同事直接在服务器上敲了一条“默认丢弃所有入站”，结果把自己的 SSH 也堵了，只能去机房接显示器才恢复——从那以后我们组里改防火墙都加一条“10 分钟后自动恢复”的保险。记住：防火墙规则写错了，代价是把自己锁在门外；写之前先想好怎么回来。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的 Linux 虚拟机里：运行 ss -tlnp，列出所有监听的端口，把每个端口和它背后的服务对应起来，问一句：这个端口还需要对外开放吗？<br>2. 在虚拟机里看看 nftables 的状态：sudo nft list ruleset（如果没有规则，会显示空），再运行 sudo systemctl status nftables，看看服务在不在；再 cat /etc/nftables.conf（如果存在），看看默认配置长什么样。<br>3. 在虚拟机里写一套最小规则练手：放行回环、已建立的连接、SSH 端口，其余丢弃，写进 /etc/nftables.conf，运行 sudo systemctl enable --now nftables 加载它，再从宿主机试着 SSH 登录虚拟机，验证规则生效；练完把规则恢复成原样。</p>
+      <h2>避坑</h2>
+      <p>别在生产系统、别人的服务器上练 nft 命令：动手只在你自己的虚拟机里做；改防火墙前先留好进机器的办法：虚拟机控制台或定时自动恢复，别把自己锁外面；默认策略设 drop 之前，先确认放行规则已经写好了：顺序反了，SSH 立刻就断；防火墙管包不管内容：放行了 443，不等于网站就安全了，应用层还要另外防护。</p>
+      <p>防火墙是网络大门的守门人：默认拒绝、按需放行，规则写清、两边验证。最后一章我们看出了问题去哪翻记录：<a href="linux-c6-logs-journald.html">第 6 章</a>日志与 journald——Linux 的日志存在哪、怎么查、怎么长期保存。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>nftables 是现代 Linux 防火墙，三层结构：表、链、规则。</li>
+          <li>防火墙第一原则：默认拒绝、按需放行，先全堵上，再一个个放行需要的。</li>
+          <li>最小规则集：放行回环、已建立的连接、SSH、网站端口，其余全部丢弃。</li>
+          <li>查规则用 nft list ruleset，改完要两边验证：该通的通、该堵的堵。</li>
+          <li>改防火墙前先留好进机器的办法，防火墙只管包的进出，不管包里的恶意内容。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="linux-c4-ssh-hardening.html">← 上一章：第 4 章：SSH 加固</a>
+        <a href="../course.html">课程目录</a>
+        <a href="linux-c6-logs-journald.html">下一章：第 6 章：日志与 journald →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

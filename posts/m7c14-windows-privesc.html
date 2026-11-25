@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 14 章：Windows 提权 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 14 章：Windows 提权</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>上一章的 Linux 提权，找的是 sudo、SUID、计划任务这些“配错了的地方”。这一章换到 Windows，思路完全一样，地方完全不同：Windows 的提权点长在服务、注册表、令牌和用户账户控制（UAC）上。你在 Windows 电脑上学习，理解 Windows 提权还有一层现实意义：你自己的电脑、你修过的客户的电脑，用的都是这套机制——知道它哪里会出问题，才知道平时该怎么配。</p>
+      <p>先说 Windows 的权限模型和 Linux 的关键区别。Linux 是“root 与非 root”的二分法，Windows 是“令牌 + 完整性级别 + UAC”的组合：每个进程都带着一个访问令牌，写着你是谁、属于哪些组、有什么特权；UAC 是那道“你要允许此应用对设备进行更改吗”的确认框——它不是杀毒软件，而是“普通用户平时用受限令牌、需要管理员权限时再提升”的机制。提权的目标，就是拿到一个带着管理员令牌、甚至 SYSTEM 令牌的进程。SYSTEM 是比管理员还高的本地系统账号，很多服务就是以 SYSTEM 身份跑的。本章所有实验只在自己的虚拟机靶场里做。</p>
+
+      <h2>最常见的五种提权路子</h2>
+      <p><strong>第一，UAC 绕过。</strong>有些系统组件在提升权限时不会弹确认框（自动提升），攻击者利用这些组件的特性，不经过用户确认就拿到管理员令牌。防御：UAC 不要调到“从不通知”，管理员账号日常使用也不要一直用最高权限登录——第 13 章讲过的最小权限原则，在 Windows 上同样适用。</p>
+      <p><strong>第二，服务权限配置不当。</strong>Windows 服务很多是以 SYSTEM 身份跑的。如果某个服务的配置普通用户能改（比如服务的可执行文件路径普通用户能写、服务注册表项权限太松），攻击者把服务的可执行文件换成自己的程序，等服务一重启，程序就以 SYSTEM 身份跑了。检查工具：<code>sc qc 服务名</code> 看服务配置，<code>accesschk</code> 查权限。</p>
+      <p><strong>第三，不带引号的服务路径（Unquoted Service Path）。</strong>如果服务的可执行文件路径里有空格、又没加引号，比如 <code>C:\Program Files\My Service\service.exe</code>，Windows 会按空格拆开依次尝试：<code>C:\Program.exe</code>、<code>C:\Program Files\My.exe</code>……攻击者只要在 <code>C:\</code> 下放一个叫 <code>Program.exe</code> 的恶意程序，服务一启动就先执行它——以 SYSTEM 身份。修复：服务路径加引号，或者把 <code>C:\</code> 根目录的写权限收紧。</p>
+      <p><strong>第四，AlwaysInstallElevated。</strong>这是两个注册表项（<code>HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer</code> 下的 <code>AlwaysInstallElevated</code>），如果同时被设为 1，任何用户装 MSI 安装包都会以 SYSTEM 身份安装——攻击者自己打一个 MSI 包一装，就拿到 SYSTEM 权限了。检查：看这两个注册表项是不是都是 1；修复：除非确实需要，否则关掉它。</p>
+      <p><strong>第五，令牌窃取与 Potato 家族。</strong>Windows 里很多服务带着高权限令牌在跑，攻击者通过诱使系统向自己发起认证（比如让系统去访问一个攻击者控制的 SMB 地址），拿到高权限令牌再“冒充”它。历史上著名的 Potato 系列（Hot Potato、Rotten Potato、Juicy Potato）都是这个思路的不同变体，针对不同版本的 Windows。防御：打补丁、关掉不必要的服务、网络隔离，少给令牌被窃取的机会。</p>
+
+      <h2>自动化枚举工具：WinPEAS 与 Seatbelt</h2>
+      <p>和 Linux 的 LinPEAS 对应，Windows 有 <strong>WinPEAS</strong> 和 <strong>Seatbelt</strong>。在靶机上跑一遍，它们会把系统信息、补丁情况、服务配置、注册表项、计划任务、用户权限、敏感文件一把全列出来，标出可疑项。同样的话再说一遍：输出是线索不是结论，标红的每一项都要亲手验证。WinPEAS 的输出很长，第一次跑会被信息量吓到——正确用法是先看标红和标黄的部分，再按“服务 → 注册表 → 计划任务 → 用户”的顺序过一遍。</p>
+
+      <h2>提权成功之后，先做什么</h2>
+      <p>和 Linux 一样：先固定证据——<code>whoami</code> 证明自己是管理员或 SYSTEM、提权用的命令和输出、提权点的配置截图，全部记下来。再确认影响范围：这个提权点是单台机器的问题，还是域里所有机器的通病（比如同一个组策略下发的错误配置）？报告里的修复建议要具体：服务路径加引号、收紧哪个服务的权限、关掉 AlwaysInstallElevated、UAC 调到哪个级别——每一条都要能照着做。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Windows提权五种路子图：UAC绕过、服务权限、不带引号服务路径、AlwaysInstallElevated、令牌窃取">
+          <rect x="20" y="20" width="520" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="45" text-anchor="middle" font-size="13" fill="#1a1a2e">Windows 提权目标：拿到管理员令牌，甚至 SYSTEM 令牌</text>
+          <rect x="20" y="90" width="160" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">UAC 绕过</text>
+          <text x="100" y="134" text-anchor="middle" font-size="11" fill="#666">自动提升的组件</text>
+          <rect x="200" y="90" width="160" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">服务权限不当</text>
+          <text x="280" y="134" text-anchor="middle" font-size="11" fill="#666">服务文件能被改写</text>
+          <rect x="380" y="90" width="160" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">不带引号的路径</text>
+          <text x="460" y="134" text-anchor="middle" font-size="11" fill="#666">C:\Program.exe 被先执行</text>
+          <rect x="20" y="180" width="250" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="204" text-anchor="middle" font-size="13" fill="#1a1a2e">AlwaysInstallElevated</text>
+          <text x="145" y="224" text-anchor="middle" font-size="11" fill="#666">两个注册表项同时为 1</text>
+          <rect x="290" y="180" width="250" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="204" text-anchor="middle" font-size="13" fill="#1a1a2e">令牌窃取（Potato 家族）</text>
+          <text x="415" y="224" text-anchor="middle" font-size="11" fill="#666">诱使系统认证，冒充高权限令牌</text>
+          <rect x="120" y="266" width="320" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="294" text-anchor="middle" font-size="13" fill="#1a1a2e">枚举工具：WinPEAS / Seatbelt——输出是线索，要验证</text>
+        </svg>
+        <figcaption>图：Windows 提权的五种常见路子——思路与 Linux 相通，位置完全不同</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>Windows 提权最容易让人“看花眼”：WinPEAS 一跑，几千行输出，标红标黄一大片，新手要么全信、要么全不看。我的办法是“先服务，后注册表”：服务权限和不带引号的路径这两类，验证起来最快（<code>sc qc</code> 看一眼、路径里有没有空格看一眼），命中率也最高，先把这两类过完，再去看注册表和计划任务。另外一个血泪教训：有一次我在靶机上试不带引号的服务路径，写了个测试程序放进 C 盘根目录，忘了服务重启才会触发，等了半天没反应，还以为方法不对——后来才明白，服务要重启（或等系统重启）才会去执行那个路径。提权很多时候不是“方法不对”，是“触发条件没满足”，多等一步、多重启一次，答案就出来了。还有，Windows 提权实验一定要在快照上做，改服务、改注册表改坏了，恢复快照是最快的后悔药。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在自己的虚拟机里：给 Windows 靶机拍快照，拿到一个普通用户 shell 后，先跑 <code>whoami /priv</code> 看当前令牌有什么特权，再跑 WinPEAS，把标红的项列出来。<br>2. 故意配出一个提权点：在自己的靶机上建一个路径带空格、又不带引号的测试服务，再在 C 盘根目录放一个测试程序，重启服务后看它是不是被执行了；实验结束删掉测试服务和测试程序。<br>3. 检查 AlwaysInstallElevated：在靶机注册表里看 <code>HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer</code> 下的 AlwaysInstallElevated 是不是 1，再看 HKCU 下的对应项，理解为什么“两个同时为 1”才是问题。<br>4. 写修复建议：针对你找到的提权点，写三条具体到操作的修复措施（服务路径加引号、收紧服务权限、关掉 AlwaysInstallElevated），并按影响 × 可能性定个级。</p>
+      <h2>避坑</h2>
+      <p>只在自己的虚拟机靶场里做 Windows 提权实验：对真实系统提权是越界行为；别把 WinPEAS 的输出当结论：标红的每一项都要亲手验证；注意触发条件：改了服务配置要重启服务才会生效，别急着下结论；UAC 别调到“从不通知”：日常也不要一直用最高权限账号登录；修复建议要具体到操作：服务路径加引号、收紧权限、关掉 AlwaysInstallElevated，每条都要能照着做；动手前先拍快照：改服务、改注册表改坏了，恢复快照最快。</p>
+      <p>Windows 提权讲完了，Linux 和 Windows 两条提权路都走了一遍。下一章是模块七第 15 章，也是本阶段的收尾：<a href="m7c15-post-exploitation-report.html">第 15 章：后渗透与报告</a>——拿到权限之后干什么、怎么收尾、怎么写一份让人愿意照着改的报告。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>Windows 提权的目标是拿到管理员令牌甚至 SYSTEM 令牌；UAC 是“平时受限、需要时再提升”的机制，不是杀毒软件。</li>
+          <li>五种常见路子：UAC 绕过、服务权限配置不当、不带引号的服务路径、AlwaysInstallElevated、令牌窃取（Potato 家族）。</li>
+          <li>WinPEAS / Seatbelt 能自动枚举提权点，但输出只是线索，标红的每一项都要亲手验证。</li>
+          <li>很多提权点要重启服务或系统才会触发；改服务、改注册表之前先拍快照。</li>
+          <li>修复建议要具体到操作：服务路径加引号、收紧服务权限、关掉 AlwaysInstallElevated、UAC 不调到“从不通知”。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c13-linux-privesc.html">← 上一章：第 13 章：Linux 提权</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c15-post-exploitation-report.html">下一章：第 15 章：后渗透与报告 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

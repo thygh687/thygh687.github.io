@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块八第 7 章：威胁情报深入 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块八第 7 章：威胁情报深入</h1>
+      <div class="meta"><span class="tag">安全运营与应急响应</span>2026-11-25 · 模块八</div>
+      <p><a href="m6c22-threat-intel-frameworks.html">模块六第 22 章</a>我们第一次见到威胁情报：杀伤链和钻石模型帮我们把“攻击是怎么发生的”结构化。那一章是“框架”；这一章讲情报本身：威胁情报到底是什么、长什么样、从哪来、怎么用到防守里。先给一个定义：<strong>威胁情报是经过分析的、能指导行动的关于威胁的信息</strong>。注意“经过分析”和“能指导行动”这两个限定——一堆没加工的 IP 地址列表不是情报，是一堆数据；只有经过验证、标明了可信度、能告诉你“该做什么”的信息，才叫情报。</p>
+      <p>举个例子：有人在网上发了一个恶意 IP 列表，这是数据；你的团队验证了这个 IP 最近确实在攻击同行业的公司、确认了它的攻击手法、把它写进了防火墙封禁规则并通知了 SOC 重点关注，这才是情报。数据和情报的区别，就在于<strong>有没有经过你的分析和判断</strong>。</p>
+
+      <h2>IOC 与 TTP：情报的两种粒度</h2>
+      <p>威胁情报有两种最常见的形态。<strong>IOC（Indicator of Compromise，失陷指标）</strong>是具体的“坏东西的指纹”：恶意 IP 地址、恶意域名、文件哈希值、钓鱼邮件的发件人、恶意网址。IOC 的特点是具体、好用、易过期：攻击者换个 IP、重新编译一下木马，旧的 IOC 就失效了。所以 IOC 要不停更新，像天气预报一样有保质期。用 IOC 的典型场景是“封堵”：把恶意 IP 写进防火墙，把恶意域名写进 DNS 黑名单，把恶意文件哈希写进 EDR——第 2 章的 SIEM 规则里，经常就是拿 IOC 去匹配日志。</p>
+      <p><strong>TTP（Tactics, Techniques, and Procedures，战术、技术与程序）</strong>是攻击者的“手法”：他用什么战术（比如先钓鱼再横向移动）、什么技术（比如用计划任务做持久化）、什么步骤。TTP 的特点是抽象、难换、保质期长：攻击者可以天天换 IP，但他习惯用的手法几个月都不会变。第 3 章的 ATT&amp;CK 本质上就是一套标准化的 TTP 语言——TTP 告诉你“攻击者会怎么做”，你就能提前布防，而不是等 IOC 出现才反应。IOC 和 TTP 的关系可以这样记：<strong>IOC 是“坏东西长什么样”，TTP 是“坏人习惯怎么做”</strong>。成熟的团队两者都要：IOC 用来快速封堵，TTP 用来长期布防。</p>
+
+      <h2>情报生命周期：从需求到反馈的闭环</h2>
+      <p>威胁情报不是“买一份报告就完事”，它有一个生命周期，业界常用六个环节来描述：<strong>一、提需求</strong>——先问“我需要知道什么？”比如“最近针对我们行业的勒索组织有哪些？”没有需求的情报收集，等于大海捞针。<strong>二、收集</strong>——从公开来源（安全厂商报告、开源情报）、商业来源（付费情报服务）、内部来源（自己公司的日志和事件）收集信息。<strong>三、处理</strong>——把不同格式的信息整理成统一格式，去重、翻译、打标签。<strong>四、分析</strong>——这是最关键的一步：验证真假、评估可信度、判断和自己的关系——“这个威胁针对的是金融业，和我们制造业关系不大”本身就是一条分析结论。<strong>五、分发</strong>——把情报送到需要的人手里：给 SOC 的是能直接用的 IOC 和规则，给管理层的是“风险上升了，建议增加预算”这样的判断。<strong>六、反馈</strong>——用情报的人要回来说“这条情报有没有用、准不准”，反馈回流到第一步，下一轮的需求就更准了。六个环节转起来，情报就越用越准；哪个环节断了，情报就慢慢变成一堆没人看的报告。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="威胁情报生命周期图：六个环节闭环，以及 IOC 与 TTP 的对比">
+          <rect x="20" y="20" width="160" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="48" text-anchor="middle" font-size="13" fill="#1a1a2e">1. 提需求</text>
+          <rect x="200" y="20" width="160" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="48" text-anchor="middle" font-size="13" fill="#1a1a2e">2. 收集</text>
+          <rect x="380" y="20" width="160" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="48" text-anchor="middle" font-size="13" fill="#1a1a2e">3. 处理</text>
+          <rect x="20" y="100" width="160" height="48" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="128" text-anchor="middle" font-size="13" fill="#1a1a2e">4. 分析</text>
+          <rect x="200" y="100" width="160" height="48" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="128" text-anchor="middle" font-size="13" fill="#1a1a2e">5. 分发</text>
+          <rect x="380" y="100" width="160" height="48" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="128" text-anchor="middle" font-size="13" fill="#1a1a2e">6. 反馈 → 回到 1</text>
+          <rect x="20" y="180" width="250" height="64" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="205" text-anchor="middle" font-size="13" fill="#1a1a2e">IOC：坏东西的指纹</text>
+          <text x="145" y="225" text-anchor="middle" font-size="11" fill="#666">IP、域名、文件哈希 —— 具体、易过期</text>
+          <rect x="290" y="180" width="250" height="64" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="205" text-anchor="middle" font-size="13" fill="#1a1a2e">TTP：坏人的习惯做法</text>
+          <text x="415" y="225" text-anchor="middle" font-size="11" fill="#666">战术、技术、步骤 —— 抽象、保质期长</text>
+          <text x="280" y="285" text-anchor="middle" font-size="13" fill="#1a1a2e">IOC 用来快速封堵，TTP 用来长期布防</text>
+          <text x="280" y="310" text-anchor="middle" font-size="12" fill="#666">情报 = 经过分析、能指导行动的信息</text>
+        </svg>
+        <figcaption>图：威胁情报生命周期六个环节——从需求到反馈的闭环；IOC 与 TTP 是情报的两种粒度</figcaption>
+      </figure>
+
+      <h2>情报分层：给不同的人不同的情报</h2>
+      <p>威胁情报还分三个层次，对应不同的读者。<strong>战略情报</strong>给管理层看：讲的是“趋势”——哪个地区的攻击在上升、哪个行业是重点目标、未来半年要防什么，语言是非技术的，结论是“要不要加预算、要不要调整方向”。<strong>战术情报</strong>给安全团队看：讲的是“手法”——某个攻击组织最近在用什么 TTP、针对什么系统，结论是“该补哪类检测、该重点盯什么”。<strong>运营情报</strong>给 SOC 一线看：讲的是“具体指标”——今天要封哪些 IP、盯哪些域名、查哪些文件哈希，结论就是一条可以直接执行的规则。三个层次的情报，来源可能相同，但写法和读者完全不同——把战略情报发给一线分析师，他不知道该干什么；把 IOC 列表发给总经理，他也看不懂。情报工作的一半功夫，是“翻译”：把同样的事实，翻译成不同读者能直接用的样子。</p>
+      <p>情报的可信度也要分级。常见的评估方法是看两个维度：<strong>来源可靠不</strong>（官方机构、知名厂商、匿名论坛，可信度依次递减）和<strong>信息本身可不可信</strong>（有没有多方印证、有没有原始证据）。一条只有匿名论坛单方面说法、没有任何佐证的情报，可信度就是低——可以记下来观察，但不能直接拿去封禁、更不能拿去指控谁。情报分析师的基本功，就是对每条情报都问一句：“你怎么知道的？还有谁这么说？”</p>
+
+      <h2>情报从哪来：公开渠道入门</h2>
+      <p>对初学者来说，情报的来源不用一开始就追求付费服务，公开渠道已经够练手了：安全厂商的公开报告（定期发布的威胁趋势报告）、CVE 数据库和厂商安全公告（第 8 章漏洞管理会用到）、开源情报社区分享的 IOC 列表、以及<a href="m6c16-security-news.html">模块六第 16 章</a>讲过的安全新闻渠道。每天花 15 分钟浏览这些渠道，养成“看情报”的习惯，比囤一堆报告有用得多。</p>
+      <p>用公开情报要守两条规矩：第一，核对来源——同一条消息，有没有第二家独立来源印证？只有一家小网站在说的消息，先记下来观察，别急着行动。第二，分清“情报”和“广告”——有些厂商报告的结尾会推销自家产品，读的时候要分清哪部分是事实、哪部分是推销。情报分析的基本功，就是对每一条信息都多问一句“你怎么知道的？”</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我刚做情报的时候，犯过一个典型的错误：看到一份很吓人的报告——“某组织正在大规模攻击制造业”——立刻建议全员戒备，结果查下来，那个组织攻击的是国外的制造业，和我们一点关系都没有，白白紧张了一周。教训是：情报的第一步永远是问“和我有什么关系？”——行业、地区、用的系统、规模，四个维度对不上，再吓人的情报也和你无关。还有一个经验：别迷信“付费情报就一定准”。付费情报的优势是量大、更新快，但它不知道你公司的具体情况；真正值钱的情报，往往是你自己从内部日志和事件里提炼出来的——因为那是“针对我们”的情报，别人买不到。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：挑一个你认识的公开安全新闻（比如最近的勒索事件报道），试着把它拆成三层——战略层（一句话趋势）、战术层（攻击者用了什么手法）、运营层（能直接用的 IOC，比如提到的恶意域名或 IP）。<br>2. 给你拆出来的 IOC 打分：它来自什么来源？有没有第二方印证？如果只能找到单一匿名来源，你会怎么定它的可信度？<br>3. 写一条你自己的“情报需求”：假设你是某小公司的安全负责人，写三条你最想知道的事（比如“针对我们行业的最新钓鱼手法”），再写你会从哪些公开渠道去找答案。<br>4. 对照第 3 章的 ATT&amp;CK，把你找到的战术层手法对应到 ATT&amp;CK 的技术编号上——这就是把情报翻译成检测语言的练习。</p>
+      <h2>避坑</h2>
+      <p>别把没加工的数据当情报：没经过验证、标不出可信度、说不清“该做什么”的信息，只是数据；别只看 IOC 不看 TTP：IOC 一换就失效，TTP 才是长期布防的依据；别跳过“和我有什么关系”这一步：行业、地区、系统对不上的情报，再吓人也和你无关；别把情报发错读者：战略、战术、运营三层要分开写，发给对的人；别轻信单一来源：没有多方印证的情报，只能观察，不能直接拿去封禁或指控。</p>
+      <p>模块六第 22 章给了我们情报的框架（杀伤链、钻石模型），这一章补上了情报的血肉：IOC 是指纹、TTP 是手法、生命周期是闭环、分层是翻译。情报的最终目的，是让防守比攻击快一步。下一章我们回到日常运营里最磨人的一件事：<a href="m8c8-vuln-management.html">漏洞管理流程——从发现到修复的闭环</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>威胁情报是经过分析、能指导行动的信息；没加工的数据不是情报。</li>
+          <li>IOC 是坏东西的指纹（IP、域名、文件哈希），具体好用但易过期，用来快速封堵。</li>
+          <li>TTP 是坏人的习惯做法（战术、技术、步骤），保质期长，用来长期布防；ATT&amp;CK 是标准化的 TTP 语言。</li>
+          <li>情报生命周期六个环节：提需求、收集、处理、分析、分发、反馈，闭环转动才越用越准。</li>
+          <li>情报分三层：战略给管理层、战术给安全团队、运营给 SOC 一线；每条情报都要问来源可靠性和多方印证。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m8c6-forensics-deep.html">← 上一章：第 6 章：数字取证深入</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m8c8-vuln-management.html">下一章：第 8 章：漏洞管理流程 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

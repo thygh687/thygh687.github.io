@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块九第 9 章：移动安全入门 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块九第 9 章：移动安全入门</h1>
+      <div class="meta"><span class="tag">进阶与新趋势</span>2026-11-25 · 模块九</div>
+<p>手机是你最亲近的电脑：它装着你的通讯录、照片、支付、邮箱、聊天记录，还随时连着网络、开着定位、带着摄像头和麦克风。移动安全的麻烦在于：手机上的安全模型和电脑很不一样——App 
+之间被“沙箱”隔开，
+      每个 App 只能在自己的小隔间里活动；但与此同时，App 又向系统要了很多权限，权限一旦给出去，数据就跟着出去了。</p>
+      <p>这一章讲手机 App 安全的四个问题：权限、数据存储、网络传输、恶意 App。</p>
+
+      <h2>权限：App 向你要的每一项，都要问一句为什么</h2>
+<p>现代手机系统（Android、iOS）都用“按需授权”：App 要用摄像头、位置、通讯录时，必须先问你。但问题有三个：第一，很多人习惯性点“允许”，点完就忘了；
+第二，有些权限是“一次授权、长期有效”，
+      App 在后台也能用；第三，权限组合起来很危险——一个手电筒 App 要通讯录和定位，单看每一项都“好像有点道理”，合起来就是过度收集。</p>
+<p>判断权限合不合理的办法很简单：问一句“这个功能没有这项权限能不能跑？”——手电筒不需要通讯录，记账 App 不需要你的位置。定期检查的方法是：打开系统的权限管理，
+按权限看“哪些 App 在用位置、
+哪些在用麦克风”，把不合理的收回来；不常用的 App 直接卸载或停用。企业环境里还会用 MDM（移动设备管理）统一管员工手机的权限和策略，但对个人用户来说，“定期检查 
+      + 不合理就收回”就是最有效的防线。
+      </p>
+
+      <h2>数据存储与网络传输</h2>
+<p>App 把数据存在手机上有两种风险：存明文（任何拿到手机、或者拿到备份的人都能直接读），和存得太久（删了 App，数据还留在手机里）。正规 App 应该把敏感数据加密存储，
+并用系统提供的密钥库（Android
+Keystore、iOS Keychain）来保管密钥，而不是把密钥硬编码在 App 代码里——硬编码的密钥，任何人反编译 App 都能找到，这正是<a href="m9c2-reversing-intro.html">第
+      2 章逆向</a>能轻易做到的事。</p>
+<p>网络传输上，App 和服务器之间要用 TLS 1.3 加密（<a href="m5c8-tls-handshake.html">模块五第 8 章</a>）
+，还要做证书校验，防止中间人冒充服务器。
+有些 App 为了“调试方便”关掉证书校验就发布了，等于把加密的门拆了——在公共 Wi-Fi 下，这类 App 的数据很容易被截获。用户能做的检查很有限：尽量只在官方应用商店下载、
+      不连来路不明的
+      Wi-Fi、敏感操作（支付、登录）不用公共网络。</p>
+
+      <h2>恶意 App 与侧载</h2>
+<p>恶意 App 是移动端最常见的威胁：伪装成正常应用，偷通讯录、偷短信验证码、后台扣费、弹广告。官方应用商店有审核，但不是万无一失——恶意 App 会先表现正常、
+过审后再通过更新露出恶意行为。比商店更危险的是“侧载”：
+      从浏览器、聊天群、第三方网站直接装 App，绕过了商店审核。侧载的 App 没有任何人替你检查过，风险最高。</p>
+<p>还有一类风险来自系统层面：越狱（iOS）与 Root（Android）会拆掉系统的沙箱和权限检查，让恶意 App 能做它本来做不了的事——除非你明确知道自己在干什么，
+否则不要越狱或 Root 日常使用的手机。
+      系统更新也要及时：手机系统的安全补丁常常修的是能被 App 或网页直接触发的漏洞，拖着不更新，等于留着已知的门不关。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="手机App沙箱与权限图：每个App在自己的沙箱里，权限是出沙箱的门">
+<rect x="40" y="20" width="480" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="45" text-anchor="middle" font-size="13" fill="#1a1a2e">手机操作系统：沙箱把每个 App 隔开</text>
+<rect x="40" y="84" width="150" height="88" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="115" y="110" text-anchor="middle" font-size="13" fill="#1a1a2e">App A：聊天</text>
+          <text x="115" y="130" text-anchor="middle" font-size="11" fill="#666">权限：麦克风、通讯录</text>
+          <text x="115" y="148" text-anchor="middle" font-size="11" fill="#666">数据加密存储</text>
+<rect x="205" y="84" width="150" height="88" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="110" text-anchor="middle" font-size="13" fill="#1a1a2e">App B：记账</text>
+          <text x="280" y="130" text-anchor="middle" font-size="11" fill="#666">权限：仅存储</text>
+          <text x="280" y="148" text-anchor="middle" font-size="11" fill="#666">不需要位置 ✓</text>
+<rect x="370" y="84" width="150" height="88" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="445" y="110" text-anchor="middle" font-size="13" fill="#1a1a2e">App C：手电筒？</text>
+          <text x="445" y="130" text-anchor="middle" font-size="11" fill="#666">要通讯录 + 定位</text>
+          <text x="445" y="148" text-anchor="middle" font-size="11" fill="#666">过度收集 ✗ 卸掉它</text>
+<rect x="40" y="200" width="480" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="13" fill="#1a1a2e">传输：App ↔ 服务器用 TLS 1.3 + 证书校验</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">公共 Wi-Fi 下，关掉证书校验的 App 最容易被截获</text>
+          <text x="280" y="282" text-anchor="middle" font-size="12" fill="#666">只从官方商店下载 · 不侧载 · 不越狱 / Root 日常手机</text>
+          <text x="280" y="306" text-anchor="middle" font-size="12" fill="#666">定期按权限检查：谁在用位置、谁在用麦克风</text>
+        </svg>
+        <figcaption>图：手机沙箱与权限——每个 App 在自己的隔间里，权限是出隔间的门，不合理就收回</figcaption>
+      </figure>
+
+
+      <h2>换手机时的数据安全清单</h2>
+<p>换手机是移动安全里最容易被忽视的环节。旧手机里装着你的全部生活：照片、聊天记录、支付信息、登录状态。处理旧手机之前，先做三件事：第一，确认新手机上所有重要账号都能登录——邮箱、
+支付、银行，逐个验证，
+别等到旧手机清空了才发现某个账号登不上去。</p>
+<p>第二，解绑与退出：先在旧手机上退出所有账号、解绑支付和设备锁（比如 iPhone 的激活锁），再恢复出厂设置。只恢复出厂设置、不先解绑，有些手机会锁死，下一任机主用不了，
+你自己也远程解不开。</p>
+<p>第三，确认擦除：恢复出厂设置后，检查一遍旧手机里是不是真的空了——照片、通讯录、短信都不应该再出现。如果旧手机要卖掉或送人，最好再多做一步：恢复出厂后随便存几个大文件、
+再恢复一次，让旧数据更难被恢复。</p>
+<div class="teacher-note"><strong>老师经验：</strong>我帮人看手机，第一件事就是打开权限管理，按“位置”筛一遍：经常能看到三四个根本不需要位置的 
+App 在后台拿位置。
+还有一次，一个“壁纸”类 App 要了读取短信的权限——短信里有验证码，这就是典型的过度索权。我的习惯是：装新 App 时，每弹一个权限就停下来想三秒“它要这个干嘛”；
+      每个月花五分钟，按权限筛一遍，
+把不合理的收回来。手机安全没有一劳永逸的设置，靠的就是这五分钟的定期检查。另外，短信验证码是“半个密码”，任何 App、任何人以任何理由要你的验证码，都不要给。
+      </div>
+
+      <h2>动手做</h2>
+<p>1. 只在自己的设备上做：打开手机的权限管理，按“位置、麦克风、通讯录、短信”四项分别筛一遍，列出每个权限下都有哪些 App，标出你觉得不合理的，收回它们的权限。
+<br>2. 检查你手机里有没有“侧载”的
+App（不是从官方商店装的），逐个问一句“它从哪来的、还有必要留吗”，不必要的卸载掉。<br>3. 检查系统更新：确认手机系统和主要 App 都是最新版，把自动更新打开；
+      再检查锁屏方式是不是强密码或生物识别，
+而不是简单的滑动解锁。<br>4. 做一次“丢失演练”：确认手机的远程定位、锁定、擦除功能已经开启并能用——手机丢了能远程锁、能远程擦，才算有兜底。</p>
+      <h2>避坑</h2>
+<p>别习惯性点“允许”：每个权限请求都停下来想三秒，它要这个干嘛；别侧载 App：绕过商店审核的安装，风险最高；别把验证码给任何人：短信验证码是半个密码，App 
+和人都不能要；别越狱或 Root 日常手机：
+拆掉沙箱等于拆掉整套防护；别拖着不更新系统：手机补丁修的常常是能被直接触发的漏洞；别以为官方商店就绝对安全：恶意 App 也会先正常、后作恶，权限检查不能省。</p>
+<p>这一章把<a href="m9c2-reversing-intro.html">第 2 章的逆向</a>和<a href="m5c8-tls-handshake.html">模块五的 
+TLS 1.3</a>搬到了手机上：
+沙箱是隔离，权限是门，传输要加密，商店审核不是万能。下一章我们看比手机更“不起眼”、却更难管的设备——<a href="m9c10-ics-iot-intro.html">第 
+      10 章：工控与物联网安全入门</a>，
+      摄像头、路由器也不安全。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>手机用沙箱隔离每个 App，权限是 App 出隔间的门：每个权限请求都要问“没有它能不能跑”。</li>
+          <li>定期按权限检查（位置、麦克风、通讯录、短信），不合理的收回，不常用的卸载。</li>
+          <li>敏感数据要加密存储，密钥放系统密钥库，绝不硬编码在 App 代码里；传输用 TLS 1.3 + 证书校验。</li>
+          <li>恶意 App 常伪装成正常应用，侧载风险最高；不要越狱或 Root 日常使用的手机。</li>
+          <li>系统更新要及时，远程定位、锁定、擦除要提前开好，手机丢了才有兜底。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m9c8-ai-security.html">← 上一章：第 8 章：AI 安全</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m9c10-ics-iot-intro.html">下一章：第 10 章：工控与物联网安全入门 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 6 章：XXE 与反序列化 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 6 章：XXE 与反序列化</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>前面几章的漏洞——注入、XSS、CSRF、SSRF、上传、逻辑漏洞——都相对“看得见”，测试时也容易想到。这一章的两个漏洞恰恰相反：XXE（XML 外部实体注入）和不安全的反序列化，平时很少被新手放进检查清单，可一旦命中，危害往往是最高的：读服务器上的任意文件、执行任意代码、直接拿下服务器。它们共同的根子是：<strong>程序在解析外部输入的时候，太“信任”输入里自带的功能了。</strong></p>
+      <p>先说 XXE 要用的 XML。XML 是一种标记语言，程序之间常用它交换数据。XML 有一个功能叫“实体（Entity）”：可以在文档开头定义一个实体，比如 <code>&lt;!ENTITY xxe "hello"&gt;</code>，之后正文里写 <code>&amp;xxe;</code>，解析器就会把它替换成 hello。这本来是个方便的功能，但 XML 还允许定义“外部实体”——实体的内容不在文档里，而在一个外部文件或 URL 里：<code>&lt;!ENTITY xxe SYSTEM "file:///etc/passwd"&gt;</code>。如果服务器用的 XML 解析器允许外部实体，攻击者提交这样一段 XML，服务器解析时就会去读自己的 <code>/etc/passwd</code> 文件，再把内容放进返回结果里。文件就这样被读走了。</p>
+
+      <h2>XXE 能干什么：读文件、探内网、打 SSRF</h2>
+      <p>XXE 最直接的利用是<strong>读任意文件</strong>：把 <code>file:///etc/passwd</code>（Linux）或 <code>file:///C:/Windows/win.ini</code>（Windows）写进外部实体，服务器的回显里就会出现文件内容。更进一步，外部实体也可以是一个 URL：<code>SYSTEM "http://192.168.1.1/admin"</code>——服务器解析时就会替攻击者去访问内网地址，这就变成了上一章讲的 SSRF。还有一种“炸弹”型利用：实体可以嵌套定义，一个实体引用十个实体、每个又引用十个，最终解析器要展开几十亿个字符，服务器的内存和 CPU 直接被撑爆，这叫“十亿笑声（Billion Laughs）”攻击，连数据都不用偷，纯粹是拒绝服务。</p>
+      <p>怎么发现 XXE？线索是：网站接受 XML 格式的输入——上传 XML 文件、提交 XML 数据的接口、SOAP 服务、Office 文档解析（docx、xlsx 本质上就是一堆 XML 文件打包成的 zip）、SVG 图片上传（SVG 也是 XML）。测试时先提交一段带外部实体的 XML，看服务器有没有反应：回显了文件内容、响应变慢了、或者发起了内网请求，都是命中的信号。注意：有些 XXE 是“盲注型”的，服务器不回显文件内容，这时要用外带（out-of-band）技巧——让外部实体指向攻击者控制的服务器，看它会不会来“取”内容，有请求就说明漏洞存在。</p>
+
+      <h2>反序列化：把数据变回对象时的陷阱</h2>
+      <p>再说反序列化。程序经常要把一个对象“打包”成字节流存起来或传出去（序列化），用的时候再“解包”还原成对象（反序列化）。问题出在解包这一步：如果程序直接反序列化攻击者能控制的数据，攻击者就能在数据里夹带“机关”——精心构造的字节流在还原时，会触发程序里某些类的特殊方法（比如自动执行命令、读写文件的方法），最终导致任意代码执行。</p>
+      <p>举个具体场景：Java 网站把用户会话对象序列化后存在 Cookie 里，攻击者拿到一个合法的序列化数据，改一改里面的类名和字段，再发回去，服务器反序列化时调用了某个危险类的 <code>readObject</code> 方法，命令就执行了。PHP、Python、.NET 都有各自的反序列化点：PHP 的 <code>unserialize()</code>、Python pickle 的 <code>loads()</code>、Java 的 <code>ObjectInputStream</code>。这就是为什么安全规范里反复强调：<strong>永远不要反序列化不可信的数据；Python 的 pickle 尤其不能用来解析网络上传来的数据。</strong></p>
+      <p>防御反序列化的办法有三层：第一，能不用序列化就不用，改用 JSON 这种纯数据格式——JSON 只描述数据，不携带“执行什么代码”的指令；第二，必须用时做完整性校验（签名），数据被改过就拒绝；第三，用白名单限制能反序列化的类，只允许业务必需的那几个类，其他的一律拒绝。Java 生态里还有专门的过滤机制（JEP 290），可以按类名做过滤。</p>
+
+      <h2>XXE 怎么防：关掉外部实体</h2>
+      <p>防 XXE 的核心就一句话：<strong>解析 XML 时禁用外部实体和 DTD。</strong>不同语言的配置方式不同，但思路一样：Java 的 DocumentBuilderFactory 要设置 <code>disallow-doctype-decl</code> 或至少禁用外部实体；Python 的 lxml、ElementTree 默认相对安全，但不要用功能最全的解析器去解析不可信输入；.NET 的 XmlReader 要关掉 DTD 处理。原则是“最小功能”：解析器只需要读数据，就不要给它“读外部文件、访问网络、展开实体”的能力。上传 SVG、Office 文档这类“本质是 XML”的文件时，也要走同样的解析配置，不能因为“只是张图片”就放松。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="XXE与反序列化原理图：外部实体让解析器读服务器文件，恶意序列化数据在反序列化时触发危险方法">
+          <rect x="20" y="30" width="240" height="64" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="56" text-anchor="middle" font-size="13" fill="#1a1a2e">XXE：外部实体</text>
+          <text x="140" y="76" text-anchor="middle" font-size="11" fill="#666">ENTITY xxe SYSTEM "file:///etc/passwd"</text>
+          <rect x="300" y="30" width="240" height="64" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="56" text-anchor="middle" font-size="13" fill="#1a1a2e">反序列化：恶意对象数据</text>
+          <text x="420" y="76" text-anchor="middle" font-size="11" fill="#666">字节流里夹带危险类的调用</text>
+          <rect x="180" y="130" width="200" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="152" text-anchor="middle" font-size="13" fill="#1a1a2e">服务器解析输入</text>
+          <text x="280" y="172" text-anchor="middle" font-size="11" fill="#666">解析器太信任输入自带的功能</text>
+          <rect x="20" y="220" width="240" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="242" text-anchor="middle" font-size="13" fill="#1a1a2e">后果：读任意文件、探内网</text>
+          <text x="140" y="262" text-anchor="middle" font-size="11" fill="#666">十亿笑声可打爆服务器</text>
+          <rect x="300" y="220" width="240" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="242" text-anchor="middle" font-size="13" fill="#1a1a2e">后果：任意代码执行</text>
+          <text x="420" y="262" text-anchor="middle" font-size="11" fill="#666">直接拿下服务器</text>
+          <text x="280" y="310" text-anchor="middle" font-size="12" fill="#666">防御：禁用外部实体与 DTD；不用序列化就改用 JSON；只允许白名单里的类</text>
+          <line x1="140" y1="94" x2="230" y2="130" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="420" y1="94" x2="330" y2="130" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="230" y1="186" x2="140" y2="220" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="330" y1="186" x2="420" y2="220" stroke="#1a1a2e" stroke-width="1.5"/>
+        </svg>
+        <figcaption>图：XXE 与不安全反序列化——共同的根子是解析器太信任输入自带的功能</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>XXE 和反序列化是最容易被“漏测”的两类漏洞，原因很现实：它们不像 SQL 注入那样有个显眼的输入框。我的检查清单上有一条专门的提醒：看到任何“上传文件、导入数据、解析文档”的功能，先问一句“它背后是不是 XML？是不是序列化数据？”——docx、xlsx、SVG、SOAP 接口、Java 的序列化 Cookie，这些都是 XXE 和反序列化的藏身之处。还有一次教训：有个系统把 XML 解析器的外部实体关了，我以为安全了，结果它用的解析器版本太旧，配置项根本没生效——防御配置一定要亲手验证，用一段带外部实体的测试数据打一次，确认真的不解析了，才算修好。按<a href="m6c8-cve-cvss.html">模块六第 8 章</a>的 CVSS 来看，这两类漏洞一旦可利用，基本都是高危甚至严重，报告里不要往低了写。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在自己的虚拟机里：写一个最小的 XML 测试——用 Python 的 lxml 或在线靶场的 XXE 练习环境，提交一段带外部实体 <code>file:///etc/passwd</code> 的 XML，观察解析器返回了什么；再换成禁用了外部实体的配置，确认同样的输入被拒绝了。<br>2. 在虚拟机里搭一个接受 XML 的小接口（或用现成的 XXE 靶场），试试“十亿笑声”的思路：只做小规模嵌套实验，观察解析时间的变化，理解实体展开为什么能打爆服务器——不要在共享环境里做大规模测试。<br>3. 反序列化实验：在虚拟机里用 Python 写两行代码：<code>pickle.dumps()</code> 打包一个对象，再 <code>pickle.loads()</code> 还原；然后查文档确认：为什么 pickle 的官方文档明确警告“不要解析不可信数据”，并写下如果改用 JSON 会失去什么、得到什么。<br>4. 做一次“藏身之处”盘点：列出你见过的接受 XML 或序列化数据的功能（Office 文档、SVG 上传、SOAP 接口、序列化 Cookie），给每个功能写一句“如果它是 XXE 或反序列化点，危害是什么”。</p>
+      <h2>避坑</h2>
+      <p>只在自己的虚拟机和靶场里做 XXE 与反序列化实验：读真实服务器的文件、打爆真实服务，都是越界行为；别只看输入框：docx、SVG、SOAP 接口、序列化 Cookie 都是藏身之处；别以为关了配置就万事大吉：要亲手用测试数据验证配置真的生效了，旧版本解析器可能根本不支持这个配置项；别用 pickle 解析网络数据：改用 JSON，安全得多；别把这两类漏洞定低：可利用的 XXE 和反序列化基本都是高危起步。</p>
+      <p>容易忽略的两类漏洞讲完了。下一章我们回到 Web 安全的主线——身份：<a href="m7c7-session-auth.html">第 7 章：会话与认证深入：JWT、CORS、CSP 与越权访问</a>。第 1 章埋下的 JWT 的伏笔、上一章提到的越权访问，都在这一章收束。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>XXE 是 XML 外部实体注入：解析器按攻击者的指示去读服务器文件、访问内网，甚至被“十亿笑声”打爆。</li>
+          <li>反序列化漏洞：程序还原攻击者控制的对象数据时，触发危险类的方法，导致任意代码执行；Python pickle 绝不能解析不可信数据。</li>
+          <li>两者根子相同：解析器太信任输入自带的功能；藏身之处是 Office 文档、SVG、SOAP 接口、序列化 Cookie 这类“不像输入框”的地方。</li>
+          <li>XXE 防御：解析 XML 时禁用外部实体和 DTD；反序列化防御：改用 JSON、做签名校验、白名单限制可反序列化的类。</li>
+          <li>防御配置要亲手验证生效；这两类漏洞一旦可利用，按 CVSS 基本都是高危起步。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c5-upload-logic.html">← 上一章：第 5 章：文件上传与逻辑漏洞</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c7-session-auth.html">下一章：第 7 章：会话与认证深入：JWT、CORS、CSP 与越权访问 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

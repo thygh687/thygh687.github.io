@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块八第 3 章：ATT&amp;CK 防御、威胁狩猎与检测工程 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块八第 3 章：ATT&amp;CK 防御、威胁狩猎与检测工程</h1>
+      <div class="meta"><span class="tag">安全运营与应急响应</span>2026-11-25 · 模块八</div>
+      <p><a href="m6c22-threat-intel-frameworks.html">模块六第 22 章</a>我们认识了 MITRE ATT&amp;CK：攻击者从侦察、初始访问、执行、持久化、提权、防御规避、凭证访问、发现、横向移动、收集、命令与控制，到数据渗出，一共十几个战术，每个战术下面是一堆具体技术（Technique）。那一章我们是“认一认攻击者长什么样”；这一章我们反过来：<strong>拿着攻击者的手法清单，来检查自己的防守有没有洞</strong>。这就是 ATT&amp;CK 在防守方的核心用法。</p>
+      <p>打个比方：ATT&amp;CK 是一张“小偷的作案手法大全”——撬锁、翻窗、配钥匙、藏进衣柜。防守方拿着这本大全，一项一项问自己：我家窗户防翻吗？钥匙有没有被人配过？衣柜里藏没藏人？问完就知道该在哪里加锁、装摄像头。同理，安全团队拿着 ATT&amp;CK 的技术清单，逐项检查：这项技术，我有没有日志能看到？有没有规则能告警？有没有措施能拦住？这套工作就叫<strong>检测工程（Detection Engineering）</strong>。</p>
+
+      <h2>检测工程：从 ATT&amp;CK 技术到检测规则</h2>
+      <p>检测工程有四步。第一步，<strong>选技术</strong>：从 ATT&amp;CK 里挑出对自己最要紧的技术——比如勒索软件最爱用的“计划任务持久化”（T1053）、“凭证转储”（T1003）、“禁用安全工具”（T1562.001），优先覆盖这些。第二步，<strong>找数据源</strong>：这项技术会在日志里留下什么痕迹？计划任务对应 Windows 事件 4698（计划任务被创建），凭证转储对应 LSASS 进程被异常访问。没有数据源，就写不出规则——第 2 章讲的日志收集，就是检测工程的地基。第三步，<strong>写规则</strong>：把“痕迹”翻译成 SIEM 的检测逻辑，比如“10 分钟内出现 4698 且任务指向可疑路径，就告警”。第四步，<strong>测试与调优</strong>：在实验环境里模拟这项技术，看规则能不能抓到，再看误报多不多——抓不到要补，误报太多要收紧。这四步循环往复，就是检测工程师的日常。</p>
+      <p>衡量检测覆盖度有个常用工具叫 <strong>ATT&amp;CK Navigator</strong>：一张热力图，把 ATT&amp;CK 的技术按“已有检测 / 部分检测 / 没有检测”涂成不同颜色。团队每季度看一次这张图：红色区域就是防守的盲区，下个季度优先补。初学者不用急着用这个工具，先理解它的思想：<strong>防守不是“装了多少设备”，而是“攻击者的多少手法能被你看见”</strong>。看不见，就等于不存在。</p>
+
+      <h2>威胁狩猎：不等告警，主动去找</h2>
+      <p>SIEM 的规则是“等坏事发生再告警”，但有一种攻击者特别狡猾：他用的都是系统自带的正常工具（比如 PowerShell、WMI），不触发任何规则，悄悄潜伏几个月——这叫“无文件攻击”或“Living off the Land”。等规则告警，黄花菜都凉了。对付这种对手，要用<strong>威胁狩猎（Threat Hunting）</strong>：不等告警，分析师主动带着假设去日志里找。</p>
+      <p>狩猎从一个<strong>假设</strong>开始，比如：“最近有情报说某组织在用计划任务做持久化，我们公司有没有中招的机器？”然后去查：全公司过去 30 天新建的计划任务，逐个看创建者、触发时间和执行路径——正常的任务是系统或管理员建的、指向已知程序；可疑的任务是凌晨建的、指向临时文件夹里的陌生程序。狩猎结束要产出两样东西：一是结论（找到入侵了，还是没找到、排除了），二是新的检测规则（把这次狩猎的发现固化成规则，下次自动告警）。狩猎和检测工程就是这样互相喂养的：<strong>狩猎发现新手法，检测工程把它变成自动规则；规则覆盖不到的地方，再靠狩猎去补</strong>。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ATT&amp;CK 防御循环图：选技术、找数据源、写规则、测试调优，狩猎与检测互相喂养">
+          <rect x="180" y="15" width="200" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="43" text-anchor="middle" font-size="14" fill="#1a1a2e">ATT&amp;CK 技术清单</text>
+          <rect x="20" y="95" width="120" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="118" text-anchor="middle" font-size="13" fill="#1a1a2e">1. 选技术</text>
+          <text x="80" y="138" text-anchor="middle" font-size="11" fill="#666">优先高危常用手法</text>
+          <rect x="160" y="95" width="120" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="220" y="118" text-anchor="middle" font-size="13" fill="#1a1a2e">2. 找数据源</text>
+          <text x="220" y="138" text-anchor="middle" font-size="11" fill="#666">日志里留什么痕迹</text>
+          <rect x="300" y="95" width="120" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="360" y="118" text-anchor="middle" font-size="13" fill="#1a1a2e">3. 写规则</text>
+          <text x="360" y="138" text-anchor="middle" font-size="11" fill="#666">痕迹翻译成检测逻辑</text>
+          <rect x="440" y="95" width="100" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="490" y="118" text-anchor="middle" font-size="13" fill="#1a1a2e">4. 测试调优</text>
+          <text x="490" y="138" text-anchor="middle" font-size="11" fill="#666">模拟攻击验证</text>
+          <rect x="20" y="195" width="250" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="218" text-anchor="middle" font-size="13" fill="#1a1a2e">威胁狩猎：带着假设主动找</text>
+          <text x="145" y="238" text-anchor="middle" font-size="11" fill="#666">发现新手法 → 变成新规则</text>
+          <rect x="290" y="195" width="250" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="218" text-anchor="middle" font-size="13" fill="#1a1a2e">ATT&amp;CK 热力图：覆盖度可视化</text>
+          <text x="415" y="238" text-anchor="middle" font-size="11" fill="#666">红色盲区 = 下季度优先补</text>
+          <text x="280" y="290" text-anchor="middle" font-size="12" fill="#666">防守的衡量标准：攻击者的多少手法能被你看见</text>
+          <text x="280" y="312" text-anchor="middle" font-size="12" fill="#666">看不见，就等于不存在</text>
+        </svg>
+        <figcaption>图：ATT&amp;CK 防御循环——检测工程把技术变成规则，威胁狩猎把新发现变成规则，热力图标出盲区</figcaption>
+      </figure>
+
+      <h2>一个例子：从“计划任务”到一条检测规则</h2>
+      <p>拿最常见的持久化手法“计划任务”走一遍全流程。攻击者想在你电脑上长期潜伏，最简单的办法之一就是建一个计划任务，让恶意程序每天凌晨三点自动运行。ATT&amp;CK 里这项技术叫 T1053。数据源：Windows 安全日志事件 4698（计划任务被创建），里面有任务名、创建者、执行的程序路径。检测规则可以写成：“出现 4698，且执行路径在临时文件夹（Temp、AppData）或指向陌生 exe，就告警。”再进一步：正常管理员建任务一般在白天、指向已知路径；凌晨三点新建的任务、可疑路径的任务，优先级更高。威胁狩猎的版本则是反过来问：“过去 30 天全公司新建了多少计划任务？有没有凌晨建的、有没有指向临时文件夹的？”查完如果发现三台机器中招，就按第 4 章的应急流程处理，同时把这条规则固化进 SIEM。</p>
+      <p>这个例子也说明了检测工程的一个原则：<strong>规则要写在“攻击者绕不过去”的地方</strong>。攻击者可以换文件名、换路径，但他要做持久化，就绕不开“建计划任务”这个动作——动作本身是稳定的，文件名是易变的。好的检测规则抓的是“动作”，不是“名字”。这也是为什么 ATT&amp;CK 按“战术—技术”组织，而不是按病毒名组织：病毒名天天变，手法变起来慢得多。</p>
+
+      <h2>从检测到响应：规则触发后发生什么</h2>
+      <p>检测规则触发告警之后，事情并没有结束，而是刚开始。告警先进入 SOC 队列（第 1 章），一线分析师分诊确认；确认是真问题，就按第 4 章的应急流程走；处理完之后，还有一个容易被忽略的收尾动作：<strong>把这次事件的发现反馈回检测工程</strong>——规则是太宽了还是太窄了？有没有漏掉的变种手法？要不要再补一条规则？第 7 章讲的情报生命周期里也有同样的“反馈”环节，道理是一样的：每一次真实事件，都是改进检测的一次机会。</p>
+      <p>有些团队还会把“响应”的一部分自动化，这就是第 1 章提到的 SOAR：比如规则确认是已知的钓鱼邮件，就自动删邮件、封发件人域名、给收件人发提醒——分析师只需要复核结果。自动化的前提是“这件事已经发生过很多次、每次的处理都一样”，第一次遇到的新情况，永远应该由人来判断。自动化是为了把人的时间省下来，去处理那些真正需要人判断的案子。</p>
+      <p>最后提醒一个检测工程的常见误区：规则的数量不等于安全水平。一千条没人维护的规则，不如十条每天有人看、每季度调优一次的规则。检测工程拼的不是“写了多少条”，而是“有多少条真的在抓坏人”。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我见过不少团队一上来就想“把 ATT&amp;CK 全覆盖”，结果半年过去，一条能用的规则都没落地——贪多嚼不烂。真正有效的起步是反过来的：先挑 5 项技术，都是勒索软件和常见入侵最爱用的（计划任务持久化、凭证转储、禁用安全工具、PowerShell 远程下载、横向移动用的 PsExec），每项都做到“有日志、有规则、测过、调过”，这 5 条规则能挡住日常 80% 的常见攻击。还有一个教训：写规则之前一定要先确认数据源在不在——有一次我们花了一周写了一套漂亮的规则，上线才发现那批服务器根本没把日志发到 SIEM，规则全是摆设。所以检测工程的第一步永远是：日志先到位，规则再上场。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：打开任务计划程序，列出所有计划任务，挑一个你不认识的，查它的创建者、触发时间和执行路径，判断它是系统任务还是可疑任务——这就是一次微型狩猎。<br>2. 对照 ATT&amp;CK 的思路，给你的虚拟机挑 3 项最值得检测的技术（提示：计划任务持久化、新建账号、异常 PowerShell），每项写一句话：它在日志里会留下什么痕迹（事件 ID 或日志位置）。<br>3. 在虚拟机里建一个无害的计划任务（比如每天弹出一次记事本），然后在事件查看器里找到对应的 4698 事件，读出它的任务名和执行路径——亲眼看到“动作”是怎么变成“日志”的。<br>4. 画一张你自己的 ATT&amp;CK 覆盖热力图（手绘就行）：列出本章提到的 5 项技术，给每项标“有检测 / 部分检测 / 没检测”，看看你的虚拟机盲区在哪。</p>
+      <h2>避坑</h2>
+      <p>别想着一次覆盖全部 ATT&amp;CK：先挑 5 项高频技术做实，比贪多一圈最后全是摆设强；别在没有日志的情况下写规则：数据源不到位，规则再漂亮也没用；别只检测“病毒名”：攻击者换个文件名就绕过去了，要检测“动作”；别把狩猎当成“随便翻翻日志”：狩猎要有假设、有范围、有结论，查完要产出规则或排除结论；别在真实网络、真实系统上模拟攻击手法：所有测试只在你自己的虚拟机或实验环境里做。</p>
+      <p>模块六我们学了 ATT&amp;CK 和杀伤链是“攻击者的地图”，第 2 章我们学了日志是“防守方的眼睛”——这一章把两者连起来了：拿着地图去布防，拿着眼睛去狩猎。防守做到这一步，下一件事就是：万一真的出事了，按什么流程处理？下一章讲<a href="m8c4-incident-response-framework.html">应急响应框架：NIST SP 800-61</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>ATT&amp;CK 在防守方的用法：拿着攻击者的手法清单，逐项检查自己有没有日志、规则和拦截措施。</li>
+          <li>检测工程四步：选技术、找数据源、写规则、测试与调优；ATT&amp;CK 热力图让覆盖盲区一目了然。</li>
+          <li>威胁狩猎是不等告警、带着假设主动找：发现新手法就固化成规则，与检测工程互相喂养。</li>
+          <li>好规则检测的是攻击者的“动作”（如建计划任务），不是易变的文件名——动作稳定，名字易变。</li>
+          <li>起步建议：先做实 5 项高频技术（计划任务、凭证转储、禁用安全工具、PowerShell 下载、横向移动）。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m8c2-siem-logs.html">← 上一章：第 2 章：SIEM 与日志分析</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m8c4-incident-response-framework.html">下一章：第 4 章：应急响应框架：NIST SP 800-61 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

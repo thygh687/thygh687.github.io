@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 16 章：绕过与持久化：免杀、持久化机制与 C2 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 16 章：绕过与持久化：免杀、持久化机制与 C2</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>上一章（<a href="m7c15-post-exploitation-report.html">第 15 章</a>）讲了拿到权限之后干什么：收集信息、横向移动、写报告。这一章讲的是后渗透里最容易被误解的两个问题：第一，你是怎么在杀毒软件和 EDR 眼皮底下不被发现的；第二，权限拿到之后，怎么在目标重启、断网、换密码之后还留得住。先把立场说清楚：这一章讲的是<strong>防御视角下的绕过与持久化</strong>——你要理解攻击者怎么躲，才能在蓝队那里认出这些手法、写出检测规则；所有演示只在你自己的虚拟机实验环境里做，绝不在真实系统、真实网络上练手。</p>
+      <p>先理解检测是怎么工作的。杀毒软件和 EDR 发现恶意程序，主要靠四层：<strong>特征检测</strong>——文件里有没有已知的恶意代码片段（签名），像查通缉令照片；<strong>启发式检测</strong>——代码长得像不像恶意软件，比如一段程序既会加密文件又会删备份，就算没见过也值得怀疑；<strong>行为检测</strong>——程序运行时干了什么，比如一个 Word 文档突然去创建计划任务、去连一个陌生地址；<strong>信誉与云查杀</strong>——这个文件以前有没有人见过、签名证书可不可信。绕过，就是针对这四层的弱点做文章：特征层靠“换脸”，行为层靠“装好人”，信誉层靠“借别人的好名声”。</p>
+
+      <h2>免杀：攻击者怎么躲检测</h2>
+      <p>最常见的免杀思路有四种。第一种是<strong>编码与加密</strong>：把恶意代码先加密存在文件里，运行时才在内存里解开，磁盘上的文件看起来就是一堆乱码，特征检测扫不到。这招对付静态扫描有效，但运行时解开的那一刻，行为检测可能就盯上它了。第二种是<strong>“借壳”正常程序</strong>：不自己写一个可疑程序，而是借用系统自带的合法工具干活——PowerShell、rundll32、mshta 这些系统自带程序本来就是白名单上的，攻击者用它们去下载、去执行，安全软件很难一刀切地拦。模块六第 5 章讲过，恶意软件的持久化手法很多就藏在系统自带机制里，道理是一样的。第三种是<strong>进程注入</strong>：把代码塞进一个正在运行的正常进程（比如浏览器）里执行，安全软件看到的是浏览器在干活，而不是一个陌生程序。第四种是<strong>关掉或蒙住“眼睛”</strong>：比如干扰 EDR 的探针、篡改日志、让告警发不出去——这是最危险也最容易被发现的一类，因为“安全软件突然不工作了”本身就是一个强烈的告警信号。</p>
+      <p>防御者要记住一个结论：<strong>没有一种免杀是永久有效的。</strong>签名会更新，行为规则会补，昨天能躲过的手法，今天可能一上线就被拦。真正有用的防御不是指望某一款产品拦住所有东西，而是模块六第 17 章讲的纵深防御——签名、行为、网络、日志多层叠加，攻击者躲过一层，还有下一层等着他。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="检测四层与绕过思路对照图">
+          <rect x="20" y="20" width="240" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="46" text-anchor="middle" font-size="14" fill="#1a1a2e">检测的四层</text>
+          <text x="140" y="66" text-anchor="middle" font-size="11" fill="#666">特征 / 启发式 / 行为 / 信誉</text>
+          <rect x="300" y="20" width="240" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="46" text-anchor="middle" font-size="14" fill="#1a1a2e">绕过的四种思路</text>
+          <text x="420" y="66" text-anchor="middle" font-size="11" fill="#666">加密 / 借壳 / 注入 / 蒙住眼睛</text>
+          <line x1="260" y1="50" x2="298" y2="50" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="40" text-anchor="middle" font-size="11" fill="#666">针对</text>
+          <rect x="20" y="120" width="240" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="146" text-anchor="middle" font-size="14" fill="#1a1a2e">持久化：留住权限</text>
+          <text x="140" y="166" text-anchor="middle" font-size="11" fill="#666">重启之后还在，才叫留住</text>
+          <rect x="300" y="120" width="240" height="60" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="146" text-anchor="middle" font-size="14" fill="#1a1a2e">C2：留住联系</text>
+          <text x="420" y="166" text-anchor="middle" font-size="11" fill="#666">断网重连、定时回连</text>
+          <rect x="140" y="220" width="280" height="60" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="246" text-anchor="middle" font-size="14" fill="#1a1a2e">防御：纵深防御，多层叠加</text>
+          <text x="280" y="266" text-anchor="middle" font-size="11" fill="#666">躲过一层，还有下一层</text>
+          <text x="280" y="310" text-anchor="middle" font-size="12" fill="#666">免杀不是隐身，只是暂时没被认出来</text>
+        </svg>
+        <figcaption>图：检测的四层、绕过的四种思路、持久化与 C2 的关系</figcaption>
+      </figure>
+
+      <h2>持久化：重启之后还在，才叫留住</h2>
+      <p>拿到一台机器的权限只是开始：机器一重启，内存里的东西全没了，权限也就丢了。持久化就是让权限“活过重启”。Windows 上最常见的持久化位置，你作为防御者一定要会查：<strong>注册表 Run 键</strong>（开机自动启动的程序列表）、<strong>计划任务</strong>（定时或触发执行的任务）、<strong>服务</strong>（伪装成系统服务随开机启动）、<strong>启动文件夹</strong>（放进去的程序开机就运行）、<strong>WMI 事件订阅</strong>（系统事件一触发就执行，最隐蔽的一种）。检查这些位置有一个共同原则：<strong>看“谁在不该出现的地方出现了”</strong>——一个来路不明的程序出现在 Run 键里，一个计划任务指向 Temp 目录下的陌生文件，都是红旗。</p>
+      <p>持久化还有一个更隐蔽的层次：<strong>账号层面的持久化</strong>。攻击者不留程序，而是留一个账号：新建一个不起眼的管理员账号、给一个普通账号悄悄提权、或者留一把 SSH 密钥、一个有效的票据（第 19 章会讲票据攻击）。这种持久化不留文件，杀毒软件扫不出来，只能靠账号审计发现——定期查“有哪些账号、谁是管理员、最近新建了什么账号”，这是模块六第 10 章访问控制的日常功课。</p>
+
+      <h2>C2：指挥控制通道是怎么工作的</h2>
+      <p>C2（Command and Control，指挥控制）是攻击者与被控制机器之间的“电话线”。被控制的机器会定时“回连”攻击者的服务器，问一句“有什么新指令”，这叫 <strong>Beacon（信标）</strong>。为了不被发现，Beacon 会模仿正常流量：用 HTTPS 藏在加密流量里、用 DNS 查询把数据一点点带出去、回连间隔加随机抖动（比如每 60 秒上下浮动几十秒），避免形成一眼就能看出来的规律。防御者看 C2，看的是<strong>规律和异常</strong>：一台办公电脑半夜三点定时向一个从没见过的境外地址发小包，或者 DNS 查询量突然暴涨，都是值得查的信号。模块三讲过 DNS 和 TCP 的工作原理——C2 通道再怎么伪装，终究要走这些协议，协议层面的异常是藏不住的。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>真实应急响应里，我见过最多的情况是：客户说“杀毒软件没报毒”，但机器明显不对劲——风扇狂转、半夜有流量、计划任务里多了一个指向 Temp 目录的任务。查到最后，往往是攻击者用系统自带工具（比如 PowerShell）干活，根本没留下一个能被签名的恶意文件。所以蓝队的第一课是：别只信“有没有报毒”，要信“有没有异常行为”。我给新人一个习惯：每周花十分钟，在自己的虚拟机上打开任务计划程序和注册表 Run 键看一眼，认一认里面每一项都是什么——认得正常，才能一眼看出不正常。还有一句：持久化手法本身是中性的，杀毒软件自己也要用 Run 键和服务开机启动，区别只在“是谁放的、指向哪里”。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的 Windows 虚拟机里：打开任务计划程序，把里面每一项任务的名字和“操作”指向的程序都看一遍，记下你认不出的项，再去查它是系统自带的还是第三方软件的。<br>2. 只在你自己的 Windows 虚拟机里：打开注册表编辑器，看 HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run 和 HKEY_LOCAL_MACHINE 下的同名位置，列出里面的每一项，判断每一项指向的程序是否可信。<br>3. 只在你自己的虚拟机里：用 <code>netstat -an</code> 看当前所有网络连接，挑出你认不出的远程地址，查它对应的进程是谁——重点看有没有程序在定时向陌生地址发小包。<br>4. 写一份一页纸的“持久化检查清单”：Run 键、计划任务、服务、启动文件夹、新增账号，每一项写清“在哪查、正常长什么样、什么算异常”，以后每次检查都按这张清单来。</p>
+      <h2>避坑</h2>
+      <p>别在真实系统上练免杀：任何绕过检测的实验都只在你自己的虚拟机里做，拿去对付真实杀毒软件、真实公司网络，就是违法；别把“没报毒”等同于“没问题”：行为异常比报毒更值得查；别只查文件：账号、计划任务、注册表这些“无文件”的持久化位置，恰恰是最容易漏的；别轻易关掉安全软件来“验证”：关掉防护做实验，等于把门打开做实验，实验结束要立刻恢复快照；别把 C2 流量当成普通流量：定时、规律、半夜活动、陌生地址，四个信号凑齐两个就值得深挖。</p>
+      <p>这一章讲的是“躲”和“留”：免杀是躲过检测，持久化是留住权限，C2 是留住联系。理解了这三件事，你就理解了为什么防守不能只靠一款产品——因为攻击者躲的是一层一层的东西。下一章（<a href="m7c17-ad-lab.html">第 17 章</a>）我们换一个战场：亲手搭一个活动目录实验环境——自己的域控、自己的两台客户端，从此活动目录的攻与防都有地方练了。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>检测分四层：特征、启发式、行为、信誉；绕过就是针对其中一层的弱点做文章。</li>
+          <li>免杀常见思路：加密、借用系统自带工具、进程注入、干扰检测；没有一种免杀是永久有效的。</li>
+          <li>持久化要活过重启：Run 键、计划任务、服务、启动文件夹、WMI 事件订阅，外加账号层面的持久化。</li>
+          <li>C2 靠 Beacon 定时回连，模仿正常流量；防御看的是规律和异常（定时、半夜、陌生地址）。</li>
+          <li>防御靠纵深防御：多层叠加，躲过一层还有下一层；“没报毒”不等于“没问题”。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c15-post-exploitation-report.html">← 上一章：第 15 章：后渗透与报告</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c17-ad-lab.html">下一章：第 17 章：动手：搭一个活动目录实验环境 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

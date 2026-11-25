@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 1 章：Web 工作原理深入 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 1 章：Web 工作原理深入</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>模块六里，我们学会了怎么守一台电脑：CIA、风险定级、杀伤链、防火墙、日志、备份。模块七换一个主角：网站。从这一章开始，评估的对象从一台电脑变成一个网站，攻击的手法也会更具体——但模块六的框架会一直跟着你：每一个 Web 漏洞，都可以问一句“它违反了 CIA 里的哪一条”“它处在杀伤链的哪一步”“风险该定几级”。</p>
+      <p>要看懂 Web 攻击，得先看懂一次正常的网页访问到底发生了什么。你在浏览器地址栏里敲下一个网址、按回车，到页面出现，中间其实走了一整条链：浏览器先问 DNS“这个域名对应哪个 IP”（<a href="m3c7-dns-http-tls.html">模块三第 7 章</a>），再和服务器建立 TCP 连接（三次握手），再用 TLS 1.3 把连接加密，最后才发 HTTP 请求、收 HTTP 响应。攻击者就藏在这条链的每一个环节里找缝。</p>
+
+      <h2>一次请求里到底有什么</h2>
+      <p>一个 HTTP 请求由四部分组成：<strong>请求行</strong>（方法 + 路径 + 版本，例如 <code>GET /login HTTP/1.1</code>）、<strong>请求头</strong>（Host、User-Agent、Cookie 等）、<strong>空行</strong>、<strong>请求体</strong>（POST 提交的表单数据就放在这里）。方法是动词：GET 是“拿东西”，POST 是“交东西”，PUT、DELETE、PATCH 分别对应改和删。一个常见的初学者误会是“GET 安全、POST 安全”——不对，两者都只是传数据的方式，真正决定安全的是服务器怎么处理这些数据。</p>
+      <p>服务器回你的响应也有四部分：<strong>状态行</strong>（状态码）、<strong>响应头</strong>、<strong>空行</strong>、<strong>响应体</strong>（通常就是 HTML）。状态码要会读：2xx 是成功（200 正常、302 跳转严格说属于 3xx）、3xx 是重定向、4xx 是客户端的错（404 找不到、403 没权限）、5xx 是服务器的错（500 服务器内部错误）。做渗透测试时，状态码是最诚实的线索：一个本来 404 的路径突然返回 200，往往意味着你猜对了某个隐藏的页面或接口。</p>
+
+      <h2>无状态的 HTTP，怎么记住你是谁</h2>
+      <p>HTTP 有个天生的特点：<strong>无状态</strong>——服务器处理完一个请求就“忘”了你，下一个请求来时，它认不出你就是刚才那个人。可网站偏偏要记住你：你登录后点开每一页，它都得知道“这是已登录的用户”。解决办法就是<strong>会话（Session）</strong>和 <strong>Cookie</strong>。</p>
+      <p>流程是这样的：你登录成功后，服务器在自己的内存或数据库里建一个会话，里面存着“用户 ID、登录时间、权限”，再把一个随机生成的会话 ID（Session ID）通过响应头的 <code>Set-Cookie</code> 发给浏览器。浏览器之后每次发请求，都会自动在请求头里带上 <code>Cookie: sessionid=……</code>，服务器凭这个 ID 找到对应的会话，就认出你了。会话 ID 就是一把临时的钥匙：谁拿到它，谁就是你。所以会话 ID 必须足够随机、必须只走加密连接、最好加上 <code>HttpOnly</code>（JavaScript 读不到，防 XSS 偷）和 <code>Secure</code>（只通过 HTTPS 传）这两个属性。</p>
+      <p>还有一种常见的认证方式是 <strong>JWT</strong>（JSON Web Token），它把用户信息直接写进令牌本身，由服务器签名防篡改，浏览器存在本地。JWT 的细节我们放在<a href="m7c7-session-auth.html">第 7 章</a>细讲，这里先记住一句话：Cookie + 服务端会话是“服务器记得你”，JWT 是“你自己带着一张盖了章的介绍信”。</p>
+
+      <h2>浏览器拿到 HTML 之后干什么</h2>
+      <p>响应体里的 HTML 到了浏览器，并不是直接显示出来就完了。浏览器要解析 HTML 建出 DOM 树（<a href="m4c9-html-css-js.html">模块四第 9 章</a>讲过 DOM 是什么），加载 CSS 决定样式，再执行 JavaScript——JavaScript 可以改 DOM、可以发新的请求（这就是 AJAX / fetch）、可以读 Cookie（除非 HttpOnly）。这一步非常关键：<strong>很多 Web 漏洞的本质，就是攻击者想办法让受害者的浏览器替自己执行代码或发出请求。</strong>下一章的 SQL 注入攻击的是服务器端的数据库，<a href="m7c3-xss.html">第 3 章</a>的 XSS 攻击的就是浏览器这一端。</p>
+      <p>还有一点要建立直觉：浏览器里跑的代码是<strong>不可信的</strong>。用户能在浏览器里改任何东西——改表单里的价格、改 Cookie、改 JavaScript 发出去的请求。所以安全检查永远不能只做在浏览器里：前端的校验只是为了用户体验好，后端的校验才是真正的安全防线。这个原则在<a href="m7c5-upload-logic.html">第 5 章</a>的逻辑漏洞里会反复出现。</p>
+
+      <h2>加密与连接：TLS 1.3 与 TCP 的收尾</h2>
+      <p>现代网站几乎都用 HTTPS，也就是 HTTP + TLS。先讲 <strong>TLS 1.3</strong>：它是当前最新的 TLS 版本，握手更快（一次往返就能建立加密连接），而且去掉了旧版本里一批不安全的加密算法和功能。看到一个网站还在用 TLS 1.0 或 1.1，那本身就是一个值得写进报告的发现——旧版本有已知弱点，早就该淘汰了。证书也要会看：证书是发给哪个域名的、有没有过期、是不是可信机构签发的。</p>
+      <p>TCP 连接结束时要经过<strong>四次挥手</strong>：双方各自发送 FIN、各自确认 FIN，确认对方真的没有数据要发了，才彻底断开。记住这个说法——断连是“四次挥手”，和建立连接的“三次握手”是一对。抓包时（<a href="m3c14-wireshark.html">模块三第 14 章</a>的 Wireshark）能看到完整的挥手过程，会读它，排查“连接挂住、半开连接”这类问题就有了抓手。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="一次网页访问的完整流程图：浏览器经DNS、TCP、TLS到服务器，再发请求收响应">
+          <rect x="20" y="140" width="110" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="75" y="166" text-anchor="middle" font-size="13" fill="#1a1a2e">浏览器</text>
+          <text x="75" y="186" text-anchor="middle" font-size="11" fill="#666">发请求 · 渲染页面</text>
+          <rect x="430" y="140" width="110" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="485" y="166" text-anchor="middle" font-size="13" fill="#1a1a2e">Web 服务器</text>
+          <text x="485" y="186" text-anchor="middle" font-size="11" fill="#666">处理 · 查数据库</text>
+          <rect x="200" y="20" width="160" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="38" text-anchor="middle" font-size="13" fill="#1a1a2e">1. DNS：域名 → IP</text>
+          <text x="280" y="56" text-anchor="middle" font-size="11" fill="#666">2. TCP 三次握手</text>
+          <rect x="200" y="80" width="160" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="98" text-anchor="middle" font-size="13" fill="#1a1a2e">3. TLS 1.3 加密握手</text>
+          <text x="280" y="116" text-anchor="middle" font-size="11" fill="#666">证书、加密算法协商</text>
+          <line x1="130" y1="160" x2="430" y2="160" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#a)"/>
+          <text x="280" y="150" text-anchor="middle" font-size="12" fill="#1a1a2e">HTTP 请求：方法 + 头 + 体</text>
+          <line x1="430" y1="190" x2="130" y2="190" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#a)"/>
+          <text x="280" y="212" text-anchor="middle" font-size="12" fill="#1a1a2e">HTTP 响应：状态码 + 头 + HTML</text>
+          <rect x="180" y="250" width="200" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="272" text-anchor="middle" font-size="13" fill="#1a1a2e">Cookie 会话 ID</text>
+          <text x="280" y="292" text-anchor="middle" font-size="11" fill="#666">浏览器每次请求自动带上</text>
+          <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#1a1a2e"/></marker></defs>
+          <text x="280" y="330" text-anchor="middle" font-size="12" fill="#666">断开连接时：TCP 四次挥手</text>
+        </svg>
+        <figcaption>图：一次网页访问的完整流程——DNS、TCP、TLS 1.3、HTTP 请求与响应、Cookie 会话</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>刚入行的测试员最容易犯的错，是只盯着“页面上能看到的东西”。我见过有人对着一个登录框试了几十个弱密码，却从来没打开浏览器的开发者工具看一眼网络请求——其实请求里明明白白写着后端接口的地址、返回的错误信息、甚至会话 ID 的生成规律。养成习惯：看到任何一个网站，先按 F12 打开开发者工具，看“网络”标签里发了哪些请求、每个请求的状态码和响应是什么。这一个习惯，能让你在渗透测试里少走一半弯路。还有一句：状态码和报错信息是服务器在“说话”，学会听它说话，比背一百个攻击 payload 都有用。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机或实验环境里：打开浏览器开发者工具（F12），访问你自己搭的本地网站（或虚拟机里的 DVWA 靶场），在“网络”标签里看一次完整的请求和响应：记下请求方法、状态码、请求头里的 Cookie、响应头里的 Set-Cookie。<br>2. 在虚拟机里用 curl 复现一次请求：<code>curl -i http://localhost/</code>，对照浏览器里看到的内容，认出状态行、响应头、响应体各是哪几行。<br>3. 检查一个本地站点的 Cookie 属性：在开发者工具的“应用 / 存储”里看 Cookie 有没有 HttpOnly 和 Secure 标记，把结果记下来。<br>4. 画一张你自己的流程图：从输入网址到页面出现，把 DNS、TCP 三次握手、TLS 1.3、HTTP 请求响应、Cookie 这五个步骤按顺序写出来，每个步骤写一句话说明它在干什么。</p>
+      <h2>避坑</h2>
+      <p>别拿真实网站练手：抓包、改请求、试参数只能在自己的虚拟机和靶场里做，对真实网站做这些事是越界行为；别把 GET 和 POST 当成安全措施：数据放在 URL 里还是请求体里都不等于“安全”，后端校验才是防线；别只看页面不看请求：页面上看不到的接口、状态码和响应头，往往藏着真正的信息；别轻信前端校验：浏览器里的任何检查都能被绕过，真正的安全检查永远在服务器端；记清术语：TCP 断连是“四次挥手”，不是别的说法，写报告时别写错。</p>
+      <p>这一章把 Web 的底座铺好了：请求与响应、状态码、会话与 Cookie、浏览器渲染、TLS 1.3、四次挥手。你已经能看懂一次网页访问的全过程，也知道了攻击者会往哪些环节里钻。下一章我们就动手：<a href="m7c2-sqli-lab.html">第 2 章：SQL 注入实战</a>——从<a href="m5c4-sql-injection.html">模块五第 4 章</a>讲过的原理出发，在自己的靶场里把注入从“听说过”变成“亲手做过”。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>一次网页访问要走 DNS、TCP 三次握手、TLS 1.3 加密、HTTP 请求与响应这条完整链路。</li>
+          <li>HTTP 请求由请求行、请求头、空行、请求体组成；响应由状态行、响应头、空行、响应体组成，状态码 2xx/3xx/4xx/5xx 各有含义。</li>
+          <li>HTTP 本身无状态，网站靠会话 ID + Cookie 记住用户；会话 ID 必须随机、只走加密连接，并加上 HttpOnly 和 Secure 属性。</li>
+          <li>浏览器里的代码不可信：前端校验只是体验优化，真正的安全检查永远在服务器端。</li>
+          <li>TLS 先讲 1.3，旧版本应淘汰；TCP 断连是四次挥手，与三次握手相对应。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="summary-module6.html">← 上一章：模块六小结：先守住自己，再看懂攻击者</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c2-sqli-lab.html">下一章：第 2 章：SQL 注入实战 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

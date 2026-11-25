@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows 专项第 2 章：系统进程：SMSS、CSRSS、LSASS · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>Windows 专项第 2 章：系统进程：SMSS、CSRSS、LSASS</h1>
+      <div class="meta"><span class="tag">Windows 专项</span>2026-11-25 · Windows 专项</div>
+      <p>打开任务管理器，你会看到一堆名字奇怪的进程：smss.exe、csrss.exe、lsass.exe、winlogon.exe、services.exe。它们一开机就在跑，关不掉，也绝不能随便关。这一章讲其中最关键的三个：SMSS、CSRSS、LSASS，顺带认识 winlogon 和 services。</p>
+      <p>新手最常犯的错误，就是看到不认识的进程就以为是病毒，然后把它结束掉——结果系统立刻蓝屏或注销。反过来，病毒也最爱冒充这些系统进程的名字。所以这一章的目标很实际：认得出真系统进程长什么样，知道它们各自负责什么，遇到可疑的同名进程知道去哪验证。</p>
+      <p>先记住总图：开机先是 SMSS 搭舞台，然后 CSRSS 管窗口和控制台，LSASS 管“你是谁”，winlogon 管登录界面，services 管服务。它们分工不同，但缺了谁，系统都站不起来。</p>
+      <h2>SMSS：会话管理器，开机第一棒</h2>
+      <p>SMSS（Session Manager Subsystem）是用户态第一个启动的进程，由内核启动。它负责创建会话、启动 CSRSS 和 winlogon、加载注册表里 \Registry\Machine\SYSTEM\CurrentControlSet\Control\Session Manager\BootExecute 指定的启动任务（比如开机磁盘检查 chkdsk），还负责创建系统环境变量。</p>
+      <p>SMSS 有个特点：它启动完关键子系统后，自己就退场了——主 SMSS 进程在系统起来后会退出，只在每个新会话里留下一个短暂的副本。所以任务管理器里你通常看不到常驻的 smss.exe，或者只看到一瞬间。看到多个长期存在的 smss.exe，就要警惕。</p>
+      <p>排障时，SMSS 相关的问题常表现为开机卡在某个阶段、开机自检反复出现。检查思路是看 BootExecute 里被加了什么：恶意软件有时会把自己写进这里，让自己在登录之前就跑起来。</p>
+      <h2>CSRSS：窗口与控制台的幕后管家</h2>
+      <p>CSRSS（Client/Server Runtime Subsystem）负责 Windows 的窗口管理、控制台窗口（命令提示符、PowerShell 的黑窗口其实都是它画的）、进程和线程的创建与销毁，以及一部分图形子系统的支持。在 Windows NT 早期它管得更多，后来图形部分搬进了内核，但它依然是不可或缺的。</p>
+      <p>CSRSS 每个会话一个实例：会话 0（服务会话）一个，登录用户会话一个。所以任务管理器里看到两个 csrss.exe 是正常的，一个都不能结束。结束 CSRSS 的后果是立刻蓝屏——系统设计上就是这么“脆弱”，因为它管的东西太基础了。</p>
+      <p>安全上要注意：CSRSS 是病毒冒充的重灾区。真的 csrss.exe 永远在 C:\Windows\System32\ 下，由 SYSTEM 账号运行，父进程是 SMSS。如果在别的路径下看到 csrss.exe，或者它的父进程不是 smss.exe，那就是假的，立刻按第 7 章的 Sysinternals 工具去核查。</p>
+      <h2>LSASS：管“你是谁”的守门人</h2>
+      <p>LSASS（Local Security Authority Subsystem Service）是 Windows 安全的心脏：登录时验证你的密码、生成访问令牌（第 9 章细讲）、保存登录凭据、管理本地安全策略。每次你输入密码、每次程序以你的身份访问文件，背后都有 LSASS 在背书。</p>
+      <p>正因为它手里攥着凭据，LSASS 是攻击者最想偷的东西。著名的 Mimikatz 工具，干的就是从 LSASS 内存里把密码哈希和票据掏出来。Windows 对此的防护包括：Credential Guard（用虚拟化把 LSASS 隔离开，第 10 章讲）、LSA 保护（只允许签名的代码注入 LSASS）、以及“不要用管理员账号日常上网”这条最朴素的规矩。</p>
+      <p>LSASS 被结束或崩溃，系统会强制重启——这是设计上的保护：没有守门人，系统宁可停下来也不继续裸奔。如果你的电脑无缘无故提示“LSASS 遇到问题即将重启”，先别急着重装，查查是不是有程序在往 LSASS 里注入东西，或者系统文件损坏了。</p>
+      <h2>winlogon 与 services：登录与服务的搭档</h2>
+      <p>winlogon.exe 管登录界面：你看到的锁屏、输入密码的框、Ctrl+Alt+Del 的安全桌面，都是它负责的。它和 LSASS 配合：你输密码，winlogon 把密码交给 LSASS 验证，验证通过才放你进桌面。winlogon 还负责锁屏、注销、关机时的会话清理。</p>
+      <p>services.exe 是服务控制管理器（SCM）：所有 Windows 服务（第 4 章细讲）都由它启动、停止和管理。开机时它按配置一个个把服务拉起来，服务崩了它负责记录、按策略重启。任务管理器里 services.exe 的子进程，就是一堆 svchost.exe。</p>
+      <p>认识这五个进程之后，任务管理器的“详细信息”页就不再是一堆天书了：System、Registry、Memory Compression 是内核相关的系统进程；smss、csrss、lsass、winlogon、services 是用户态的系统支柱；剩下的 svchost.exe 是服务的宿主，一个 svchost 里可能装着好几个服务。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="系统关键进程关系图：SMSS 启动 CSRSS 和 winlogon，winlogon 调用 LSASS 验证登录，services 管理服务">
+          <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker></defs>
+          <rect x="180" y="10" width="200" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">SMSS 会话管理器</text>
+          <text x="280" y="54" text-anchor="middle" font-size="11" fill="#666">开机第一棒，搭舞台</text>
+          <rect x="20" y="90" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">CSRSS</text>
+          <text x="100" y="134" text-anchor="middle" font-size="11" fill="#666">窗口、控制台</text>
+          <rect x="200" y="90" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">winlogon</text>
+          <text x="280" y="134" text-anchor="middle" font-size="11" fill="#666">登录界面</text>
+          <rect x="380" y="90" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">LSASS</text>
+          <text x="460" y="134" text-anchor="middle" font-size="11" fill="#666">验证密码、发令牌</text>
+          <rect x="180" y="190" width="200" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">services.exe 服务控制管理器</text>
+          <text x="280" y="234" text-anchor="middle" font-size="11" fill="#666">启动、管理所有服务</text>
+          <line x1="280" y1="54" x2="280" y2="88" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="280" y1="142" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="280" y="290" text-anchor="middle" font-size="12" fill="#666">真的系统进程都在 C:\Windows\System32 下，由 SYSTEM 运行</text>
+          <text x="280" y="315" text-anchor="middle" font-size="12" fill="#666">父进程不对、路径不对，就是冒充</text>
+
+        </svg>
+        <figcaption>图：开机关键进程的分工——SMSS 搭台、CSRSS 管窗口、LSASS 管身份</figcaption>
+      </figure>
+      <h2>本章检查清单</h2>
+      <p>□ SMSS 是开机第一棒，负责建会话、启动 CSRSS 和 winlogon，干完活就退场。</p>
+      <p>□ CSRSS 管窗口和控制台，每个会话一个，真的只在 System32 下、父进程是 SMSS。</p>
+      <p>□ LSASS 是安全心脏，验证密码、发访问令牌，是 Mimikatz 这类工具最想偷的目标。</p>
+      <p>□ winlogon 管登录界面，services.exe 管所有服务的启动和停止。</p>
+      <p>□ 辨别真假系统进程看三件套：路径、父进程、数字签名，只看名字一定会误判。</p>
+      <p>□ 把本章的命令和检查步骤抄进自己的笔记，下次遇到同类问题直接用。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本章学习检查流程图：理解概念、动手检查、形成习惯">
+          <rect x="130" y="20" width="300" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">第一步：理解概念</text>
+          <text x="280" y="62" text-anchor="middle" font-size="11" fill="#666">能用自己的话讲出本章的核心概念</text>
+          <rect x="130" y="110" width="300" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="132" text-anchor="middle" font-size="14" fill="#1a1a2e">第二步：动手检查</text>
+          <text x="280" y="152" text-anchor="middle" font-size="11" fill="#666">只在虚拟机里，按动手做逐项验证</text>
+          <rect x="130" y="200" width="300" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="14" fill="#1a1a2e">第三步：形成习惯</text>
+          <text x="280" y="242" text-anchor="middle" font-size="11" fill="#666">把检查写进笔记，下次遇到同类问题直接用</text>
+          <line x1="280" y1="72" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="162" x2="280" y2="198" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">概念、动手、习惯，三步走完才算学会一章</text>
+        </svg>
+        <figcaption>图：本章的学习检查流程——理解概念、动手检查、形成习惯</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>我接过不少“我电脑中病毒了”的求助，打开任务管理器一看，用户要杀的正是 csrss.exe——因为网上有文章说它“可能是病毒”。我的判断方法从来只有三条：看路径（是不是 System32）、看父进程（Process Explorer 里一眼就能看到）、看签名（右键属性 → 数字签名是不是 Microsoft）。三条都对，就放手；有一条不对，再查。反过来也一样：真病毒冒充成 svchost.exe 藏在用户目录下，路径一露馅就藏不住了。记住，名字可以冒充，路径和父进程很难一起冒充。</div>
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机里：打开任务管理器 → 详细信息，按名称排序，找到 csrss.exe、lsass.exe、winlogon.exe、services.exe，记下它们的 PID、用户名（应为 SYSTEM）和内存占用。<br>2. 在虚拟机里打开 PowerShell，运行 Get-Process csrss,lsass,winlogon,services | Select-Object Name,Id,Path，再运行 Get-CimInstance Win32_Process -Filter "Name='csrss.exe'" | Select-Object Name,ParentProcessId，对照父进程 ID 看看 csrss 的父亲是谁。<br>3. 下载 Sysinternals 的 Process Explorer（第 7 章会细讲），在虚拟机里打开它，看看这些系统进程的父子关系树，并右键一个系统进程 → 属性 → 验证签名，把看到的签发者记下来。</p>
+      <h2>避坑</h2>
+      <p>千万别在任务管理器里结束 csrss.exe、lsass.exe、winlogon.exe 或 services.exe：结束 CSRSS 立刻蓝屏，结束 LSASS 系统强制重启，结束 winlogon 会注销；别只看名字断案：病毒最爱用的就是同名冒充，一定要看路径、父进程和签名三件套；别轻信网上的“进程大全”式结论：同一个进程名在不同 Windows 版本里行为可能不同，以你手上这台机器的实际情况为准。</p>
+      <p>现在你认得开机就在跑的关键进程了：SMSS 搭台、CSRSS 管窗口、LSASS 管身份、winlogon 管登录、services 管服务。下一章我们看它们把配置存在哪：<a href="windows-c3-registry-ntfs.html">第 3 章</a>讲注册表与 NTFS——配置单元、MFT 与备用数据流，藏东西和找东西都在那里。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>SMSS 是开机第一棒，负责建会话、启动 CSRSS 和 winlogon，干完活就退场。</li>
+          <li>CSRSS 管窗口和控制台，每个会话一个，真的只在 System32 下、父进程是 SMSS。</li>
+          <li>LSASS 是安全心脏，验证密码、发访问令牌，是 Mimikatz 这类工具最想偷的目标。</li>
+          <li>winlogon 管登录界面，services.exe 管所有服务的启动和停止。</li>
+          <li>辨别真假系统进程看三件套：路径、父进程、数字签名，只看名字一定会误判。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="windows-c1-architecture.html">← 上一章：第 1 章：Windows 架构：NT Executive、内核与 HAL</a>
+        <a href="../course.html">课程目录</a>
+        <a href="windows-c3-registry-ntfs.html">下一章：第 3 章：注册表与 NTFS：配置单元、MFT 与备用数据流 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

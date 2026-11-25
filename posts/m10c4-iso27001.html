@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块十第 4 章：ISO 27001 与合规框架 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块十第 4 章：ISO 27001 与合规框架</h1>
+      <div class="meta"><span class="tag">治理、风险、合规与韧性</span>2026-11-25 · 模块十</div>
+      <p>上一章的 NIST CSF 是自愿对照的体检表——没人发证书，做得好不好自己说了算。这一章讲另一套框架：<strong>ISO/IEC 27001:2022</strong>。它是国际标准化组织（ISO）和国际电工委员会（IEC）发布的<a href="m10c3-nist-csf.html">信息安全管理体系标准</a>，最大的不同是：它可以<strong>认证</strong>——通过第三方审核，拿到一张证书，向客户和合作伙伴证明“我们的安全管理是合格的”。很多公司投标、签大客户时，对方第一句话就是：“你们有 ISO 27001 证书吗？”</p>
+      <p>先分清两个容易混淆的名字：<strong>ISO 27001</strong> 是“要求”——规定一家组织必须建立什么样的管理体系才能拿证；<strong>ISO 27002</strong> 是“指南”——告诉你每项控制具体怎么做。27001 是考试大纲，27002 是参考书。第 10 章会把 27001 的附录 A 一条一条讲清楚，本章先讲体系本身。</p>
+
+      <h2>ISMS：信息安全管理体系是什么</h2>
+      <p>ISO 27001 要求组织建立一套 <strong>ISMS（信息安全管理体系）</strong>，核心思想是 PDCA 循环：<strong>计划（Plan）</strong>——定范围、做风险评估、选控制措施；<strong>实施（Do）</strong>——把措施落地、写政策、做培训；<strong>检查（Check）</strong>——内审、监控、测一测措施有没有效；<strong>改进（Act）</strong>——发现问题就改，再来一轮。体系不是一套文件，而是一个不停转的循环——这正是第 1 章治理里“能检查”的具体化。</p>
+      <p>体系的第一步是<strong>定范围</strong>：哪些部门、哪些系统、哪些数据在体系里？范围要写清楚，不能含糊——“全公司”听起来气派，但做起来可能顾不过来；“只有客户服务系统”又可能太窄，客户会问“那我的数据存在哪？”范围定下来之后，所有工作都围绕它展开。</p>
+
+      <h2>27001 的正文：十个条款，重点在 4–10</h2>
+      <p>ISO 27001:2022 的正文有十个条款，前三个是介绍性的（范围、引用、术语），真正的要求在第 4 到第 10 条：<strong>第 4 条</strong>理解组织及其环境——内外部有哪些因素会影响安全；<strong>第 5 条</strong>领导作用——高层必须带头、批资源、定政策，不能只挂个名；<strong>第 6 条</strong>策划——做风险评估、定安全目标；<strong>第 7 条</strong>支持——人、钱、培训、沟通、文件都要跟上；<strong>第 8 条</strong>运行——按计划执行风险处置、做变更管理；<strong>第 9 条</strong>绩效评价——监控、内审、管理评审；<strong>第 10 条</strong>改进——不符合项要纠正，体系要持续改进。</p>
+      <p>注意第 5 条“领导作用”：很多公司拿证失败，不是技术不行，是高层不参与。审核员会直接问老板：“你的安全目标是什么？你上次看安全报告是什么时候？”答不上来，体系就是纸面上的。</p>
+
+      <h2>附录 A：93 项控制，四组分法</h2>
+      <p>27001 的附录 A 列出了 93 项控制措施，分成四组：<strong>组织类 37 条</strong>（政策、职责、供应商、事件管理等）、<strong>人员类 8 条</strong>（入职、离职、培训、纪律等）、<strong>物理类 14 条</strong>（门禁、机房、设备等）、<strong>技术类 34 条</strong>（访问控制、加密、日志、备份等）。37 + 8 + 14 + 34 = 93，这组数字要记住，第 10 章会逐组讲。</p>
+      <p>关键点：<strong>不是每一条都必须做。</strong>组织要先做风险评估，再根据风险选控制措施；没选的，要在《适用性声明》（SoA）里写清为什么不选。审核员看 SoA，就能知道你是不是“按风险办事”，而不是“照单全抄”。这和第 2 章的风险管理是同一套逻辑：先评估，再处置。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ISO 27001体系PDCA循环与附录A四组控制图">
+          <rect x="180" y="10" width="200" height="44" rx="8" fill="#1a1a2e" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="37" text-anchor="middle" font-size="15" fill="#ffffff">ISMS：PDCA 循环不停转</text>
+          <rect x="20" y="80" width="120" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="103" text-anchor="middle" font-size="13" fill="#1a1a2e">计划 Plan</text>
+          <text x="80" y="123" text-anchor="middle" font-size="11" fill="#666">定范围、评估风险</text>
+          <rect x="150" y="80" width="120" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="210" y="103" text-anchor="middle" font-size="13" fill="#1a1a2e">实施 Do</text>
+          <text x="210" y="123" text-anchor="middle" font-size="11" fill="#666">落地措施、做培训</text>
+          <rect x="280" y="80" width="120" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="340" y="103" text-anchor="middle" font-size="13" fill="#1a1a2e">检查 Check</text>
+          <text x="340" y="123" text-anchor="middle" font-size="11" fill="#666">内审、监控、测效果</text>
+          <rect x="410" y="80" width="130" height="56" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="475" y="103" text-anchor="middle" font-size="13" fill="#1a1a2e">改进 Act</text>
+          <text x="475" y="123" text-anchor="middle" font-size="11" fill="#666">纠正问题、再来一轮</text>
+          <rect x="20" y="170" width="250" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="193" text-anchor="middle" font-size="13" fill="#1a1a2e">附录 A：组织类 37 条 + 人员类 8 条</text>
+          <text x="145" y="213" text-anchor="middle" font-size="11" fill="#666">政策、职责、入职离职、培训</text>
+          <rect x="290" y="170" width="250" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="193" text-anchor="middle" font-size="13" fill="#1a1a2e">附录 A：物理类 14 条 + 技术类 34 条</text>
+          <text x="415" y="213" text-anchor="middle" font-size="11" fill="#666">门禁、机房、访问控制、加密、日志</text>
+          <text x="280" y="265" text-anchor="middle" font-size="13" fill="#1a1a2e">37 + 8 + 14 + 34 = 93 项控制</text>
+          <text x="280" y="290" text-anchor="middle" font-size="12" fill="#666">不是每条都必须做：按风险选，没选的写进适用性声明</text>
+          <text x="280" y="315" text-anchor="middle" font-size="12" fill="#666">认证分两个阶段：文件审核 + 现场审核，通过后拿证、每年监督审核</text>
+        </svg>
+        <figcaption>图：ISO 27001 的 ISMS 是 PDCA 循环，附录 A 的 93 项控制分四组，按风险选用</figcaption>
+      </figure>
+
+      <h2>认证是怎么考的</h2>
+      <p>认证分两个阶段：<strong>第一阶段</strong>是文件审核——审核员看你的政策、风险评估、适用性声明全不全；<strong>第二阶段</strong>是现场审核——审核员到公司来，访谈员工、抽查记录、看措施是不是真的在跑。两个阶段都通过，才能拿证。拿证之后不是一劳永逸：每年有监督审核，三年要重新认证。审核员最爱问的一句话是：“给我看证据。”说你做了培训，要拿出签到表；说你做了备份，要拿出恢复演练记录。没有证据，就等于没做。</p>
+      <p>对初学者来说，ISO 27001 的最大价值不是那张证书，而是它逼着一家公司把安全工作“体系化”：风险评估做了、责任分清了、记录留下了、定期复查了。哪怕不去拿证，按这个思路做一遍，公司的安全水平也会上一个台阶。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我见过两家公司准备 ISO 27001，一家花了三个月突击补文件，审核时员工被问到政策内容一问三不知，结果没过；另一家花了半年，先让每个部门按自己的业务做风险评估，再写政策，审核时员工能说出自己的职责和手里的流程，一次就过了。差别不在文件多厚，在“是不是真的在跑”。还有一句大实话：别为了拿证而拿证——如果客户没要求、业务不需要，先按 27001 的思路把基础打牢（资产清单、风险评估、备份、访问控制），比急着请审核员划算得多。证书是结果，不是目的。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机或实验环境里做：给假想的 20 人小公司写一段 ISMS 范围声明，写清哪些部门、系统和数据在范围内，哪些不在，并写一句为什么这样定。<br>2. 从附录 A 的四组里各挑两项控制（组织、人员、物理、技术各两项），写出这家小公司打算怎么做、由谁负责。<br>3. 写一份迷你适用性声明：挑一项你认为这家小公司暂时不做的控制，写清不做的理由（比如没有机房，就不做机房类控制），并写明什么时候重新评估。<br>4. 对照 PDCA，写出这家公司下个季度的四件事：计划做什么、实施什么、检查什么、改进什么。</p>
+      <h2>避坑</h2>
+      <p>别把 27001 和 27002 混为一谈：27001 是要求（考试大纲），27002 是指南（参考书）；别以为 93 项都要做：按风险选，没选的写进适用性声明并讲清理由；别让高层只挂名：第 5 条领导作用是审核重点，老板答不上安全目标，体系就是纸面的；别突击补文件：审核员要的是证据和真实运行，员工一问三不知就过不了；别在真实公司系统上练手：本章的动手做只写文档、做表格，不碰任何真实公司的账号、数据和系统。</p>
+      <p>ISO 27001 讲的是“自己家里”的体系，但风险常常从“别人家里”进来：供应商的系统被攻破，你的数据也跟着遭殃。下一章讲 <a href="m10c5-third-party-risk.html">第 5 章：第三方风险</a>——合作方靠不靠谱，不能只看合同上的一句话。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>ISO/IEC 27001:2022 是可以认证的信息安全管理体系标准；27001 是要求，27002 是指南。</li>
+          <li>ISMS 的核心是 PDCA 循环：计划、实施、检查、改进，不停转；第一步是定清范围。</li>
+          <li>正文第 4–10 条是真正的要求，其中第 5 条领导作用是审核重点，高层必须真参与。</li>
+          <li>附录 A 共 93 项控制：组织类 37 条、人员类 8 条、物理类 14 条、技术类 34 条，按风险选用，没选的写进适用性声明。</li>
+          <li>认证分文件审核和现场审核两阶段，拿证后每年监督审核、三年重新认证；审核员最爱问“给我看证据”。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m10c3-nist-csf.html">← 上一章：第 3 章：NIST CSF 2.0</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m10c5-third-party-risk.html">下一章：第 5 章：第三方风险 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

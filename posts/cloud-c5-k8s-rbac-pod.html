@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>云与容器安全专项第 5 章：Kubernetes RBAC 与 Pod 安全 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>云与容器安全专项第 5 章：Kubernetes RBAC 与 Pod 安全</h1>
+      <div class="meta"><span class="tag">云与容器安全专项</span>2026-11-25 · 云与容器安全专项</div>
+      <p>上一章管的是镜像出生之前的事。这一章管的是容器跑起来之后的事，地点是 Kubernetes（简称 K8s）——目前最常用的容器编排系统。你可以把它理解成容器的“调度中心”：哪个容器跑在哪台机器上、谁能操作集群、容器之间能不能互相访问，都由它说了算。K8s 的安全，核心就是两个问题：<strong>谁能动集群</strong>（RBAC），以及<strong>容器能干什么</strong>（Pod 安全）。</p>
+      <p>先认识 K8s 里最小的单位：<strong>Pod</strong>。Pod 是一组一起跑的容器，共享网络和存储，是 K8s 调度的基本单位。多个 Pod 组成<strong>命名空间</strong>（Namespace）：命名空间是集群里的一道隔离墙——开发、测试、生产可以各用一个命名空间，互相看不见对方的资源。K8s 的控制平面（API Server）是集群的“大脑”，所有操作都要经过它；节点（Node）是真正跑容器的机器。安全的第一条规矩：控制平面不对公网开放，节点的访问也要收紧。</p>
+
+      <h2>RBAC：谁能动集群</h2>
+      <p><strong>RBAC</strong>（基于角色的访问控制）是 K8s 的权限模型，四个概念要分清。<strong>主体</strong>：谁在操作——用户、用户组，或者服务账号（ServiceAccount，给 Pod 里的程序用的身份）。<strong>角色</strong>（Role）：一组权限的集合，比如“能查看 Pod、不能删除 Pod”。<strong>角色绑定</strong>（RoleBinding）：把角色发给某个主体，限定在某个命名空间里。<strong>集群角色与集群角色绑定</strong>（ClusterRole / ClusterRoleBinding）：作用范围是整个集群，不限于一个命名空间。</p>
+      <p>RBAC 的做法和第 2 章的云 IAM 是一个思路：最小权限、按角色给、定期回收。具体到 K8s，有四条硬规矩。<strong>第一，默认的服务账号权限要收紧。</strong>每个命名空间都有一个默认服务账号，Pod 没指定身份时就用它——默认服务账号不应该有超出需要的权限，更不应该能创建、删除资源。<strong>第二，集群管理员（cluster-admin）要极少。</strong>cluster-admin 是 K8s 里的“上帝角色”，能做任何事，只有极少数人能拿，日常操作绝不用它。<strong>第三，权限按命名空间隔离。</strong>开发环境的角色只能动开发命名空间，动不了生产命名空间——命名空间就是 K8s 世界里的账号隔离。<strong>第四，定期审计绑定关系。</strong>谁绑定了什么角色、角色里有什么权限，定期导出来检查，离职、换岗的绑定要及时回收。</p>
+
+      <h2>Pod 安全：容器能干什么</h2>
+      <p>RBAC 管的是“谁能动集群”，Pod 安全管的是“容器跑起来之后能干什么”。容器默认的隔离没有虚拟机那么强——容器共用宿主机的内核，一个容器逃逸出来，就可能影响整台宿主机。所以 Pod 的安全配置要逐项收紧。</p>
+      <p><strong>第一，别用 root 跑容器。</strong>容器里默认可能是 root 用户，容器一旦被攻破，攻击者就是 root。Pod 安全配置里要指定非 root 用户运行，禁止提权（allowPrivilegeEscalation: false）。<strong>第二，别给容器特权。</strong>特权容器（privileged: true）几乎等于直接操作宿主机，只在极少数系统级场景下才用，业务容器一律不给。<strong>第三，文件系统只读。</strong>容器运行时不需要改自己的文件系统，就把它设成只读（readOnlyRootFilesystem: true），需要写数据的地方单独挂一个卷——攻击者就算进来了，也写不进系统文件、装不了后门。<strong>第四，限制资源。</strong>每个 Pod 都要设 CPU 和内存的上限（limits），防止一个失控的容器（或被挖矿的容器）把整台节点的资源吃光，拖垮其他容器。</p>
+      <p>K8s 提供了 <strong>Pod 安全标准</strong>（Privileged、Baseline、Restricted 三档），可以按命名空间强制执行：生产命名空间用最严的 Restricted，开发命名空间可以用 Baseline。标准是底线，不是天花板——关键业务还要按自己的需要再加规则。还有<strong>网络策略</strong>（NetworkPolicy）：默认情况下，同一个集群里的 Pod 之间是可以互相访问的；网络策略就是给 Pod 之间加防火墙——只允许明确需要的访问，其他一律拒绝。微隔离做到位了，一个 Pod 被攻破，攻击者也横向移动不出去。</p>
+
+      <h2>密钥与镜像拉取：容易漏的两处</h2>
+      <p><strong>密钥（Secret）</strong>是 K8s 里存密码、证书、令牌的地方。两条规矩：密钥不要写在 Pod 的定义文件里（定义文件可能进代码仓库），要用专门的 Secret 对象挂载；Secret 默认只做了 base64 编码，不是加密——要开静态加密（Encryption at Rest），让存在 etcd 里的数据真正加密。更进一步，重要密钥可以用外部密钥管理系统来管，K8s 只在用的时候去取。</p>
+      <p><strong>镜像拉取</strong>也要管：K8s 拉镜像时要验证来源——只允许从可信的私有仓库拉取，配合上一章的签名验证，签名对不上的镜像不准部署。公开仓库的镜像、没扫过的镜像，不应该出现在生产集群里。镜像拉取凭证本身也是密钥，要按 Secret 的规矩管。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kubernetes RBAC 与 Pod 安全分层图">
+          <rect x="30" y="30" width="500" height="70" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="58" text-anchor="middle" font-size="14" fill="#1a1a2e">RBAC：谁能动集群</text>
+          <text x="280" y="85" text-anchor="middle" font-size="12" fill="#666">主体 → 角色 → 角色绑定（命名空间内）· 集群角色绑定（全集群）</text>
+          <rect x="30" y="130" width="240" height="90" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="150" y="158" text-anchor="middle" font-size="13" fill="#1a1a2e">Pod 安全：容器能干什么</text>
+          <text x="150" y="183" text-anchor="middle" font-size="12" fill="#1a1a2e">非 root · 禁止提权 · 只读文件系统</text>
+          <text x="150" y="205" text-anchor="middle" font-size="12" fill="#666">限制资源 · 网络策略做微隔离</text>
+          <rect x="290" y="130" width="240" height="90" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="410" y="158" text-anchor="middle" font-size="13" fill="#1a1a2e">密钥与镜像拉取</text>
+          <text x="410" y="183" text-anchor="middle" font-size="12" fill="#1a1a2e">Secret 静态加密 · 不写进定义文件</text>
+          <text x="410" y="205" text-anchor="middle" font-size="12" fill="#666">只从可信仓库拉取 · 验证签名</text>
+          <text x="280" y="260" text-anchor="middle" font-size="13" fill="#1a1a2e">命名空间是隔离墙：开发、测试、生产各用一个</text>
+          <text x="280" y="290" text-anchor="middle" font-size="12" fill="#666">控制平面不对公网开放 · cluster-admin 极少人能拿</text>
+          <text x="280" y="320" text-anchor="middle" font-size="12" fill="#666">一个 Pod 被攻破，网络策略要让攻击者横向移动不出去</text>
+        </svg>
+        <figcaption>图：RBAC 管“谁能动集群”，Pod 安全管“容器能干什么”，命名空间是两者之间的隔离墙</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我审计过一个 K8s 集群，发现一个开发用的服务账号绑定了 cluster-admin——问下来，是当初图省事绑的，后来没人记得收回来。那个账号的令牌还写在一个 Pod 的定义文件里，定义文件传到了代码仓库。也就是说，任何一个能看到仓库的人，都能拿到整个集群的最高权限。从那以后，我审计 K8s 只看三样东西：第一，有几个 cluster-admin 绑定，分别是谁；第二，默认服务账号能干什么；第三，有没有 Pod 在用 root 或特权模式跑。这三样查完，集群的安全水平基本就摸清了。还有一句：网络策略一定要做，我见过太多集群“默认全通”，一个 Pod 被攻破，攻击者半小时就摸遍了整个集群——微隔离不是锦上添花，是保命的东西。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在自己的虚拟机或云厂商的免费实验沙箱里做：在本地虚拟机里装一个轻量 K8s（比如 minikube 或 kind），建两个命名空间（开发和生产），分别建一个只能查看 Pod 的角色和一个能管理 Pod 的角色，绑定给不同的服务账号，验证开发角色动不了生产命名空间。<br>2. 在你的实验集群里跑一个 Pod，故意不设安全配置，再逐项加上：非 root 用户、禁止提权、只读文件系统、资源上限，每加一项验证一次容器还能不能正常跑——看看哪一项会让你的应用出问题，为什么。<br>3. 写一条网络策略：只允许 A 命名空间的 Pod 访问 B 命名空间的某个服务，其他访问一律拒绝，部署后验证拒绝真的生效了。<br>4. 检查一个你手头有的 Pod 定义文件（没有就现写一个最小的）：里面有没有写死密钥？镜像地址是不是可信仓库？容器是不是 root 或特权模式？把发现的问题记下来。</p>
+      <h2>避坑</h2>
+      <p>别给服务账号绑 cluster-admin：日常操作用最小权限的角色，cluster-admin 只给极少数人；别让默认服务账号权限过大：Pod 没指定身份时就用它，权限要收紧；别用 root 或特权容器跑业务：非 root、禁止提权、只读文件系统是底线；别把密钥写进定义文件：用 Secret 对象挂载，并开静态加密；别让集群默认全通：网络策略做微隔离，一个 Pod 被攻破也要横向移动不出去；别把控制平面暴露给公网：API Server 只允许可信的网络访问。</p>
+      <p>RBAC 与 Pod 安全管的是集群“运行中”的安全。但集群的配置每天都在变：有人改了角色绑定，有人放宽了 Pod 安全标准，有人新开了一个公开的服务——这些变化谁来看着？下一章<a href="cloud-c6-cspm-compliance.html">第 6 章：CSPM 与云合规</a>讲的就是“持续检查”的工具：用 CSPM 把云配置一遍一遍地扫，别让错误配置一直敞着。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>Pod 是 K8s 调度的基本单位，命名空间是集群里的隔离墙，控制平面不对公网开放。</li>
+          <li>RBAC 四个概念：主体、角色、角色绑定、集群角色绑定；最小权限、按命名空间隔离、定期审计绑定关系。</li>
+          <li>Pod 安全底线：非 root 运行、禁止提权、不给特权、文件系统只读、限制 CPU 与内存资源。</li>
+          <li>Pod 安全标准分 Privileged、Baseline、Restricted 三档，生产命名空间用最严的 Restricted；网络策略做微隔离。</li>
+          <li>密钥用 Secret 对象挂载并开静态加密，不要写进定义文件；只从可信仓库拉取镜像并验证签名。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="cloud-c4-image-security.html">← 上一章：第 4 章：容器镜像安全</a>
+        <a href="../course.html">课程目录</a>
+        <a href="cloud-c6-cspm-compliance.html">下一章：第 6 章：CSPM 与云合规 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

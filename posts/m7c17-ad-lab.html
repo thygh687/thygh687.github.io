@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 17 章：动手：搭一个活动目录实验环境 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 17 章：动手：搭一个活动目录实验环境</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>从这一章起，我们进入活动目录（Active Directory，简称 AD）的世界。AD 是企业内网的“户口本 + 门禁系统”：谁是谁、谁能进哪台电脑、谁能看哪个文件夹，全由它说了算。想学 AD 的攻与防，光看书是不够的——你需要一个自己的域：自己的域控、自己的两台客户端、自己的用户和组。这一章就是动手搭这个实验室：全部在你自己的虚拟机里，用“仅主机”或“内部网络”把实验网和真实网络隔开，绝不碰真实公司的域、真实的网络。</p>
+      <p>先说硬件账：你的电脑是 64GB 内存，搭这个实验绰绰有余。三台虚拟机这样分：一台 Windows Server（域控）分 4GB 内存、2 个 CPU、60GB 磁盘；两台 Windows 10/11 客户端各分 4GB 内存、2 个 CPU、50GB 磁盘。加起来 12GB 内存，宿主机还剩一大半。虚拟机软件用你之前课程里用过的那一款就行（模块二第 7 章搭 Linux 虚拟机时用过的流程，这里换成 Windows 系统盘）。Windows Server 可以用微软官方提供的评估版镜像——评估版有 180 天试用期，足够学完这一模块，记得从微软官网下载，不要从任何来路不明的网站下系统镜像。</p>
+
+      <h2>网络：先把实验网隔离开</h2>
+      <p>搭 AD 实验最重要的一步不是装系统，是<strong>先把网络隔离开</strong>。三台虚拟机都接到同一个“仅主机（Host-Only）”或“内部网络（Internal）”里：它们之间能互相通信，但默认出不去真实网络，也进不来真实网络。这样做有两个好处：第一，实验里的攻击手法（比如第 19 章的哈希传递）不会误伤真实网络；第二，域控提供的 DHCP、DNS 服务不会干扰你家里的真实路由器。记住一个原则：<strong>实验网的 DNS 和 DHCP 都由你的域控说了算</strong>，客户端的 DNS 要指向域控的地址，而不是指向你家路由器的地址——否则客户端根本找不到域。</p>
+      <p>地址规划可以很简单：域控固定 IP 192.168.56.10，客户端 1 用 192.168.56.11，客户端 2 用 192.168.56.12，子网掩码 255.255.255.0。域名起一个明显是实验用的名字，比如 lab.local——一看就知道这是实验室，不是真实公司的域。装好之后立刻给每台虚拟机拍一个快照，起名“刚装好”：以后实验做坏了，一键回到这个干净状态，比重装快十倍。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="活动目录实验环境三台虚拟机拓扑图">
+          <rect x="180" y="20" width="200" height="56" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="44" text-anchor="middle" font-size="14" fill="#1a1a2e">域控 DC01</text>
+          <text x="280" y="64" text-anchor="middle" font-size="11" fill="#666">Windows Server · 192.168.56.10</text>
+          <rect x="20" y="140" width="200" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="120" y="164" text-anchor="middle" font-size="14" fill="#1a1a2e">客户端 1</text>
+          <text x="120" y="184" text-anchor="middle" font-size="11" fill="#666">Windows 10/11 · 192.168.56.11</text>
+          <rect x="340" y="140" width="200" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="440" y="164" text-anchor="middle" font-size="14" fill="#1a1a2e">客户端 2</text>
+          <text x="440" y="184" text-anchor="middle" font-size="11" fill="#666">Windows 10/11 · 192.168.56.12</text>
+          <line x1="230" y1="76" x2="120" y2="138" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="330" y1="76" x2="440" y2="138" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="140" y="240" width="280" height="56" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="264" text-anchor="middle" font-size="14" fill="#1a1a2e">仅主机 / 内部网络（与真实网络隔离）</text>
+          <text x="280" y="284" text-anchor="middle" font-size="11" fill="#666">DNS 由域控提供 · 每台机器先拍快照</text>
+          <text x="280" y="325" text-anchor="middle" font-size="12" fill="#666">域名 lab.local：一看就是实验室</text>
+        </svg>
+        <figcaption>图：三台虚拟机的实验拓扑——域控加两台客户端，网络与真实网络隔离</figcaption>
+      </figure>
+
+      <h2>搭域的五个步骤</h2>
+      <p><strong>第一步，装好三台虚拟机。</strong>域控装 Windows Server，客户端装 Windows 10 或 11，都用官方镜像。装完先打补丁、设好上面规划的固定 IP，互相 ping 一下确认通了再往下走。</p>
+      <p><strong>第二步，把服务器提升为域控。</strong>在服务器上安装“Active Directory 域服务”角色，然后运行提升向导：新建林，根域名填 lab.local，设置一个你记得住的目录服务还原密码。提升完成后服务器会重启，重启回来它就是域控了——登录时要选 lab 域的管理员账号。</p>
+      <p><strong>第三步，让客户端加域。</strong>在客户端上把 DNS 设成域控的地址（192.168.56.10），然后在系统属性里选“域”，输入 lab.local，按提示输入域管理员的账号密码。成功后重启，登录界面会出现“登录到 LAB”的选项——这就说明客户端已经是域的一员了。</p>
+      <p><strong>第四步，建实验用的组织结构。</strong>在域控上打开“Active Directory 用户和计算机”，新建几个组织单位（OU），比如“IT 部”“财务部”；在每个 OU 里新建几个用户（比如 alice、bob）和几个组（比如 IT-Admins、Finance）；再建一个共享文件夹，只给 Finance 组读。别用真实的人名和真实公司的部门名——实验数据越假越好。</p>
+      <p><strong>第五步，验证。</strong>用 alice 的账号在客户端 1 上登录域，确认能登录、能看到自己有权限的共享文件夹、看不到没权限的；再用一个普通用户试着访问管理员的共享，确认被拒绝。能登录、能区分权限，这个实验室就算搭好了。验证完再拍一个快照，起名“域已搭好”。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我带新人搭 AD 实验，十次里有八次卡在同一个地方：客户端加域时报错“找不到域控制器”。原因几乎每次都一样——客户端的 DNS 没指对。记住：加域之前，先在客户端上 ping 一下 lab.local，看它解析出来的地址是不是域控的 192.168.56.10；解析不对，加域一定失败。还有两个习惯：第一，每做完一大步就拍快照，别等做坏了才后悔；第二，域管理员的密码单独记在一个地方（比如你自己的密码管理器里），别和普通实验账号的密码混在一起——第 20 章讲防御时你会明白，域管理员账号就是整个域的“总钥匙”，丢了它等于丢了整个域。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的电脑上：按本章的地址规划，把三台虚拟机接到同一个仅主机或内部网络，确认三台之间能互相 ping 通，但虚拟机访问不了真实网络。<br>2. 只在你自己的实验环境里：把 Windows Server 提升为域控（域名 lab.local），再把两台客户端加进域，用域账号登录一次，确认登录成功。<br>3. 只在你自己的实验环境里：在域控上建两个 OU、四个实验用户、两个组和一个按组授权的共享文件夹，验证普通用户能进自己有权限的文件夹、进不了没权限的。<br>4. 给两台关键状态各拍一个快照：“刚装好”和“域已搭好”，并写一张一页纸的实验环境说明：每台机器的名字、IP、用途、账号清单（实验账号，不要写真实信息）。</p>
+      <h2>避坑</h2>
+      <p>别把实验虚拟机接到桥接网络：桥接会让实验域控直接暴露在真实网络里，域控的服务可能干扰真实网络；别用真实域名：lab.local 这种一眼假的名字才是对的；别在客户端上用真实 DNS：DNS 必须指向域控，否则加域失败；别跳过快照：AD 做坏了重装要半天，快照只要一分钟；别用真实的账号密码：实验账号、实验密码，和真实账号彻底分开；别从不明网站下系统镜像：Windows Server 评估版只从微软官网下载。</p>
+      <p>实验室搭好了，从下一章起，活动目录的攻与防就都有地方练了。下一章（<a href="m7c18-ad-basics.html">第 18 章</a>）先讲理论：域、域控、组织单位、组策略、Kerberos——把“企业内网的骨架”这张图先画清楚，再动手拆它。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>实验环境是三台虚拟机：Windows Server 域控加两台 Windows 客户端，内存共 12GB 左右。</li>
+          <li>网络必须隔离：用仅主机或内部网络，DNS 和 DHCP 由域控提供，实验网不碰真实网络。</li>
+          <li>搭域五步：装系统、提升域控、客户端加域、建 OU 与用户组、验证登录与权限。</li>
+          <li>域名用 lab.local 这种一眼假的名字，实验账号与真实账号彻底分开。</li>
+          <li>关键节点拍快照：“刚装好”和“域已搭好”，做坏了能一键回到干净状态。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c16-evasion-persistence.html">← 上一章：第 16 章：绕过与持久化：免杀、持久化机制与 C2</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c18-ad-basics.html">下一章：第 18 章：活动目录基础 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

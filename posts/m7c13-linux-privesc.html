@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 13 章：Linux 提权 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 13 章：Linux 提权</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>上一章我们用 Metasploit 拿到一个 shell，但很多时候，这个 shell 的身份只是个普通用户：能看的东西有限、能改的东西更少。提权（Privilege Escalation）就是从普通用户变成 root 的过程。为什么非要 root？因为很多关键操作——读所有文件、看密码哈希、装驱动、改系统配置——只有 root 能做。测试做到这一步，目标才算真正“拿下”。本章所有实验只在自己的虚拟机靶场里做。</p>
+      <p>提权之前，先建立一个正确的排查顺序。拿到 shell 先问五个问题：我是谁（<code>id</code>、<code>whoami</code>）？系统是什么（<code>uname -a</code>、<code>cat /etc/os-release</code>）？内核版本有没有已知漏洞？sudo 能让我以 root 跑什么？有哪些 SUID 文件、计划任务、特殊权限？这五个问题，就是提权检查清单的前五项。很多提权不是“找到一个 0day”，而是“系统管理员配错了一个地方”。</p>
+
+      <h2>最常见的四种提权路子</h2>
+      <p><strong>第一，sudo 配置不当。</strong>用 <code>sudo -l</code> 看当前用户能以 root 身份跑哪些命令。如果能跑 <code>vim</code>、<code>less</code>、<code>find</code>、<code>cp</code> 这类能执行命令或读写文件的程序，提权就很直接：比如 <code>sudo vim -c ':shell'</code> 就能拿到 root shell；<code>sudo find / -exec /bin/sh \;</code> 也一样。修复：sudo 只给确实需要的命令，而且给命令不要给带 shell 转义功能的编辑器和查看器。</p>
+      <p><strong>第二，SUID 文件滥用。</strong>SUID 是一种特殊权限：文件属主是 root、又带了 SUID 位，普通用户运行它时，程序就以 root 身份跑。用 <code>find / -perm -4000 -type f 2&gt;/dev/null</code> 列出所有 SUID 文件，一个一个查：是不是系统必需的、有没有能执行命令的（比如带 SUID 的 <code>vim</code>、<code>find</code>、<code>nmap</code> 旧版本都能直接拿 root）。修复：没必要的 SUID 位去掉，能用 sudo 精细授权的就别用 SUID。</p>
+      <p><strong>第三，计划任务（cron）与可写脚本。</strong>看 <code>/etc/crontab</code>、<code>/etc/cron.d/</code> 和用户的 crontab：有没有 root 定时跑的脚本、那个脚本文件普通用户能不能写？能写，就等于能以 root 身份执行任意命令——等下一次计划任务触发，root shell 就回来了。同理，系统服务用的配置文件、启动脚本，普通用户能写也是提权点。修复：root 跑的脚本，文件权限收紧，目录也不许普通用户写。</p>
+      <p><strong>第四，内核与软件漏洞。</strong>内核版本太旧，就有公开的提权漏洞（比如 Dirty COW、脏管道 Dirty Pipe）。用 <code>uname -a</code> 拿到内核版本，对照漏洞库，再用 Metasploit 的 <code>local_exploit_suggester</code>（第 12 章讲过）推荐可用的模块。修复：打补丁——这是最根本的，也是最容易被拖延的。按<a href="m6c8-cve-cvss.html">模块六第 8 章</a>的 CVSS，一个可本地提权的内核漏洞，严重程度基本都是高危起步。</p>
+
+      <h2>自动化枚举工具：LinPEAS 与 LinEnum</h2>
+      <p>手工一条一条查很慢，实战里常用自动化枚举脚本：<strong>LinPEAS</strong> 和 <strong>LinEnum</strong>。把脚本传到靶机上跑一遍，它会把系统信息、sudo 配置、SUID 文件、计划任务、可写文件、历史命令、敏感文件一把全列出来，还会把“看起来能提权”的项标成显眼的颜色。但要注意两点：第一，工具的输出是“线索”，不是“结论”——标红的每一项都要亲手验证，误报很常见；第二，工具本身要在靶机上跑，跑之前确认授权范围，只在自己的虚拟机里用。枚举脚本的输出可以直接存下来，当作报告的附件。</p>
+
+      <h2>提权成功之后，先做什么</h2>
+      <p>拿到 root 先别急着翻东西。先固定证据：<code>id</code> 证明自己是 root、<code>whoami</code>、提权用的命令和输出，全部记下来。接着按测试目标收集信息：读之前读不到的配置文件、看密码哈希（只在授权测试里）、确认系统上还有没有其他提权点——因为报告里要写的不仅是“提权成功了”，更是“系统哪里配错了、怎么修”。提权点的修复建议要具体到命令：哪条 sudo 规则要删、哪个 SUID 位要去掉、哪个脚本的权限要收紧。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Linux提权检查清单图：先问五个问题，再查四种常见提权路子">
+          <rect x="20" y="20" width="520" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="45" text-anchor="middle" font-size="13" fill="#1a1a2e">拿到 shell 先问五件事：我是谁？什么系统？内核版本？sudo 能跑什么？</text>
+          <rect x="20" y="90" width="120" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">sudo 滥用</text>
+          <text x="80" y="134" text-anchor="middle" font-size="11" fill="#666">sudo -l 看能跑什么</text>
+          <rect x="152" y="90" width="120" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="212" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">SUID 文件</text>
+          <text x="212" y="134" text-anchor="middle" font-size="11" fill="#666">find -perm -4000</text>
+          <rect x="284" y="90" width="120" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="344" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">计划任务</text>
+          <text x="344" y="134" text-anchor="middle" font-size="11" fill="#666">root 跑的可写脚本</text>
+          <rect x="416" y="90" width="124" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="478" y="114" text-anchor="middle" font-size="13" fill="#1a1a2e">内核漏洞</text>
+          <text x="478" y="134" text-anchor="middle" font-size="11" fill="#666">uname -a 对照 CVE</text>
+          <rect x="20" y="180" width="250" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="204" text-anchor="middle" font-size="13" fill="#1a1a2e">LinPEAS / LinEnum 枚举</text>
+          <text x="145" y="224" text-anchor="middle" font-size="11" fill="#666">输出是线索，要亲手验证</text>
+          <rect x="290" y="180" width="250" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="204" text-anchor="middle" font-size="13" fill="#1a1a2e">拿到 root 先固定证据</text>
+          <text x="415" y="224" text-anchor="middle" font-size="11" fill="#666">id、命令、输出全部记下</text>
+          <text x="280" y="276" text-anchor="middle" font-size="12" fill="#666">很多提权不是 0day，而是管理员配错了一个地方</text>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">修复建议要具体到命令：删哪条规则、去哪个 SUID 位</text>
+        </svg>
+        <figcaption>图：Linux 提权的排查顺序——先问五件事，再查四种常见路子</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>Linux 提权我踩过最大的坑，是“工具说能提，亲手一试不行”。LinPEAS 把某一项标红了，我兴冲冲写进笔记，结果那个 SUID 文件是系统自带的、那个 sudo 规则指向的命令根本不存在——工具只负责“列出来”，判断得自己来。我的做法是：枚举输出先过三遍，第一遍看标红的，第二遍看标黄的，第三遍看“可写文件”这类容易被忽略的——很多真实的提权点藏在第三遍里。还有一句：提权实验一定要在快照上做。改 sudo 配置、改 SUID 位、往计划任务里写东西，一不小心就把靶机改坏了；快照在手，改坏了恢复一下，十分钟又是一条好汉。按<a href="m6c11-risk-management.html">模块六第 11 章</a>的影响 × 可能性定级：能从普通用户提到 root 的配置问题，基本都是高危。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在自己的虚拟机里：给靶机拍快照，拿到一个普通用户 shell 后，按本章顺序跑一遍检查清单：<code>id</code>、<code>uname -a</code>、<code>sudo -l</code>、SUID 文件列表、计划任务列表，把结果记下来。<br>2. 故意配出一个提权点：在自己的靶机上给测试账号加一条能跑 <code>vim</code> 的 sudo 规则，再用 <code>sudo vim -c ':shell'</code> 拿到 root，确认成功后删掉这条规则，体会“配置错了会怎样”。<br>3. 跑 LinPEAS：在靶机上跑一遍 LinPEAS，把标红的项逐个亲手验证，区分哪些是真提权点、哪些是误报。<br>4. 写修复建议：针对你找到的提权点，写三条具体到命令的修复措施（删哪条 sudo 规则、去哪个 SUID 位、收紧哪个脚本的权限），并按影响 × 可能性定个级。</p>
+      <h2>避坑</h2>
+      <p>只在自己的虚拟机靶场里做提权实验：对真实系统提权是越界行为；别把工具输出当结论：LinPEAS 标红的每一项都要亲手验证，误报很常见；动手前先拍快照：改配置、改权限一不小心就把靶机改坏了；提权成功先固定证据：id、命令、输出全部记下，写报告要用；修复建议要具体到命令：只写“加强配置”等于没写；内核漏洞要打补丁：这是最根本的修复，别拖延。</p>
+      <p>Linux 提权讲完了。下一章我们换一个系统：<a href="m7c14-windows-privesc.html">第 14 章：Windows 提权</a>——思路相通（都是找“配错了的地方”），但 Windows 的提权点长在服务、注册表和令牌这些完全不同的地方。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>提权是从普通用户变成 root 的过程；拿到 shell 先问五件事：身份、系统、内核版本、sudo、SUID 与计划任务。</li>
+          <li>四种常见路子：sudo 配置不当、SUID 文件滥用、root 计划任务里的可写脚本、内核与软件漏洞。</li>
+          <li>LinPEAS / LinEnum 能自动枚举提权点，但输出只是线索，标红的每一项都要亲手验证。</li>
+          <li>很多提权不是 0day，而是管理员配错了一个地方；修复建议要具体到命令。</li>
+          <li>提权实验只在自己的虚拟机里做，动手前先拍快照，拿到 root 先固定证据。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c12-metasploit-deep.html">← 上一章：第 12 章：Metasploit 深入</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c14-windows-privesc.html">下一章：第 14 章：Windows 提权 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

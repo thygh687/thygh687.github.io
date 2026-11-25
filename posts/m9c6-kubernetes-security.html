@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块九第 6 章：容器与 Kubernetes 安全 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块九第 6 章：容器与 Kubernetes 安全</h1>
+      <div class="meta"><span class="tag">进阶与新趋势</span>2026-11-25 · 模块九</div>
+<p>上一章讲了一个容器怎么守。现实里容器很少是“一个”——一个应用可能有几十个容器，分布在多台机器上，还要自动扩缩、自动重启、滚动更新。管这件事的系统就叫容器编排，
+最常用的是 Kubernetes（简称
+K8s）。Kubernetes 像一个“容器管家”：你告诉它“我要 3 个副本、这样联网、这样存数据”，它负责把容器调度到合适的机器上，并保证它们一直按你说的样子跑。
+      </p>
+<p>管家权力很大，所以管家本身就成了最值得攻击的目标。Kubernetes 安全的核心就一句话：<strong>控制平面（API Server）是王座，谁拿到它，
+谁就拿到整个集群。</strong>这一章讲王座怎么守、
+      容器之间怎么隔离、以及供应链怎么从镜像延伸到整个集群。</p>
+
+      <h2>控制平面：API Server 是王座</h2>
+<p>Kubernetes 的大脑是 API Server：所有操作——创建容器、改配置、看日志——都要经过它。守住它有三道关。第一，认证：谁在敲门？要用强认证（证书、
+令牌 + 多因素思路），匿名访问必须关掉，
+历史上真实发生过的事故里，就有 API Server 对公网开放、还允许匿名访问，攻击者直接接管整个集群挖矿。第二，授权：RBAC（基于角色的访问控制）决定“这个身份能做什么”——<a href="m6c10-access-control-pam.html">模块六第
+10 章</a>的访问控制在这里变成一堆角色和绑定关系，最常见的翻车是给某个服务账号绑了集群管理员（cluster-admin）还到处用。第三，审计：API Server 
+      的审计日志要开着，
+      记录谁在什么时候做了什么操作——没有审计，出事了连“谁动了集群”都查不到。</p>
+<p>还有一个容易被忽略的点：etcd。etcd 是 Kubernetes 的“记事本”，集群的所有状态——包括所有的密钥（Secret）——都存在里面。etcd 
+必须加密、必须只允许 API Server
+      访问、备份也要加密。拿到 etcd，等于拿到集群的全部家底。</p>
+
+      <h2>工作负载：Pod 的安全上下文与网络策略</h2>
+<p>容器在 Kubernetes 里以 Pod 为单位运行。每个 Pod 都可以设“安全上下文”：以哪个用户运行、能不能提权、文件系统是不是只读。实操要点和上一章一脉相承：
+默认不许容器以 root
+运行、不许特权模式、文件系统能只读就只读。Kubernetes 还提供 Pod 安全标准（Pod Security Standards），可以按“受限、基线、特权”三档给整个命名空间定规矩——新集群建议直接从“基线”起步，
+      再按需收紧。</p>
+<p>网络层面，Kubernetes 默认是“扁平”的：所有 Pod 默认能互相访问。这对攻击者是好消息——攻进一个 Pod，就能横向摸到别的 Pod。所以要用网络策略（NetworkPolicy）
+画隔离线：
+只允许必要的 Pod 之间通信，其余默认拒绝。再加上命名空间（namespace）把不同团队、不同环境（测试 / 生产）分开，横向移动的路就窄多了。这和<a href="m3c19-switching-vlan.html">模块三第
+19 章</a>的 VLAN 分段、<a href="m6c6-firewall-ids.html">模块六第 6 章</a>的防火墙是同一个思想，只是搬到了编排层。
+      </p>
+
+      <h2>密钥、镜像与准入控制</h2>
+<p>密钥（Secret）是 Kubernetes 里放密码、令牌、证书的地方。两条铁律：第一，Secret 默认只是 base64 编码，不是加密——不等于安全，
+必须开 etcd 静态加密；第二，Secret
+      要按需挂载，只给需要它的 Pod，绝不全集群共享。更进一步，可以把密钥交给外部密钥管理系统，Kubernetes 只在运行时临时取用。</p>
+<p>镜像安全在集群层面要升级：上一章的“扫描镜像”要变成“准入控制”——在 Pod 被创建之前，自动检查它的镜像有没有扫过、有没有高危漏洞、有没有签名，没通过的直接拒绝创建。
+这叫 admission
+control（准入控制），是把安全从“事后发现”变成“事前拦截”的关键一跃。再加上镜像仓库的访问控制和定期重新扫描，供应链的防线就从单个镜像延伸到了整个集群。
+      </p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kubernetes安全结构图：控制平面、etcd与工作负载">
+<rect x="130" y="16" width="300" height="48" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="36" text-anchor="middle" font-size="13" fill="#1a1a2e">控制平面：API Server（王座）</text>
+          <text x="280" y="56" text-anchor="middle" font-size="11" fill="#666">认证 + RBAC 授权 + 审计日志，匿名访问必须关</text>
+<rect x="130" y="80" width="300" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="98" text-anchor="middle" font-size="13" fill="#1a1a2e">etcd：集群的记事本（含全部密钥）</text>
+          <text x="280" y="116" text-anchor="middle" font-size="11" fill="#666">必须加密，只允许 API Server 访问</text>
+<rect x="40" y="148" width="150" height="72" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="115" y="172" text-anchor="middle" font-size="13" fill="#1a1a2e">命名空间 A：生产</text>
+          <text x="115" y="192" text-anchor="middle" font-size="11" fill="#666">Pod：非 root、只读</text>
+          <text x="115" y="208" text-anchor="middle" font-size="11" fill="#666">网络策略：默认拒绝</text>
+<rect x="205" y="148" width="150" height="72" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="172" text-anchor="middle" font-size="13" fill="#1a1a2e">命名空间 B：测试</text>
+          <text x="280" y="192" text-anchor="middle" font-size="11" fill="#666">与生产隔离</text>
+          <text x="280" y="208" text-anchor="middle" font-size="11" fill="#666">分开的密钥与权限</text>
+<rect x="370" y="148" width="150" height="72" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="445" y="172" text-anchor="middle" font-size="13" fill="#1a1a2e">准入控制</text>
+          <text x="445" y="192" text-anchor="middle" font-size="11" fill="#666">镜像未扫描 / 未签名</text>
+          <text x="445" y="208" text-anchor="middle" font-size="11" fill="#666">→ 拒绝创建 Pod</text>
+          <text x="280" y="256" text-anchor="middle" font-size="12" fill="#666">攻进一个 Pod ≠ 拿到集群：网络策略 + 命名空间 + RBAC 层层设卡</text>
+          <text x="280" y="280" text-anchor="middle" font-size="12" fill="#666">但拿到 API Server 或 etcd，就等于拿到整个集群</text>
+          <text x="280" y="312" text-anchor="middle" font-size="12" fill="#666">守集群，先守王座；再守 Pod；最后用准入控制把关入口</text>
+        </svg>
+<figcaption>图：Kubernetes 安全分层——控制平面是王座，etcd 是家底，网络策略与准入控制层层设卡</figcaption>
+      </figure>
+
+
+      <h2>一次集群入侵是怎么扩散的</h2>
+<p>设想一个攻击链：攻击者先找到一个对外暴露、又有漏洞的应用 Pod，攻了进去。这是第一步，拿到的只是一个普通容器的权限，影响有限。但如果这个 Pod 绑了一个权限过大的服务账号，
+攻击者就能用它去读
+API Server——第二步，拿到更多 Pod 的信息，甚至创建新的 Pod。</p>
+<p>如果集群里还有别的弱点，扩散会继续：某个 Pod 挂了宿主机的敏感目录，攻击者就能容器逃逸，拿到宿主机权限；宿主机上有访问 etcd 的凭证，攻击者就能拿到整个集群的密钥。
+这条链上的每一环，都是前面章节讲过的防线：
+最小权限的服务账号、网络策略、非 root 运行、etcd 加密。</p>
+<p>防守者的思路正好反过来：不需要把每一步都防得天衣无缝，只要在链上任何一环把它拦住，扩散就停了。这就是纵深防御在集群里的意思——防线越多，攻击者要同时穿过所有防线的难度就越大。
+</p>
+<div class="teacher-note"><strong>老师经验：</strong>我排查 K8s 集群，第一步永远是“curl 一下 API Server 
+的端口，看它对公网开不开、匿名能不能读”。
+这个检查五分钟就能做完，却是我见过真实事故里最常见的死法——集群直接暴露在公网上，攻击者连密码都不用猜。第二步是看 RBAC：把所有绑定了 cluster-admin 
+      的账号列出来，一个一个问“它真的需要吗”。
+十次里有九次，答案都是“当时图方便”。我的建议是：给人用的账号和给程序用的服务账号分开管，服务账号只给它那个应用需要的最小权限，定期把“实际用过的权限”和“被授予的权限”对一遍，
+      多余的收回来。
+      </div>
+
+      <h2>动手做</h2>
+<p>1. 只在自己的虚拟机或实验环境里做，绝不在真实网站、真实网络、真实云账号上练手——云和容器的实验用本地虚拟机或云厂商的免费实验沙箱，绝不拿生产账号做实验：
+在虚拟机里用 minikube 或 kind
+起一个本地单节点 Kubernetes 集群（只在本地，不暴露到公网）。<br>2. 用 <code>kubectl</code> 查看集群的 RBAC：列出所有集群角色绑定，
+      找出绑定了
+cluster-admin 的账号，问一句“它真的需要吗”，并给一个测试服务账号只授“读自己命名空间 Pod”的最小权限。<br>3. 写一条最简单的网络策略：
+      让测试命名空间里的 Pod
+默认拒绝所有入站流量，再只放行一条明确需要的通信，验证“默认拒绝”确实生效。<br>4. 给一个 Pod 设安全上下文（非 root 用户、只读文件系统、禁止提权）
+      ，部署后进容器里验证：写文件失败、
+      提权失败——亲手确认防线在起作用。</p>
+      <h2>避坑</h2>
+<p>别把 API Server 暴露到公网：控制平面只允许可信网络访问，匿名访问必须关；别滥用 cluster-admin：它是集群的“万能钥匙”，能不用就不用；
+别忘了 etcd：不加密、不做访问控制的
+etcd 等于把全部密钥摊在桌上；别以为 Secret 是加密的：默认只是 base64 编码，必须开 etcd 静态加密；别让 Pod 默认互通：没有网络策略的集群，
+      攻进一个 Pod 就能摸到所有
+      Pod；别在生产集群上练手：所有实验都在本地 minikube / kind 里做。</p>
+<p>这一章把上一章的容器安全放大到了集群规模：单容器的“别拆墙”，在这里变成了 API Server、RBAC、etcd、网络策略、准入控制一整套编排层防线。
+下一章我们换一个视角——不再问“怎么守住一台机器或一个集群”，
+      而是问“如果默认谁都不信，系统该怎么设计”：<a href="m9c7-zero-trust.html">第 7 章：零信任架构</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+<li>Kubernetes 是容器编排的“管家”，控制平面 API Server 是王座：认证、RBAC 授权、审计日志三道关，匿名访问必须关。</li>
+          <li>etcd 存着集群全部状态和密钥，必须加密、只允许 API Server 访问、备份也要加密。</li>
+          <li>Pod 安全上下文：非 root 运行、只读文件系统、禁止提权；用 Pod 安全标准给命名空间定规矩。</li>
+          <li>默认扁平的 Pod 网络要用网络策略画隔离线：默认拒绝，只放行必要的通信；命名空间分隔测试与生产。</li>
+          <li>准入控制把安全从事后发现变成事前拦截：镜像未扫描、未签名就拒绝创建 Pod。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m9c5-container-security.html">← 上一章：第 5 章：容器安全</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m9c7-zero-trust.html">下一章：第 7 章：零信任架构 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

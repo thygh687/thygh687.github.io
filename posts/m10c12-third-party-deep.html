@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块十第 12 章：第三方风险深入：尽调问卷与审计证据 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块十第 12 章：第三方风险深入：尽调问卷与审计证据</h1>
+      <div class="meta"><span class="tag">治理、风险、合规与韧性</span>2026-11-25 · 模块十</div>
+      <p>第 5 章我们讲了第三方风险的四步管理：合作前尽调、合同写清、合作中监控、结束收尾。这一章把第一步和第三步展开讲深：<strong>尽调问卷怎么问、审计证据怎么看</strong>。合作方靠不靠谱，不能只听它自己说“我们很安全”，要看问卷的回答和拿得出来的证据。问卷和证据说了算——这是本章最重要的一句话。</p>
+      <p>先记住尽调的目标：不是把对方查个底朝天，而是回答三个问题——对方的安全水平能不能达到你的要求？对方的风险会不会传导到你这里？如果出事，对方能不能及时告诉你、配合你处理？问卷和证据，都是为了回答这三个问题。</p>
+
+      <h2>尽调问卷：问什么，怎么问</h2>
+      <p>一份好的尽调问卷通常分六个部分。<strong>组织与治理</strong>：有没有专职的安全负责人？有没有信息安全政策？有没有 ISO 27001 证书？<strong>数据保护</strong>：我的数据存在哪里？谁能访问？怎么加密？备份怎么做？<strong>访问控制</strong>：员工账号怎么管？特权账号有几个？离职账号多久收回？多因素认证开了没有？<strong>事件响应</strong>：出过泄露事件没有？出了事多久通知我？有没有应急响应预案和演练？<strong>合规与审计</strong>：最近一次审计是什么时候？有没有 SOC 2 报告（第 13 章会讲）？有没有未整改的高风险发现？<strong>分包与供应链</strong>：你们又把活包给了谁？我的数据会不会被第四方碰到？</p>
+      <p>问问题有技巧：别问“你们安全吗”这种没法回答的问题，要问能验证的问题——“请提供最近一次渗透测试报告的摘要”“请说明备份恢复演练的上次日期和结果”。能拿出证据的问题，才是好问题。问卷还要分级：高风险供应商问全套，低风险供应商只问核心几项，不然对方不配合、你也看不过来。</p>
+
+      <h2>审计证据：看什么，怎么判断真假</h2>
+      <p>对方交来的证据，分四档可信度。<strong>第一档，第三方认证和审计报告</strong>：ISO 27001 证书、SOC 2 报告——由独立机构出具，最可信，但要注意证书的范围（管哪些系统）和有效期（过期了等于没有）。<strong>第二档，测试报告</strong>：渗透测试报告、漏洞扫描报告——看发现了什么、修了没有、还有没有未修的高风险。<strong>第三档，内部记录</strong>：政策文件、培训记录、演练记录——有用，但毕竟是对方自己写的，要抽查验证。<strong>第四档，口头承诺</strong>：“我们很重视安全”“我们一直做得很好”——没有证据的承诺，等于没说。</p>
+      <p>看证据时要盯住三个点：<strong>时效</strong>（报告是不是最近一年的？去年的报告说明不了今年的水平）、<strong>范围</strong>（证书和报告管的是不是你要用的那个系统？管总部不管分公司的证书，帮不了你）、<strong>整改</strong>（报告里发现的问题修了没有？有发现、没整改的报告，反而是危险信号）。</p>
+
+      <h2>尽调之后：分级、决策、写进合同</h2>
+      <p>尽调结束要给出结论，分三档：<strong>通过</strong>——可以合作，按正常流程监控；<strong>有条件通过</strong>——可以合作，但对方要在期限内补上某些短板（比如三个月内拿到某项认证、一个月内修掉某个高风险），写进合同里；<strong>不通过</strong>——风险太高，换一家，或者把合作范围缩小到不碰核心数据。结论要写下来、由负责人签字，不能口头说说。</p>
+      <p>尽调的结论还要变成合同条款：第 5 章讲过的三条——数据保护、事件通知、审计权与合作结束的数据删除——都要写进去。特别要写清<strong>通知时限</strong>：对方出事之后，多久必须通知你？24 小时、48 小时，还是 72 小时？时限越短，你的应对时间越充裕。还要写清<strong>审计权</strong>：你有没有权去查对方、有没有权看对方的审计报告。没写进合同的审计权，事后很难要到。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="第三方尽调问卷六部分与证据四档可信度图">
+          <rect x="20" y="15" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="38" text-anchor="middle" font-size="13" fill="#1a1a2e">组织与治理</text>
+          <text x="100" y="56" text-anchor="middle" font-size="11" fill="#666">负责人、政策、证书</text>
+          <rect x="200" y="15" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="38" text-anchor="middle" font-size="13" fill="#1a1a2e">数据保护</text>
+          <text x="280" y="56" text-anchor="middle" font-size="11" fill="#666">存哪、谁能碰、怎么加密</text>
+          <rect x="380" y="15" width="160" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="38" text-anchor="middle" font-size="13" fill="#1a1a2e">访问控制</text>
+          <text x="460" y="56" text-anchor="middle" font-size="11" fill="#666">账号、特权、离职收回</text>
+          <rect x="20" y="90" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="113" text-anchor="middle" font-size="13" fill="#1a1a2e">事件响应</text>
+          <text x="100" y="131" text-anchor="middle" font-size="11" fill="#666">出过事吗？多久通知我？</text>
+          <rect x="200" y="90" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="113" text-anchor="middle" font-size="13" fill="#1a1a2e">合规与审计</text>
+          <text x="280" y="131" text-anchor="middle" font-size="11" fill="#666">审计报告、SOC 2、整改</text>
+          <rect x="380" y="90" width="160" height="52" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="113" text-anchor="middle" font-size="13" fill="#1a1a2e">分包与供应链</text>
+          <text x="460" y="131" text-anchor="middle" font-size="11" fill="#666">又包给了谁？第四方是谁？</text>
+          <rect x="20" y="170" width="520" height="56" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="193" text-anchor="middle" font-size="13" fill="#1a1a2e">证据四档：认证报告 &gt; 测试报告 &gt; 内部记录 &gt; 口头承诺</text>
+          <text x="280" y="213" text-anchor="middle" font-size="11" fill="#666">看证据盯三点：时效、范围、整改——过期、超范围、没整改的证据不可信</text>
+          <text x="280" y="255" text-anchor="middle" font-size="13" fill="#1a1a2e">结论三档：通过 · 有条件通过 · 不通过（写下来、负责人签字）</text>
+          <text x="280" y="280" text-anchor="middle" font-size="12" fill="#666">结论变合同：通知时限、审计权、数据删除，都要写进去</text>
+        </svg>
+        <figcaption>图：尽调问卷的六个部分与审计证据的四档可信度</figcaption>
+      </figure>
+
+      <h2>合作中监控：尽调不是一次性的</h2>
+      <p>尽调不是签合同前做一次就完事。合作期间要持续监控：关键供应商每年至少复查一次，复查时问卷可以短一点，重点看“上次的问题改了没有、有没有出新事件、证书还有效没有”。还要关注公开信息：对方上了新闻（泄露、被罚、被收购），要马上评估对你的影响。第 5 章讲过的“合作中监控”，在这里就是具体的复查动作。</p>
+      <p>监控还要有一个<strong>退出预案</strong>：如果对方出大事、或者复查不通过，你能不能快速换一家？数据能不能拿回来？切换要多久？没有退出预案的合作，等于把命交到别人手里——第 7 章的业务连续性，在这里也要把关键供应商算进去。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>看尽调问卷，我最先翻的不是对方写了什么，而是对方“没写什么”——空白的格子、含糊的回答（“基本符合”“正在完善”），往往就是问题所在。还有一个现场经验：一定要看原件，不要只看对方的总结——我见过一份“渗透测试报告摘要”写着“未发现高风险”，原件里却有三个高风险写着“计划整改”，而“计划”已经拖了半年。最后提醒一句：尽调问卷发出去之后，对方迟迟不回、或者只回一半，本身就是一个信号——一家连问卷都不愿认真答的供应商，合作之后也不会认真对待你的数据。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在你自己的虚拟机或实验环境里做：给假想的 20 人小公司写一份 12 道题的尽调问卷，六个部分各两道题，每道题都要是“能拿出证据”的问法。<br>2. 写一张证据评审表：四档证据各举一个例子，写清每档的可信度、要盯的三个点（时效、范围、整改）。<br>3. 写一份尽调结论：假设对方有一项高风险未整改、一项证书即将过期，写出你的结论是有条件通过还是不通过，并写清条件和期限。<br>4. 写三条要放进合同的条款：事件通知时限（写清小时数）、审计权、合作结束的数据删除与证据确认。</p>
+      <h2>避坑</h2>
+      <p>别问没法验证的问题：要问能拿出证据的问题，“你们安全吗”不算问题；别只看总结不看原件：摘要可能藏起高风险发现，原件才说实话；别忽略空白和含糊回答：没写的、含糊的，往往就是问题所在；别把尽调做成一次性的：关键供应商每年至少复查一次，还要有退出预案；别在真实公司系统上练手：本章的动手做只写问卷、写表格，不联系任何真实供应商，不碰真实公司的账号和数据。</p>
+      <p>ISO 27001、NIST CSF 都讲完了，但合规的世界不止这两套框架。下一章讲 <a href="m10c13-other-frameworks.html">第 13 章：其他合规框架：SOC 2 与 NIS2</a>——除了 ISO 27001，还有哪些合规要求要认识。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>合作方靠不靠谱，问卷和证据说了算；尽调要回答三个问题：对方水平够不够、风险会不会传导、出事能不能及时配合。</li>
+          <li>尽调问卷分六个部分：组织与治理、数据保护、访问控制、事件响应、合规与审计、分包与供应链。</li>
+          <li>证据分四档可信度：认证报告、测试报告、内部记录、口头承诺；看证据盯时效、范围、整改三点。</li>
+          <li>尽调结论分通过、有条件通过、不通过三档，要写下来、负责人签字，再变成合同条款。</li>
+          <li>尽调不是一次性的：关键供应商每年至少复查一次，还要有退出预案。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m10c11-privacy-law.html">← 上一章：第 11 章：隐私与数据保护法：GDPR 与个人信息保护</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m10c13-other-frameworks.html">下一章：第 13 章：其他合规框架：SOC 2 与 NIS2 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 4 章：CSRF 与 SSRF · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 4 章：CSRF 与 SSRF</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>上一章的 XSS 是“让受害者的浏览器执行攻击者的代码”。这一章的两种漏洞，思路更像“借刀杀人”：CSRF（跨站请求伪造）借的是受害者的浏览器和他的登录身份，SSRF（服务器端请求伪造）借的是服务器自己。两个漏洞名字很像、原理都带“伪造”，但借的“刀”完全不同，防御方法也完全不同。初学者最容易把它们混在一起，这一章就把这条线划清楚。</p>
+      <p>先说 CSRF 的核心矛盾：第 1 章讲过，浏览器每次发请求都会自动带上 Cookie——这是为了方便用户，但也意味着，<strong>浏览器分不清“这个请求是用户自己点的，还是别的页面偷偷让它发的”。</strong>攻击者做一个恶意网页，里面藏一个指向银行转账接口的请求；受害者正好登录着银行，打开这个恶意网页，浏览器就自动带着他的 Cookie 把转账请求发出去了。服务器一看：Cookie 有效，是本人，那就执行。受害者什么都没点，钱就转走了。</p>
+
+      <h2>CSRF：借受害者的身份发请求</h2>
+      <p>CSRF 利用的三个条件缺一不可：受害者登录着目标网站（浏览器里有有效 Cookie）；目标网站的某个敏感操作只凭 Cookie 认身份，不做额外验证；攻击者能让受害者的浏览器发出这个请求（一个链接、一张图片、一个自动提交的表单都可以）。最典型的目标是改密码、改邮箱、转账、发帖这些“改状态”的操作——只读的页面被 CSRF 也没什么可偷的。</p>
+      <p>防御 CSRF 也有三板斧，而且要组合使用。<strong>第一，CSRF Token。</strong>服务器给每个表单发一个随机令牌，提交时必须带上这个令牌才认；攻击者的页面拿不到这个令牌（同源策略拦着他读），请求就会被拒绝。这是最核心的防线。<strong>第二，SameSite Cookie。</strong>给 Cookie 设置 <code>SameSite=Lax</code> 或 <code>Strict</code>，浏览器在跨站请求里就不带它，借刀的第一步就断了。<strong>第三，关键操作二次确认。</strong>改密码、转账这类操作要求重新输入密码或做一次验证，就算请求发出去了也执行不了。三者叠加，才算合格。</p>
+      <p>顺带澄清一个常见误会：CSRF Token 和验证码不是一回事。Token 是给每个表单的、用户看不见的随机值，防的是“请求从哪来”；验证码是防机器人的，需要用户动手。两者解决的问题不同，不能互相替代。</p>
+
+      <h2>SSRF：借服务器自己去访问内网</h2>
+      <p>SSRF 反过来，借的是服务器。很多网站有这样的功能：你给它一个 URL，它帮你去取那个地址的内容——比如“输入图片地址，帮我下载头像”“输入网址，帮我生成预览”。如果服务器不做检查就照办，攻击者就可以让它去访问<strong>它自己才能访问的地方</strong>：内网的管理后台（<code>http://192.168.1.1/admin</code>）、云服务商的元数据接口（比如 <code>http://169.254.169.254/</code>，能拿到云主机的临时凭证）、本地服务（<code>http://localhost:6379/</code> 可能是没设密码的 Redis）。</p>
+      <p>SSRF 的危害比看起来大得多：轻则读取内网服务的信息，重则拿到云凭证、接管整台云主机，甚至配合其他协议打到内网数据库。这就是为什么它在 2025 版 OWASP Top 10 里的位置变了——见下一节。</p>
+
+      <h2>OWASP 2025 版：SSRF 并入 A01，一定要讲清这个映射</h2>
+      <p>这里是本章必须讲清的知识点。OWASP Top 10 2021 版里，SSRF 单独占一个类别 A10；而在 <strong>2025 版 OWASP Top 10 里，SSRF 不再单独成类，被并入了 A01：失效的访问控制（Broken Access Control）</strong>。映射关系是：2021 版 A10（SSRF）→ 2025 版 A01（Broken Access Control）的一部分。不是 SSRF 不重要了，恰恰相反——OWASP 认为 SSRF 的本质就是一种访问控制失效：服务器本不该替外部用户去访问内网资源，访问控制没做好，才让它得逞。把它并入 A01，是为了提醒我们：SSRF、越权访问（下一章第 7 章会讲的 IDOR）、未授权访问，根子上是同一类问题——“谁能访问什么”没管住。</p>
+      <p>考试和报告里都要注意这个版本问题：写“OWASP Top 10 2021 A10 是 SSRF”没错，但如果按 2025 版写，就要写 A01，并在后面注明“包含 SSRF”。反过来，CSRF 在 2025 版里也没有单独的类别，它同样归在 A01 失效的访问控制之下——CSRF 的本质也是“没验证请求到底是谁发起的”，同样是访问控制没做好。记住：<strong>按 2025 版，CSRF 和 SSRF 都映射到 A01。</strong>这个映射关系在写报告、考 Security+（当前版本 SY0-801）时都可能被问到。</p>
+
+      <h2>怎么防 SSRF</h2>
+      <p>防 SSRF 的核心是：<strong>服务器替用户去访问某个地址之前，先审查这个地址。</strong>具体做法有四条：白名单——只允许访问明确列出的域名和协议（只许 http/https，不许 file、gopher、dict 这类危险协议）；解析后再校验——先把域名解析成 IP，再检查 IP 是不是内网地址、云元数据地址（169.254.169.254），防止 DNS 解析时被“调包”（这叫 DNS 重绑定）；禁用重定向跟随或限制重定向次数，防止先给一个合法地址、再跳转到内网地址；网络隔离——跑对外服务的机器本身就不该能直接访问内网管理后台和元数据接口，网络层面的隔离是最后一道墙。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CSRF与SSRF对比图：CSRF借受害者浏览器发请求，SSRF借服务器访问内网">
+          <rect x="20" y="30" width="240" height="60" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="54" text-anchor="middle" font-size="13" fill="#1a1a2e">CSRF：借受害者的浏览器</text>
+          <text x="140" y="74" text-anchor="middle" font-size="11" fill="#666">恶意页面 → 浏览器带 Cookie 发请求</text>
+          <rect x="300" y="30" width="240" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="54" text-anchor="middle" font-size="13" fill="#1a1a2e">SSRF：借服务器自己</text>
+          <text x="420" y="74" text-anchor="middle" font-size="11" fill="#666">给 URL → 服务器替你去访问</text>
+          <rect x="20" y="130" width="240" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="154" text-anchor="middle" font-size="13" fill="#1a1a2e">目标：改密码、转账、发帖</text>
+          <text x="140" y="174" text-anchor="middle" font-size="11" fill="#666">防：Token + SameSite + 二次确认</text>
+          <rect x="300" y="130" width="240" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="154" text-anchor="middle" font-size="13" fill="#1a1a2e">目标：内网后台、云元数据</text>
+          <text x="420" y="174" text-anchor="middle" font-size="11" fill="#666">防：白名单 + 解析后校验 + 隔离</text>
+          <rect x="120" y="230" width="320" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="254" text-anchor="middle" font-size="13" fill="#1a1a2e">OWASP 2025 版：两者都属于 A01</text>
+          <text x="280" y="276" text-anchor="middle" font-size="11" fill="#666">失效的访问控制（2021 版 SSRF 单列为 A10）</text>
+          <line x1="140" y1="90" x2="140" y2="130" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="420" y1="90" x2="420" y2="130" stroke="#1a1a2e" stroke-width="1.5"/>
+        </svg>
+        <figcaption>图：CSRF 与 SSRF——借的“刀”不同，但按 OWASP 2025 版都属于 A01 失效的访问控制</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>测 CSRF 时，新手最容易白忙一场：对着一个接口试了半天，才发现它本来就要求 Token，自己只是在“证明它有防护”。正确顺序是反过来的：先看这个操作有没有 Token、Cookie 有没有 SameSite、有没有二次确认——三样齐全，基本不用再试；缺了哪样，再针对缺的那样构造测试。测 SSRF 则相反：新手常犯的错是只试 <code>http://127.0.0.1/</code>，试一次被拦就收工。其实 SSRF 的绕过花样很多：用 0x7f.0.0.1 这种十六进制 IP、用 2130706433 这种十进制 IP、用短网址跳转、用 DNS 重绑定——防御方要堵住所有写法，攻击方只要找到一种写法。所以写报告时，SSRF 的修复建议不能只写“加个黑名单”，要写白名单 + 解析后校验 + 网络隔离这三层，否则等于没修。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在自己的虚拟机里：在 DVWA 里把安全级别调到 Low，打开 CSRF 模块，试着在“改密码”功能上复现一次 CSRF：构造一个自动提交的表单页面，在自己登录状态下打开它，观察密码是不是被改了；再把级别调到 High，看同样的办法为什么失效。<br>2. 检查 Token：在浏览器开发者工具里看一次正常改密码请求的表单字段，找到 CSRF Token，把它删掉再提交一次，记录服务器的反应。<br>3. 在靶场里找一个“输入 URL 帮我取内容”的功能（或自己写一个最小的测试页面），试着让它访问 <code>http://127.0.0.1/</code> 和内网地址，观察返回结果；再试试十进制 IP 写法，看过滤能不能绕过。<br>4. 写一段映射说明：用三句话写清 2021 版 A10 与 2025 版 A01 的关系，并说明为什么 OWASP 要把 SSRF 并入 A01。</p>
+      <h2>避坑</h2>
+      <p>只在自己的靶场里做 CSRF 和 SSRF 测试：对真实网站发伪造请求、让真实服务器访问内网地址，都是越界行为；别把 CSRF 和 XSS 混为一谈：XSS 是执行代码，CSRF 是借身份发请求，防御手段完全不同；别用黑名单防 SSRF：内网地址的写法太多，黑名单永远列不全，要用白名单；写报告和考试时注意版本：按 2025 版，SSRF 和 CSRF 都属于 A01，别再写“SSRF 是 A10”；别忘了 SameSite：很多 CSRF 修复只加 Token 不加 SameSite，少了一层纵深防御。</p>
+      <p>CSRF 和 SSRF 讲完，你已经摸到了访问控制失效这个大类的一角。下一章我们换一个角度：<a href="m7c5-upload-logic.html">第 5 章：文件上传与逻辑漏洞</a>——有些漏洞根本不是技术没做好，而是业务逻辑本身有洞：上传一张“图片”就能拿到服务器权限，改一个价格参数就能一分钱买东西。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>CSRF 借受害者的浏览器和登录身份发请求，利用的是“浏览器会自动带上 Cookie”；防御靠 CSRF Token + SameSite + 关键操作二次确认。</li>
+          <li>SSRF 借服务器去访问内网资源和云元数据接口，危害可达接管云主机；防御靠白名单、解析后校验、限制重定向、网络隔离。</li>
+          <li>OWASP 2025 版映射：SSRF 从 2021 版的 A10 并入 2025 版的 A01（失效的访问控制）；CSRF 按 2025 版同样属于 A01。</li>
+          <li>两者根子相同：都是“谁能访问什么、谁能发起什么”没管住，属于访问控制失效。</li>
+          <li>测试只在自己的靶场里做；修复建议要写够三层，单靠黑名单等于没修。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c3-xss.html">← 上一章：第 3 章：XSS 跨站脚本</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c5-upload-logic.html">下一章：第 5 章：文件上传与逻辑漏洞 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

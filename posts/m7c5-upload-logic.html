@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块七第 5 章：文件上传与逻辑漏洞 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块七第 5 章：文件上传与逻辑漏洞</h1>
+      <div class="meta"><span class="tag">Web 安全与渗透测试</span>2026-11-25 · 模块七</div>
+      <p>前面四章讲的漏洞，都有一个清晰的“技术点”：拼接 SQL、执行脚本、伪造请求。这一章讲的两类漏洞不太一样：文件上传漏洞的技术点也很清晰，但逻辑漏洞常常没有任何“技术错误”——代码按设计跑得好好的，业务逻辑本身有洞。安全测试做到后面你会发现，最难找的漏洞往往不是代码写错了，而是设计时没人想到“用户会这么干”。</p>
+      <p>先说文件上传。网站让用户上传头像、传附件，是再正常不过的功能。问题出在：上传上来的文件会被服务器存到某个地方，而如果服务器之后会“执行”这个文件，攻击者就赢了。最典型的利用是上传一个伪装成图片的 Web Shell：一个 PHP 文件，里面只有一行代码——接收请求里的参数并执行。把它改名成 <code>shell.php.jpg</code> 或在内容里夹带代码骗过检查，服务器一旦把它当作 PHP 执行，攻击者就能在浏览器里对服务器下命令：读文件、查数据库、进一步提权。</p>
+
+      <h2>文件上传是怎么被绕过的</h2>
+      <p>防御方常用的检查有四种，每一种都有绕过办法。<strong>第一，只检查扩展名。</strong>攻击者用双扩展名（<code>shell.php.jpg</code>，某些服务器只看最后一个点、某些只看第一个点）、大小写（<code>shell.PHP</code>）、加分号或空字节（老版本环境）来绕过。<strong>第二，只检查 MIME 类型（Content-Type）。</strong>这个值是浏览器发来的、攻击者随便改，改成 <code>image/jpeg</code> 就能过关，根本不可信。<strong>第三，只检查文件头几个字节（魔数）。</strong>在文件开头加上 JPEG 的魔数 <code>FF D8 FF</code>，后面照样跟 PHP 代码，很多检查就放行了。<strong>第四，前端 JavaScript 检查。</strong>第 1 章讲过，前端校验都能绕过：直接用工具发请求，不走浏览器就行。</p>
+      <p>正确的防御要叠满五层：白名单扩展名（只允许 jpg、png 等明确列出的类型）；校验文件真实内容（用图像库重新解析、重新生成图片，而不是只看文件头）；上传后随机重命名（攻击者猜不到文件名，就访问不到它）；上传目录禁止执行脚本（Web 服务器配置里关掉这个目录的脚本执行权限）；上传目录与网站程序分离存放，最好放到对象存储或 CDN 上。五层里最关键的是“禁止执行”——就算前面全被绕过，文件存下来也只是一堆不会执行的文本。</p>
+
+      <h2>逻辑漏洞：代码没错，业务错了</h2>
+      <p>逻辑漏洞没有统一的 payload，只能靠理解业务来找。常见的有四种。<strong>第一，价格与数量篡改。</strong>下单时价格、折扣、数量是浏览器发给服务器的，服务器如果直接信任这些值，改一个参数就能一分钱买东西、负数下单“赚钱”。修复：价格必须在服务器端按商品 ID 重新算，绝不信任客户端传来的金额。</p>
+      <p><strong>第二，越权访问（IDOR）。</strong>看订单的地址是 <code>/order?id=123</code>，把 123 改成 124，就看到了别人的订单。服务器只验证了“登录了没有”，没验证“这个订单是不是你的”。这是访问控制失效（OWASP 2025 版 A01）的另一种面孔，第 7 章会专门讲越权。</p>
+      <p><strong>第三，流程绕过。</strong>比如“下单 → 付款 → 发货”三步，攻击者跳过付款直接请求发货接口；或者“注册 → 验证邮箱 → 才能用”，跳过验证就直接用了。每一处“下一步”都要在服务器端检查“上一步是不是真的完成了”。</p>
+      <p><strong>第四，竞态条件（Race Condition）。</strong>优惠券只能用一次，但如果两个请求同时到达，服务器两次检查都看到“还没用过”，两次都放行了，一张券用了两次。修复要靠数据库事务和锁，让“检查 + 扣减”变成一个不可分割的操作。</p>
+
+      <h2>怎么系统地找逻辑漏洞</h2>
+      <p>找逻辑漏洞没有扫描器可以依赖，得靠方法。第一步，画业务流程图：把“注册、登录、下单、付款、退款、改资料”每一步的输入、输出、前置条件都画出来。第二步，对每一步问三个问题：这个值是谁给的（能不能改）？这一步的前提条件是什么（能不能跳过）？这个操作有没有次数、金额、权限的上限（能不能重复）？第三步，用 Burp Suite（<a href="m7c10-burp-deep.html">第 10 章</a>会深入讲）把每个请求拦下来改一改：改价格、改 ID、改顺序、同时发两次，看服务器的反应。逻辑漏洞的测试，本质上是“带着恶意去正常使用这个网站”。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="文件上传检查流水线图：白名单、内容校验、随机重命名、禁止执行、分离存放五层防御">
+          <rect x="20" y="20" width="520" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="45" text-anchor="middle" font-size="13" fill="#1a1a2e">用户上传文件 → 五层检查，全部通过才能落盘</text>
+          <rect x="20" y="90" width="96" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="68" y="114" text-anchor="middle" font-size="12" fill="#1a1a2e">1. 白名单</text>
+          <text x="68" y="134" text-anchor="middle" font-size="11" fill="#666">只许 jpg/png</text>
+          <rect x="128" y="90" width="96" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="176" y="114" text-anchor="middle" font-size="12" fill="#1a1a2e">2. 内容校验</text>
+          <text x="176" y="134" text-anchor="middle" font-size="11" fill="#666">重解析图片</text>
+          <rect x="236" y="90" width="96" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="284" y="114" text-anchor="middle" font-size="12" fill="#1a1a2e">3. 随机重命名</text>
+          <text x="284" y="134" text-anchor="middle" font-size="11" fill="#666">猜不到文件名</text>
+          <rect x="344" y="90" width="96" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="392" y="114" text-anchor="middle" font-size="12" fill="#1a1a2e">4. 禁止执行</text>
+          <text x="392" y="134" text-anchor="middle" font-size="11" fill="#666">目录关脚本权限</text>
+          <rect x="452" y="90" width="88" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="496" y="114" text-anchor="middle" font-size="12" fill="#1a1a2e">5. 分离存放</text>
+          <text x="496" y="134" text-anchor="middle" font-size="11" fill="#666">对象存储/CDN</text>
+          <rect x="20" y="190" width="250" height="60" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">只靠扩展名 / MIME / 魔数</text>
+          <text x="145" y="234" text-anchor="middle" font-size="11" fill="#666">每一种都能被绕过</text>
+          <rect x="290" y="190" width="250" height="60" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">逻辑漏洞：改价格、改 ID</text>
+          <text x="415" y="234" text-anchor="middle" font-size="11" fill="#666">跳流程、同时发两次</text>
+          <text x="280" y="290" text-anchor="middle" font-size="12" fill="#666">记住：价格永远在服务器端重算，绝不信任客户端传来的金额</text>
+          <text x="280" y="314" text-anchor="middle" font-size="12" fill="#666">每一层防御都可能被绕过，叠满五层才算合格</text>
+        </svg>
+        <figcaption>图：文件上传的五层防御与逻辑漏洞的四种常见形态</figcaption>
+      </figure>
+
+      <div class="teacher-note"><strong>老师经验：</strong>文件上传测试，我见过最离谱的一次是：目标站把上传目录的执行权限关了，测试员说“没漏洞”就走了，结果那个目录能被直接当静态文件访问，攻击者传了一个 HTML 文件上去，变成了钓鱼页面——执行不了脚本，不代表没有危害。测上传要问到底：文件存哪了、能不能直接访问、访问时以什么类型返回、文件名能不能预测。逻辑漏洞更要“沉住气”：我曾经花了整整一下午，把一个购物流程从注册点到退款，每一步的参数都改了一遍，才发现退款金额的校验在前端、后端只校验了“金额大于零”——改个负数就能反向“赚钱”。逻辑漏洞没有扫描器，只能靠你对业务的理解。测试前先把流程图画出来，比直接上手改参数有效得多。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在自己的虚拟机里：在 DVWA 的 File Upload 模块（Low 级别）上传一张正常图片，记下它存到哪里、访问地址是什么；再试着上传一个改了扩展名的脚本文件，看服务器放行了没有。<br>2. 逐层加码：把 DVWA 级别调到 Medium、再调到 High，重复第 1 步，记录每一级别拦住了什么、又被什么绕过了（提示：注意 MIME 检查和扩展名白名单的区别）。<br>3. 找逻辑漏洞：在靶场或自己写的测试网站里，试着改订单 ID 看别人的订单、改商品价格再提交、跳过中间步骤直接请求最后一步，把每一次尝试和服务器的反应记下来。<br>4. 写修复方案：针对你找到的上传问题和逻辑问题，各写三条修复措施，并说明哪一条是“就算前面全被绕过也能兜底”的防线。</p>
+      <h2>避坑</h2>
+      <p>只在自己的靶场里测上传和逻辑漏洞：往真实网站传脚本、改真实订单的价格，都是越界行为；别只检查扩展名：MIME、魔数、前端检查都能绕过，要叠满五层；别把上传目录和程序放一起：上传目录必须禁止执行脚本；别信任客户端传来的任何业务数据：价格、折扣、数量、订单归属，全部要在服务器端重算、重查；逻辑漏洞没有扫描器：画流程图、逐个参数改、同时发两次，才找得到。</p>
+      <p>文件上传和逻辑漏洞讲完，Web 漏洞的“常见款”就基本齐了。下一章我们讲两类容易被忽略的漏洞：<a href="m7c6-xxe-deserialization.html">第 6 章：XXE 与反序列化</a>——它们不常出现在新手的检查清单上，可一旦出现，往往就是高危。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>文件上传漏洞：攻击者上传伪装成图片的脚本，服务器一旦执行就等于交出权限；单靠扩展名、MIME、魔数、前端检查都能被绕过。</li>
+          <li>上传防御叠满五层：白名单扩展名、内容重解析、随机重命名、上传目录禁止执行、与程序分离存放。</li>
+          <li>逻辑漏洞是业务逻辑本身有洞：价格篡改、越权访问（IDOR）、流程绕过、竞态条件，代码按设计跑着，业务却错了。</li>
+          <li>找逻辑漏洞靠画业务流程图 + 逐个改参数 + 模拟并发，扫描器帮不上忙。</li>
+          <li>铁律：价格、金额、归属等业务数据永远在服务器端重算、重查，绝不信任客户端传来的值。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m7c4-csrf-ssrf.html">← 上一章：第 4 章：CSRF 与 SSRF</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m7c6-xxe-deserialization.html">下一章：第 6 章：XXE 与反序列化 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>
