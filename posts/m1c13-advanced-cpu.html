@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 13 章：高级 CPU：超标量、多核、缓存一致性与虚拟化 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 13 章：高级 CPU：超标量、多核、缓存一致性与虚拟化</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-25 · 模块一</div>
+      <p>前面<a href="m1c2-cpu.html">第 2 章</a>讲过，CPU 的工作就是不停地取指、译码、执行：一个时钟周期做一步。可是现在的 CPU 主频早就到 4、5GHz 了，一个核一秒钟能做几十亿步，为什么电脑还是会卡？答案是：只靠“跑得更快”早就到头了，现代 CPU 快的真正原因不是主频，而是“同时做更多事”。这一章讲四样东西：超标量、多核、缓存一致性、虚拟化——它们合起来就是现代 CPU 的样子，也是后面学操作系统、学虚拟机逃逸、学侧信道攻击的地基。</p>
+
+      <h2>超标量：一个时钟周期发多条指令</h2>
+      <p>第 2 章的 CPU 模型是“一个周期一条指令”：取一条、执行一条、再取下一条。这叫标量 CPU。现代 CPU 不一样：它每个时钟周期能同时发出两条、三条、甚至四条指令去执行，这就叫<strong>超标量</strong>（superscalar）。打个比方：标量 CPU 是只有一个窗口的售票处，队伍再长也只能一个一个卖票；超标量是同时开了四个窗口，四个窗口一起卖票，队伍前进的速度就翻了几倍。</p>
+      <p>超标量能成立，是因为很多指令之间根本没有依赖关系。比如程序里连续三条指令：第一条算 a+b，第二条算 c+d，第三条算 e+f——它们算的东西互不相干，完全可以同时算。CPU 里有一个叫“发射”的环节，负责在每个周期里挑出几条互不依赖的指令，一起发给不同的执行单元：加法器、乘法器、访存单元各自忙各自的，谁也不等谁。</p>
+      <p>但超标量也不是万能的。它有个天花板：程序里总有互相依赖的指令。算完了 a+b，才能用结果去算下一步——后一条指令必须等前一条的输出，这叫<strong>数据依赖</strong>。依赖链越长，能并行发出的指令就越少。还有一种更麻烦的依赖：条件跳转——“如果 x 大于 0 就跳到这里，否则跳到那里”。CPU 没算出 x 之前，根本不知道下一条指令从哪取。现代 CPU 的办法是<strong>分支预测</strong>：先猜一个方向，猜对了就赚了，猜错了就把算错的部分全部扔掉重来。第 21 章讲流水线的时候，会回头把分支预测失败的代价算清楚。</p>
+      <p>所以看 CPU 性能只看主频是错的：一个 3GHz 的超标量 CPU，每个周期发 4 条指令，实际吞吐量可以超过一个 4GHz 但每个周期只发 1 条指令的 CPU。卖电脑时商家只喊主频，内行看的是“每周期指令数”（IPC，Instructions Per Cycle）——超标量就是提高 IPC 的主要手段。</p>
+
+      <h2>多核与超线程：不是一回事</h2>
+      <p>主频上不去了，超标量也有天花板，芯片厂换了一条路：一个芯片里塞好几个完整的 CPU 核心，这就是<strong>多核</strong>（multi-core）。双核就是两个核，四核就是四个核，每个核都能独立取指、执行，真正同时跑四个程序。8 核的电脑同时开浏览器、聊天软件、音乐、杀毒扫描，互相不抢道，就是多核在干活。</p>
+      <p>多核和<strong>超线程</strong>（Hyper-Threading）经常被混在一起，其实完全不同。多核是真的多了几个核心；超线程是在一个物理核心里“虚拟”出两个逻辑核心：一个核里有两套寄存器、两套程序计数器，但加法器、执行单元还是同一套。两个线程同时跑的时候，共用执行单元，谁有空谁用——相当于一个售票窗口挂了两个排队号，窗口还是一个。任务管理器里看到的“8 个逻辑处理器”，可能是 4 个物理核开了超线程，也可能是真 8 核——看<a href="m1c12-hardware-lab.html">第 12 章</a>的体检报告时，核心数和逻辑处理器数要分开看。</p>
+      <p>多核也有自己的代价：核心越多，核与核之间要协调的事情就越多。两个核同时想往同一个内存地址写数据，怎么办？这就引出了下一节。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="超标量与多核对比图">
+          <defs>
+            <marker id="arr13" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <text x="140" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">超标量：一个核同时发多条指令</text>
+          <text x="420" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">多核：多个核同时跑多个程序</text>
+          <rect x="20" y="40" width="240" height="70" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="66" text-anchor="middle" font-size="13" fill="#1a1a2e">核心 A</text>
+          <text x="140" y="88" text-anchor="middle" font-size="13" fill="#1a1a2e">周期 1：发指令 ① ② ③ ④</text>
+          <text x="140" y="104" text-anchor="middle" font-size="12" fill="#666">四个执行单元同时干活</text>
+          <rect x="300" y="40" width="110" height="70" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="355" y="66" text-anchor="middle" font-size="13" fill="#1a1a2e">核心 A</text>
+          <text x="355" y="88" text-anchor="middle" font-size="13" fill="#1a1a2e">跑程序 1</text>
+          <rect x="430" y="40" width="110" height="70" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="485" y="66" text-anchor="middle" font-size="13" fill="#1a1a2e">核心 B</text>
+          <text x="485" y="88" text-anchor="middle" font-size="13" fill="#1a1a2e">跑程序 2</text>
+          <rect x="20" y="140" width="240" height="70" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="166" text-anchor="middle" font-size="13" fill="#1a1a2e">超线程：一个物理核</text>
+          <text x="140" y="188" text-anchor="middle" font-size="13" fill="#1a1a2e">两套寄存器，共用执行单元</text>
+          <text x="140" y="204" text-anchor="middle" font-size="12" fill="#666">看起来像两个核，其实只有一个窗口</text>
+          <rect x="300" y="140" width="240" height="70" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="166" text-anchor="middle" font-size="13" fill="#1a1a2e">多核的代价</text>
+          <text x="420" y="188" text-anchor="middle" font-size="13" fill="#1a1a2e">核越多，核之间要协调的事越多</text>
+          <text x="420" y="204" text-anchor="middle" font-size="12" fill="#666">比如：两个核同时写同一个地址</text>
+          <text x="280" y="246" text-anchor="middle" font-size="12" fill="#666">记住：超标量是“一个核多干活”，多核是“多个核一起干”，超线程是“一个核假装两个核”</text>
+        </svg>
+        <figcaption>图：超标量、多核、超线程的区别——三者都是为了“同时做更多事”，但实现方式完全不同</figcaption>
+      </figure>
+
+      <h2>缓存一致性：多核看到的内存必须一致</h2>
+      <p>每个 CPU 核心都有自己的私有缓存（L1、L2），<a href="m1c8-locality.html">第 8 章</a>讲过，缓存是靠局部性原理才快的：CPU 先在缓存里找数据，找不到才去内存。现在问题来了：核心 A 把变量 x 读进自己的缓存改成了 5，核心 B 的缓存里还留着旧的 x = 3——两个核看到的同一个变量，值不一样了！这就是<strong>缓存一致性</strong>问题。程序跑着跑着，两个核对同一份数据的看法分裂了，结果就全错了。</p>
+      <p>解决办法的思想叫 <strong>MESI 协议</strong>。不用背它的状态机，记住它要保证的一件事就行：<strong>在任何时刻，一个内存地址的数据，在所有核的缓存里看到的必须是一致的</strong>。MESI 给缓存里的每一行数据贴一个状态标签：M（Modified，已修改，只有我有，内存里的还是旧的）、E（Exclusive，独占，只有我有，和内存一致）、S（Shared，共享，好几个核都有，谁也不能擅自改）、I（Invalid，无效，别信我这份，过期了）。</p>
+      <p>举个例子：核心 A 想改 x。它先看自己的缓存行是什么状态：如果是 S（共享），它就向所有核广播一声“我要改 x 了，你们手里的 x 作废”；别的核收到广播，把自己缓存里的 x 标记成 I（无效）；核心 A 再把自己的改成 M，安心改。之后核心 B 想读 x，发现自己缓存里的是 I，就知道这份过期了，必须重新去内存（或者从 A 那里）拿最新的。这个“广播 + 作废”的动作，硬件自动完成，程序员完全感觉不到——但代价是真实存在的：核越多，广播越频繁，缓存一致性协议本身就成了多核性能的瓶颈之一。</p>
+      <p>学安全的人要记住这个画面：缓存不是每个核各管各的保险箱，而是所有核共享的一份数据，硬件在背后不停地同步。以后学到<strong>侧信道攻击</strong>（比如 Spectre、Meltdown）时，你会发现攻击者正是利用了缓存的这些共享行为——一个核能通过缓存的 timing“偷看”另一个核干了什么。缓存一致性这节课，就是那扇门的门把手。</p>
+
+      <h2>特权级：Ring 0 与 Ring 3</h2>
+      <p>CPU 里有一道看不见的墙，叫<strong>特权级</strong>。x86 CPU 有四个特权级 Ring 0 到 Ring 3，数字越小权力越大。实际用到的只有两个：<strong>Ring 0 是内核态</strong>，操作系统内核跑在这里，可以执行任何指令、访问任何内存、直接操作硬件；<strong>Ring 3 是用户态</strong>，普通程序跑在这里，只能访问自己的内存，想碰硬件、想读写磁盘，必须通过系统调用请内核代劳。普通程序想直接读别的程序的内存？CPU 硬件直接拒绝。</p>
+      <p>为什么要有这道墙？因为程序会出 bug、会中毒。如果浏览器里跑的一段恶意代码能直接改内存、直接写磁盘，整个系统就任人宰割了。特权级就是 CPU 提供的第一道防线：用户程序被关在 Ring 3 的笼子里，危险操作只能排队请 Ring 0 的内核代办，内核会先检查“你有没有这个权限”。<a href="m1c9-interrupt.html">第 9 章</a>讲的中断和系统调用，就是程序从 Ring 3 敲门进 Ring 0 的过程。</p>
+      <p>提权攻击的目标，就是这道墙：想办法让一段本来在 Ring 3 跑的代码，拿到 Ring 0 的权力。一旦成功，整台机器就归攻击者了。所以操作系统漏洞、驱动漏洞之所以危险，就是因为它们跑在 Ring 0——漏洞一被利用，攻击者直接站在墙里面。</p>
+
+      <h2>虚拟化：虚拟机是怎么回事</h2>
+      <p>虚拟机（Virtual Machine）就是“一台假电脑”：在一台真实电脑上，用软件模拟出另一台完整的电脑，有自己的 CPU、内存、硬盘、操作系统。第 12 章的动手做里，你已经在虚拟机里跑过体检报告——虚拟机里的 Windows 以为自己独占一台电脑，其实它只是真实电脑上一个被“骗”了的客人。</p>
+      <p>骗住它的软件叫<strong>虚拟机监视器</strong>（Hypervisor，VMM）。它坐在真实硬件和虚拟机之间，干三件事：第一，<strong>分资源</strong>——把真实 CPU 的时间片、真实内存切几块分给各台虚拟机；第二，<strong>翻译危险操作</strong>——虚拟机里的系统以为自己在 Ring 0，想直接碰硬件，Hypervisor 把这些操作拦下来，翻译成对真实硬件的安全操作；第三，<strong>隔离</strong>——一台虚拟机中毒、崩溃，不能影响别的虚拟机和宿主机。</p>
+      <p>早期的虚拟化全靠软件翻译，又慢又麻烦。后来 CPU 厂商直接在硬件里加了支持：Intel 叫 VT-x，AMD 叫 AMD-V，这就是<strong>硬件辅助虚拟化</strong>。CPU 多了一个比 Ring 0 还高的特权级（常叫 Ring -1），Hypervisor 跑在那里，虚拟机里的操作系统跑在“以为自己是 Ring 0”的位置上，危险操作一出现，CPU 硬件自动把控制权交给 Hypervisor 处理，速度快得多。现在你在 VirtualBox、VMware、Hyper-V 里开虚拟机，用的都是硬件辅助虚拟化——如果你在 BIOS 里关掉了 VT-x，虚拟机要么开不起来，要么慢得没法用。</p>
+      <p>虚拟化对安全是双刃剑：好处是隔离——可疑的程序、可疑的网站，先在虚拟机里跑，坏了就把虚拟机一删，宿主机毫发无损，这就是安全研究里最常用的沙箱思路；坏处是攻击面——Hypervisor 本身一旦有漏洞，攻击者可以从虚拟机里“逃逸”出来，控制宿主机和上面所有的虚拟机。虚拟机逃逸，是虚拟化安全里最严重的漏洞类型。</p>
+
+      <div class="video-note">视频讲解：<a href="https://youtube.com/watch?v=GtVDTp826DE">CPU Architecture Explained</a>（YouTube，英文，可开自动字幕，约 8 分钟，讲 ALU、寄存器、控制单元和指令周期——看完对照本章想一想，超标量是在哪个环节“多开了窗口”）</div>
+
+      <div class="teacher-note"><strong>老师经验：</strong>现场排错，我见过太多人被“核心数”骗了。有人买电脑只看“8 核”，结果是 4 核开超线程的低压 U，跑重活还不如 6 个真核的桌面 CPU；也有人看任务管理器里 CPU 占用只有 50% 就说“CPU 没满”，其实是程序只会用一个核——单核跑满了 100%，其他核闲着，总占用看着才一半。判断性能要看单核占用、看每个核的占用，别只看总数。还有一次，客户的虚拟机慢得打不开，我远程一看：BIOS 里 VT-x 是关的，虚拟机全靠软件模拟在跑。开 VT-x、重启，五分钟解决。所以装好虚拟机先确认硬件虚拟化开了没有——这一步，省掉的麻烦比你想的多得多。</div>
+
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里打开任务管理器 → 性能 → CPU，记下核心数和逻辑处理器数：逻辑处理器是核心数的两倍，说明开了超线程；相等，说明没开。<br>2. 在虚拟机里跑一段单线程和一段多线程的小程序（Python 就行），看任务管理器里 CPU 占用：单线程只能跑满一个核，多线程能把多个核都拉起来——亲眼看一次“多核”和“单核”的区别。<br>3. 进自己电脑的 BIOS/UEFI 设置界面，找到 Intel VT-x 或 AMD-V 的开关，看它是开着还是关着（只看不动，别乱改别的设置）；再对照虚拟机软件的设置，确认虚拟机用的是硬件虚拟化。<br>4. 在虚拟机里故意开两个程序同时抢 CPU（比如一边解压大文件一边看视频），观察卡顿，再想一想：如果这是两个核在抢同一个内存地址，缓存一致性协议在背后做了什么。</p>
+
+      <h2>避坑</h2>
+      <p>别只看主频买 CPU：超标量程度、核心数、缓存大小同样决定速度；别把逻辑处理器当真核：超线程是“一个窗口两个号”，重活还是要真核；别以为多核就能让所有程序变快：单线程程序在 16 核电脑上也只用一个核；别在关了硬件虚拟化的电脑上开虚拟机：慢到怀疑人生是正常的，先检查 VT-x/AMD-V；别在虚拟机里以为绝对安全：隔离是 Hypervisor 给的，Hypervisor 有漏洞就能逃逸，可疑的东西还是要先想清楚再跑。</p>
+      <p>这一章把 CPU 从“一个周期一条指令”升级到了现代的样子：超标量让一个核多干活，多核让多个核一起干，缓存一致性保证多核看到的数据是一致的，特权级把用户程序关进笼子，虚拟化在笼子外面又造了一层假电脑。<a href="m1c19-datapath.html">第 19 章</a>会把数据通路拆开，看指令在 CPU 里到底经过了哪些部件；<a href="m1c21-pipelining.html">第 21 章</a>讲流水线，会把本章提到的分支预测失败算出具体的代价。回头看<a href="m1c2-cpu.html">第 2 章</a>的取指执行和<a href="m1c8-locality.html">第 8 章</a>的局部性：你会发现，超标量和多核，都是在那两个简单模型上长出来的。</p>
+
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>超标量：一个时钟周期同时发出多条互不依赖的指令，提高每周期指令数（IPC），只看主频会误判 CPU 性能。</li>
+          <li>多核是真多了几个核心，超线程是一个物理核虚拟出两个逻辑核、共用执行单元；逻辑处理器数不等于核心数。</li>
+          <li>缓存一致性：多核各自有私有缓存，MESI 协议用状态标签加广播作废，保证所有核看到的同一地址数据是一致的。</li>
+          <li>特权级：Ring 0 是内核态，什么都能做；Ring 3 是用户态，只能访问自己的内存，危险操作要请内核代劳——这是 CPU 的第一道防线。</li>
+          <li>虚拟化：Hypervisor 在真实硬件和虚拟机之间分资源、翻译危险操作、做隔离；硬件辅助虚拟化（VT-x/AMD-V）让虚拟机快得多，逃逸是它最严重的风险。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m1c12-hardware-lab.html">← 上一章：第 12 章：动手：拆解一台电脑的硬件信息</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m1c14-files-encoding.html">下一章：第 14 章：文件、编码与压缩 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

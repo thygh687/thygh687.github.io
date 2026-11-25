@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块五第 16 章：索引与查询优化 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块五第 16 章：索引与查询优化</h1>
+      <div class="meta"><span class="tag">数据库与密码学</span>2026-11-25 · 模块五</div>
+      <p>一张表只有几百行时，什么查询都快；等它长到几百万行，没有索引的查询会从“眨眼”变成“泡一杯咖啡回来还没跑完”。更糟的是，慢查询不只慢自己——它占着 CPU 和锁，把别的查询也拖慢，严重时整个系统都被一条慢 SQL 拖垮。这一章讲查询慢了从哪下手：索引是什么、什么时候建、什么时候不要，以及怎么用 EXPLAIN 看懂数据库的查询计划。这是<a href="m5c15-transactions.html">第 15 章</a>事务的另一面：上一章管“同时写不出错”，这一章管“读得够快”。</p>
+      <h2>索引是什么：书后面的目录</h2>
+      <p>没有索引的查询叫全表扫描：数据库把表里的每一行都翻一遍，逐行比对条件。一本书没有目录，你想找“隔离级别”就得从第一页翻到最后一页；有了目录，你直接翻到对应页码。索引就是数据库给表做的目录：它按某一列（比如用户名、订单时间）排好序，记下每个值在表里的位置，查询时先查目录，再按位置直奔那几行。</p>
+      <p>目录本身也要占地方、也要维护：每次往表里插一行、改一个值，索引也要跟着更新。所以索引不是免费的午餐——它是用“写的时候慢一点、占一点空间”换“读的时候快很多”。一张读多写少的表（比如商品目录），索引越多越划算；一张写多读少的表（比如每秒几千条的日志），索引太多反而拖慢写入。</p>
+      <h2>B 树思想：目录是怎么排的</h2>
+      <p>数据库的索引最常用 B 树（准确说是 B+ 树）这种结构。你可以把它想成一棵多叉的“查找树”：根节点是一组分界值，告诉你“要找的值在左子树还是右子树”；一层一层往下走，每走一层就排除掉一大半数据，直到叶子节点，那里按顺序排着真正的索引值和对应的行位置。</p>
+      <p>关键在“平衡”和“多叉”：树是平衡的，每条从根到叶子的路一样长，所以找任何一个值用的步数差不多；每个节点能放很多个分界值（几百个），所以树很“矮”——一百万行数据，树一般只有三四层高，查一次只要三四次磁盘读取，而全表扫描要读一百万行。这就是索引快的数学原因：<strong>把“逐行翻”变成“按层排除”，代价从 O(n) 降到 O(log n)</strong>。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="B树索引示意图">
+          <rect x="210" y="10" width="140" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="38" text-anchor="middle" font-size="14" fill="#1a1a2e">根节点：50 | 100</text>
+          <rect x="30" y="120" width="130" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="148" text-anchor="middle" font-size="14" fill="#1a1a2e">10 | 25 | 40</text>
+          <rect x="215" y="120" width="130" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="148" text-anchor="middle" font-size="14" fill="#1a1a2e">60 | 75 | 90</text>
+          <rect x="400" y="120" width="130" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="148" text-anchor="middle" font-size="14" fill="#1a1a2e">110 | 130 | 150</text>
+          <rect x="30" y="230" width="130" height="44" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="258" text-anchor="middle" font-size="14" fill="#1a1a2e">叶子：行位置 →</text>
+          <rect x="215" y="230" width="130" height="44" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="258" text-anchor="middle" font-size="14" fill="#1a1a2e">叶子：行位置 →</text>
+          <rect x="400" y="230" width="130" height="44" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="258" text-anchor="middle" font-size="14" fill="#1a1a2e">叶子：行位置 →</text>
+          <line x1="240" y1="54" x2="110" y2="118" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="54" x2="280" y2="118" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="320" y1="54" x2="450" y2="118" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="95" y1="164" x2="95" y2="228" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="164" x2="280" y2="228" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="465" y1="164" x2="465" y2="228" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="305" text-anchor="middle" font-size="12" fill="#666">找 75：根节点说“在 50–100 之间”→ 中间节点说“在 60–90 之间”→ 叶子直达那一行</text>
+        </svg>
+        <figcaption>图：B 树索引——每下一层就排除一大半数据，三四层就能定位到百万行里的某一行</figcaption>
+      </figure>
+      <h2>什么时候建索引，什么时候不要</h2>
+      <p><strong>值得建的：</strong>WHERE 条件里经常出现的列（比如按用户名、订单号查）；JOIN 时连接的列（外键列，<a href="m5c14-normalization.html">第 14 章</a>的外键）；ORDER BY、GROUP BY 里常用的列；主键——数据库会自动给主键建索引，不用你操心。</p>
+      <p><strong>别急着建的：</strong>只有很少几种取值的列，比如“性别”只有男女两类，建索引也筛不掉多少行，收益很小；几乎从不出现在查询条件里的列，建了也是白占空间；写多读少的表，每多一个索引，写入就多一份维护成本；小表——几百行的表全表扫描本来就快，索引纯属多余。</p>
+      <p><strong>复合索引（多列一起建）要讲顺序：</strong>索引 <code>(姓, 名)</code> 能加速“按姓查”和“按姓+名查”，但加速不了“只按名查”——就像电话簿按姓排好了，知道姓能翻得很快，只知道名就得整本翻。经验叫“最左前缀”：查询条件要从索引的第一列开始用，缺了第一列，后面的列就用不上。</p>
+      <h2>EXPLAIN：让数据库把它的计划说出来</h2>
+      <p>慢查询的第一步不是猜，而是看。在查询前面加一个 <code>EXPLAIN</code>，数据库就会告诉你它打算怎么执行：会不会全表扫描（type 是 ALL 就是在逐行翻）、用哪个索引（key 一栏）、大概要扫多少行（rows 一栏）、有没有用到临时表或文件排序（Extra 里的 Using temporary、Using filesort 都是危险信号）。</p>
+      <p>一个健康的查询计划长这样：type 是 ref 或 range（走了索引）、key 是你建的索引名、rows 是个小数字。一个生病的计划长这样：type 是 ALL、rows 是全表行数、Extra 里挂着 Using filesort。看到生病的计划，处理顺序是：先看是不是缺索引（最常见）；再看查询写法是不是让索引失效了——比如对索引列用了函数 <code>WHERE YEAR(下单时间) = 2026</code>，数据库就没法直接用索引，得改成范围条件 <code>WHERE 下单时间 &gt;= '2026-01-01' AND 下单时间 &lt; '2027-01-01'</code>；最后才考虑是不是表设计的问题，回到<a href="m5c14-normalization.html">第 14 章</a>的范式去检查。</p>
+      <h2>慢查询排查思路：从症状到根因</h2>
+      <p>排查慢查询有一条固定的链：第一步，确认是“一直慢”还是“偶尔慢”——偶尔慢可能是<a href="m5c15-transactions.html">第 15 章</a>的锁在挡路：别的长事务占着锁，你的查询在排队等；第二步，开慢查询日志，抓出真正慢的那几条 SQL，而不是凭感觉猜；第三步，对每条慢 SQL 跑 EXPLAIN，看它走了全表扫描还是索引；第四步，检查是不是缺索引、索引顺序不对、或者写法让索引失效；第五步，看是不是数据量本身到了要分表、归档的地步——这已经超出单表优化的范围，先把前四步做扎实。</p>
+      <p>还有两个安全视角的提醒：慢查询日志里会原样记录 SQL 语句，如果语句里拼进了用户输入（比如密码、手机号），日志就成了泄露点——这就是模块五前面讲注入时说的“永远不要把用户输入拼进 SQL，用预编译语句”的另一个原因；另外，查询优化和权限是两回事：索引能让查询变快，但不能代替最小权限——一个只需要读订单表的账号，绝不应该有删库的权限。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我处理过最多的“数据库慢”报警，根因都不是数据库不行，而是少了一个索引。有一次，一个后台列表页每次打开要 20 秒，EXPLAIN 一看，type 是 ALL，扫了 300 万行——WHERE 条件里的用户编号列根本没建索引。加一个索引，20 秒变 0.02 秒。但也有反例：另一个系统被人“优化”过，十几列上全是索引，写入慢得像蜗牛，磁盘一半被索引占了——我删掉一半没人用的索引，写入速度立刻回来。我的规矩是：索引跟着真实查询走，每加一个都要有 EXPLAIN 作证据，每半年清理一次没人用的索引。还有，永远别在高峰期给大表加索引：建索引时表会被锁，业务会停——要等到低峰期，或者用支持在线建索引的方式。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里的练习库建一张十万行的测试表（用 SQL 循环插入，或用脚本生成假数据——只在自己的虚拟机里做），先不建索引，用 <code>WHERE 邮箱 = '...' </code> 查一行，记下耗时；再给邮箱列建索引，同样查一次，对比耗时。<br>2. 对上面两次查询都跑 <code>EXPLAIN</code>，把 type、key、rows 三栏抄下来，对照着看：没索引时 type 是不是 ALL、rows 是不是十万；有索引后变成了什么。<br>3. 故意写一条让索引失效的查询：<code>WHERE YEAR(注册时间) = 2026</code>，跑 EXPLAIN 看它是不是又回到了全表扫描；再改成范围写法重跑，看索引是不是又生效了。<br>4. 建一个复合索引 <code>(姓, 名)</code>，分别跑“只按姓查”“按姓+名查”“只按名查”三条查询，用 EXPLAIN 验证哪两条走了索引、哪一条没走。</p>
+      <h2>避坑</h2>
+      <p>别给每一列都建索引：索引要维护、占空间，写操作会越来越慢；别只看查询快不快就下结论：EXPLAIN 的 rows 是估算值，最终要以上线后的真实耗时为准；别对索引列用函数、做运算、写 <code>LIKE '%xxx%'</code>（前导通配符会让索引失效，<code>LIKE 'xxx%'</code> 才走索引）；别在没备份、没低峰窗口的情况下给大表加索引；别忘了索引不是权限：优化归优化，最小权限和预编译语句一点都不能少；别在真实网站、真实业务库上练手：所有实验只在自己的虚拟机练习库里做。</p>
+      <p>查询快了，数据就该换个地方想了：不是所有数据都适合放进表里。文档、缓存、关系网这些形状各异的数据，关系型数据库装起来别扭，下一章 <a href="m5c17-nosql.html">第 17 章：NoSQL</a>讲什么时候该换一种数据库。而<a href="m5c15-transactions.html">第 15 章</a>的事务和这一章的索引合起来，才是数据库日常工作的两条腿：写得对、读得快。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>索引是数据库给表做的目录：没有索引是全表扫描，有索引是先查目录再直奔那几行，代价是写操作变慢、占额外空间。</li>
+          <li>B 树索引靠“平衡多叉、每层排除一大半”把查找从逐行翻变成按层定位，百万行数据一般三四层就能找到。</li>
+          <li>值得建索引的列：WHERE、JOIN、ORDER BY 里常用的列；不值得建的：取值很少的列、从不被查的列、写多读少的表。</li>
+          <li>复合索引讲究最左前缀：查询条件要从索引第一列开始用，缺了第一列后面的列就用不上。</li>
+          <li>慢查询先跑 EXPLAIN：type 是 ALL、rows 是全表行数、Extra 里有 Using filesort 就是生病了；先查缺索引，再查写法是不是让索引失效。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m5c15-transactions.html">← 上一章：第 15 章：事务与隔离：ACID、隔离级别与锁</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m5c17-nosql.html">下一章：第 17 章：NoSQL：文档、键值与图数据库 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

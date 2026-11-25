@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 4 章：算法与复杂度 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 4 章：算法与复杂度</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p><a href="m4c3-data-structures.html">上一章</a>讲了数据怎么组织：列表、字典、集合、元组。数据组织好了，下一个问题是：怎么高效地用它？在一份一百万行的日志里找一个 IP，是从头翻到尾，还是有更聪明的办法？把一万个端口扫描结果按顺序排好，有快有慢几种排法，差别有多大？这些问题属于算法——解决问题的具体步骤。这一章讲三个最经典的算法思想：搜索、排序、递归，再讲一个衡量算法好坏的标尺：Big-O（复杂度）。Big-O 听起来吓人，其实意思很简单：数据量变大十倍，你的程序会慢多少？</p>
+      <h2>线性搜索：从头翻到尾</h2>
+      <p>最直观的找法叫线性搜索：从第一个开始，一个一个比对，找到就停，找完都没找到就是没有。写成代码就是一个 <code>for</code> 循环加一个 <code>if</code>：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">def linear_search(items, target):
+    for i in range(len(items)):
+        if items[i] == target:
+            return i
+    return -1   # 找完都没有，返回 -1 表示不存在</pre>
+      <p>线性搜索的优点是简单、什么数据都能用，不要求数据排过序；缺点是慢。数据有 n 个，最坏情况要比 n 次：你要找的东西恰好在最后一个，或者根本不在。n 是 10 的时候无所谓，n 是一百万的时候，一次查找要比一百万次——如果每秒要查一千次，那就是十亿次比对，机器也扛不住。</p>
+      <p>生活里的例子：查字典的时候，你是不会从第一页翻到最后一页找一个字的——你会用更聪明的办法。那个更聪明的办法，就是二分搜索。</p>
+      <h2>二分搜索：每次排除一半</h2>
+      <p>二分搜索的前提是数据已经排好序。思路像猜数字游戏：我想了一个 1 到 100 之间的数，你猜 50，我说“大了”，你就知道答案在 1 到 49 之间，一下排除了 50 个数；再猜 25，我说“小了”，又排除 25 个。每次猜都排除一半，猜七次就能锁定 1 到 100 里的任何一个数——因为 2 的 7 次方是 128，超过了 100。</p>
+      <p>写成代码：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">def binary_search(items, target):
+    low = 0
+    high = len(items) - 1
+    while low &lt;= high:
+        mid = (low + high) // 2   # // 是整除，取中间位置
+        if items[mid] == target:
+            return mid
+        elif items[mid] &lt; target:
+            low = mid + 1         # 目标在右半边
+        else:
+            high = mid - 1        # 目标在左半边
+    return -1</pre>
+      <p>一百万个排好序的 IP，二分搜索最多只要比 20 次（2 的 20 次方约等于一百万），线性搜索最坏要比一百万次。这就是算法的价值：同样的问题，换个思路，速度差五万倍。代价是前提条件：数据必须先排好序——而排序本身也是要花时间的，这就引出下一个话题。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="线性搜索与二分搜索对比图">
+          <text x="140" y="25" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">线性搜索：一个一个找</text>
+          <rect x="20" y="40" width="240" height="30" rx="6" fill="#f1f5f9" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="140" y="60" text-anchor="middle" font-size="13" fill="#1a1a2e">12  25  31  47  58  63  79  90</text>
+          <text x="140" y="95" text-anchor="middle" font-size="13" fill="#666">找 79：比 8 次才找到</text>
+          <text x="420" y="25" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">二分搜索：每次砍一半</text>
+          <rect x="300" y="40" width="240" height="30" rx="6" fill="#f1f5f9" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="420" y="60" text-anchor="middle" font-size="13" fill="#1a1a2e">12  25  31  47  58  63  79  90</text>
+          <text x="420" y="95" text-anchor="middle" font-size="13" fill="#666">找 79：第 1 次比 47（小了）</text>
+          <rect x="300" y="110" width="240" height="30" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="420" y="130" text-anchor="middle" font-size="13" fill="#1a1a2e">58  63  79  90</text>
+          <text x="420" y="165" text-anchor="middle" font-size="13" fill="#666">第 2 次比 63（小了）</text>
+          <rect x="380" y="180" width="160" height="30" rx="6" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="460" y="200" text-anchor="middle" font-size="13" fill="#1a1a2e">79  90</text>
+          <text x="420" y="232" text-anchor="middle" font-size="13" fill="#666">第 3 次比 79：找到，只用了 3 次</text>
+        </svg>
+        <figcaption>图：找 79——线性搜索比 8 次，二分搜索比 3 次；数据越多，差距越大</figcaption>
+      </figure>
+      <h2>排序：冒泡与快速</h2>
+      <p>排序是把一堆无序的东西按大小排好。最直观的排法叫冒泡排序：从头走到尾，相邻两个比一比，大的往后挪，一趟走完，最大的就“冒泡”到了最后面；再走一趟，第二大的也到位了……走 n 趟，全部排好。代码短、思路直，但慢：n 个数要比大约 n²/2 次。一万个数就是五千万次比对，十万个数就是五十亿次——机器会跑到你怀疑人生。</p>
+      <p>快的排法叫快速排序，思路完全不同：挑一个数当“基准”，把比它小的全扔左边、比它大的全扔右边，基准的位置就固定了；再对左边和右边分别重复这个过程。每次都把问题切成两半，越切越小。快速排序在一万个数上只要十几万次比对，比冒泡快几百倍。Python 内置的 <code>sorted()</code> 用的就是这类高效排序的变体，所以日常写代码时直接用 <code>sorted()</code> 就行，不必自己写排序——但面试和理解原理时，必须知道“为什么它快”。</p>
+      <p>安全里的例子：把扫描结果按端口号排序、把攻击 IP 按出现次数从多到少排序、把日志按时间排序。排序本身不是目的，是为了后面的查找和分析更快——排好序的日志才能二分搜索，排好序的攻击统计才能一眼看到最严重的。</p>
+      <h2>递归：函数自己调自己</h2>
+      <p>递归是看起来最神奇的思想：一个函数在执行的过程中调用自己。听起来像无限循环，但只要满足两个条件就不会失控：第一，有一个“最小情况”可以直接给出答案，不用再调自己；第二，每次调用自己时，问题都比原来小一点，最终一定会落到最小情况上。</p>
+      <p>经典例子是斐波那契数列：每一项是前两项之和，1、1、2、3、5、8、13……写成递归就是：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">def fib(n):
+    if n &lt;= 1:        # 最小情况：直接给答案，停止递归
+        return n
+    return fib(n - 1) + fib(n - 2)  # 问题变小：算 n 就变成算 n-1 和 n-2</pre>
+      <p>递归真正的用武之地，是处理“结构会嵌套”的问题。最典型的是遍历目录：一个文件夹里有文件和子文件夹，子文件夹里又有文件和子文件夹……写循环很难写清楚，写递归却很自然：“列出这个文件夹里的所有东西；遇到文件就处理，遇到子文件夹就对它再做一次同样的事。”安全里扫描磁盘、清理恶意文件、统计目录大小，都是这个模式。后面<a href="m4c5-data-structures-advanced.html">第 5 章</a>讲树形结构时，递归会再次出现——树和递归是天生一对。</p>
+      <p>递归的代价是每次调用都要占一点内存（调用栈，<a href="m4c5-data-structures-advanced.html">第 5 章</a>会细讲），层数太深会把栈撑爆。Python 默认递归深度限制是 1000 层。所以递归适合“问题会越变越小、层数可控”的场景，不适合无限深的情况。</p>
+      <h2>Big-O：规模大了慢多少</h2>
+      <p>终于到 Big-O 了。Big-O 是描述“数据量变大时，算法的工作量怎么变”的记号，读作“大 O”。它不关心你的电脑有多快，只关心增长趋势：</p>
+      <p><strong>O(1)</strong>——不管数据多大，工作量不变：字典按键取值、集合查“在不在”，都是一次定位，跟数据量无关。<br><strong>O(log n)</strong>——数据量翻倍，工作量只加一点点：二分搜索，一百万个数 20 次，一千万个数 24 次，数据涨十倍，多 4 次而已。<br><strong>O(n)</strong>——工作量跟着数据量走：线性搜索，十万行日志查一遍就是十万次，数据翻倍工作量翻倍。<br><strong>O(n²)</strong>——数据量翻倍，工作量翻四倍：冒泡排序，一万个数五千万次，十万个数五十亿次——这就是“小数据没感觉，大数据直接卡死”的元凶。<br><strong>O(2ⁿ)</strong>——数据量加 1，工作量翻倍：上面那个朴素的斐波那契递归就是，算 fib(30) 要几百万次调用，fib(50) 要上千亿次——看着代码短，跑起来是灾难。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Big-O 增长曲线对比图">
+          <line x1="50" y1="20" x2="50" y2="220" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="50" y1="220" x2="540" y2="220" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="30" y="30" font-size="12" fill="#666">工作量</text>
+          <text x="520" y="240" font-size="12" fill="#666">数据量 n</text>
+          <path d="M60 200 L530 195" fill="none" stroke="#16a34a" stroke-width="2.5"/>
+          <text x="440" y="180" font-size="13" fill="#16a34a">O(1)：几乎不涨</text>
+          <path d="M60 200 C200 180 350 160 530 145" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+          <text x="400" y="138" font-size="13" fill="#2563eb">O(log n)：涨得很慢</text>
+          <path d="M60 200 L530 120" fill="none" stroke="#d97706" stroke-width="2.5"/>
+          <text x="420" y="110" font-size="13" fill="#d97706">O(n)：跟着涨</text>
+          <path d="M60 200 C200 170 350 80 500 30" fill="none" stroke="#dc2626" stroke-width="2.5"/>
+          <text x="380" y="30" font-size="13" fill="#dc2626">O(n²)：越涨越快</text>
+        </svg>
+        <figcaption>图：Big-O 增长曲线——同样的 n，O(n²) 的工作量比 O(log n) 高出几个数量级</figcaption>
+      </figure>
+      <p>Big-O 的实用意义就一句话：写程序之前，先想想数据量大了会怎样。日志只有几百行，什么写法都行；日志有一百万行，O(n²) 的写法就是事故。<a href="m4c3-data-structures.html">上一章</a>说的“集合查得比列表快”，翻译成 Big-O 就是：集合查找是 O(1)，列表查找是 O(n)——这就是为什么黑名单要用集合存。安全工作里的数据动不动就是百万级，Big-O 不是考试题，是每天都要用的判断力。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我见过最真实的一次 Big-O 教训，是一个日志分析脚本。同事写了两层循环：外层遍历十万个 IP，内层每次都去一份十万行的日志里从头找匹配——O(n²)，一共一百亿次比对，跑了一整夜没跑完。改法很简单：先把日志读进字典（IP → 出现次数），一次遍历建好，再查每个 IP 就是 O(1)，总共 O(n)，几秒跑完。同样的功能，换个数据结构、换个算法，时间从一夜变成几秒。现场排错时我常先问两个问题：数据有多大？现在这个写法是 O(n) 还是 O(n²)？这两个问题答上来，性能问题就解决了一大半。还有一条：别一上来就追求最优算法——先写对、再写快，O(n) 的正确程序永远胜过 O(log n) 的错误程序。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里写出上面两个搜索函数 <code>linear_search</code> 和 <code>binary_search</code>，用一个排好序的列表 <code>[12, 25, 31, 47, 58, 63, 79, 90]</code> 测试：找 79、找 100（不存在的），看返回值对不对。再把列表故意打乱顺序传给 <code>binary_search</code> 找 79，看它会出什么错——体会“二分搜索要求数据排好序”这个前提。<br>2. 写一个计时对比：生成一个 1 到 100000 的排好序的列表，用 <code>time</code> 模块分别计时线性搜索找 99999 和二分搜索找 99999 各花多久（提示：<code>import time</code>，用 <code>time.time()</code> 在前后各取一次，相减就是耗时）。数字会告诉你差距有多大。<br>3. 写递归版的目录遍历：先在虚拟机里建一个三层嵌套的假目录（每层放两三个空文件和一个子目录），写一个递归函数打印出所有文件的路径。再数一数：不写递归，只用循环，要写多少层嵌套才能遍历三层目录？体会递归处理嵌套结构的价值。<br>4. 给斐波那契递归加一个“计数器”：每次调用就加一，算 <code>fib(20)</code> 时一共调用了多少次。再算 <code>fib(25)</code>，看调用次数涨了多少倍——这就是 O(2ⁿ) 的直观感受。</p>
+      <h2>避坑</h2>
+      <p>别对没排序的数据用二分搜索：结果是错的，而且错得悄无声息，不会报错；别写没有最小情况的递归：函数会一直调自己，直到栈溢出报错；别觉得“代码短就是好”：朴素的斐波那契递归只有三行，跑起来却是灾难；别拿小数据验证性能：十个数的列表上冒泡和快速排序看不出差别，数据量上万才能见分晓；别在循环里做重复的查找：能先建成字典或集合的，先建好再查，这是现场最常见的性能坑；别把 Big-O 当精确数字：它讲的是趋势，是“规模大了慢多少”，不是“这台电脑上跑几秒”。</p>
+      <p>算法和数据结构是一对搭档：<a href="m4c3-data-structures.html">上一章</a>的四种结构，加上这一章的三种思想，日常安全工具的大部分逻辑都能拼出来了。<a href="m4c5-data-structures-advanced.html">下一章</a>会把数据结构往深里讲：栈、队列、链表、树、哈希表、图——每一种都有它在安全工作里的固定位置。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>线性搜索从头比到尾，简单通用但最坏要比 n 次；二分搜索每次排除一半，一百万个数只要 20 次，但要求数据先排好序。</li>
+          <li>冒泡排序思路直但慢（O(n²)）；快速排序把问题不断切半，快得多；日常直接用 Python 的 <code>sorted()</code>。</li>
+          <li>递归是函数自己调自己，靠“最小情况”和“问题不断变小”保证停下来，最适合遍历目录这类嵌套结构。</li>
+          <li>Big-O 描述数据量变大时工作量怎么变：O(1) 不变、O(log n) 慢涨、O(n) 跟着涨、O(n²) 越涨越快、O(2ⁿ) 是灾难。</li>
+          <li>集合/字典查找是 O(1)，列表查找是 O(n)——选对数据结构，本身就是一次算法优化；先写对，再写快。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c3-data-structures.html">← 上一章：第 3 章：数据结构</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c5-data-structures-advanced.html">下一章：第 5 章：数据结构进阶 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

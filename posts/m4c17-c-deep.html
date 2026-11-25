@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 17 章：C 语言深入：栈、堆与内存错误 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 17 章：C 语言深入：栈、堆与内存错误</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p>上一章的日志分析器跑起来之后，你手里已经有三个能干活的 Python 小工具了。但 Python 替你把内存管得严严实实：列表越界会报错、对象不用了会自动回收，你几乎感觉不到内存的存在。C 语言不一样：它把内存的钥匙直接交到你手里——能直接读写任何一块内存，也就意味着能直接写坏任何一块内存。这一章讲的就是指针真正危险的地方：栈和堆是怎么组织的，缓冲区溢出、悬空指针、内存泄漏、用后释放这些错误是怎么发生的，以及为什么现代语言要花那么大力气去防这些。本章只讲原理和危害，不教任何利用方法——知道“哪里会出事”就够了，安全工程师的工作是把这些洞堵上，不是钻进去。</p>
+      <h2>先回到第 13 章：指针到底是什么</h2>
+      <p><a href="m4c13-c-pointers.html">第 13 章</a>讲过，C 语言里的指针就是一个内存地址：变量住在内存的某个格子里，指针存的就是那个格子的门牌号。指针本身没有魔法，危险来自两点：第一，C 不检查你用指针去碰哪块内存——你说写第 100 个格子，哪怕数组只有 10 个格子，它也照写不误；第二，内存是有“邻居”的，你写超了，改掉的不是空气，而是隔壁变量、隔壁函数的地盘。Python 里 <code>lst[100]</code> 会立刻抛 IndexError 拦住你，C 里 <code>arr[100] = 1</code> 编译能过、运行可能也不报错，只是悄悄把别的东西改坏了——程序继续跑，错在暗处，这才是最可怕的。</p>
+      <p>要理解这些错误，先要看清内存的布局。一个正在运行的程序，内存大体分成几块：代码段（放指令）、全局区（放全局变量）、栈（放函数里的局部变量和返回地址）、堆（放程序运行时动态申请的内存）。栈和堆是这一章的主角。</p>
+      <h2>栈：函数调用的记事本</h2>
+      <p>栈（stack）是一块“先进后出”的内存：函数被调用时，系统在栈顶划出一块叫“栈帧”（stack frame）的区域，放这个函数的局部变量、参数和“函数结束之后回哪去”的返回地址；函数返回时，整个栈帧一次性收回。就像一摞盘子：最后放上去的先拿走，顺序永远整整齐齐。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="栈帧结构示意图">
+          <rect x="180" y="10" width="200" height="40" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">返回地址：main 函数的下一行</text>
+          <rect x="180" y="52" width="200" height="40" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="77" text-anchor="middle" font-size="14" fill="#1a1a2e">参数：传进来的值</text>
+          <rect x="180" y="94" width="200" height="40" rx="6" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="119" text-anchor="middle" font-size="14" fill="#1a1a2e">局部变量：int x</text>
+          <rect x="180" y="136" width="200" height="56" rx="6" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+          <text x="280" y="158" text-anchor="middle" font-size="14" fill="#b91c1c">局部数组：char buf[10]</text>
+          <text x="280" y="178" text-anchor="middle" font-size="12" fill="#b91c1c">只有 10 个格子</text>
+          <rect x="180" y="194" width="200" height="40" rx="6" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="219" text-anchor="middle" font-size="14" fill="#1a1a2e">旧的栈帧（上一个函数）</text>
+          <text x="400" y="30" font-size="13" fill="#666">高地址</text>
+          <text x="400" y="220" font-size="13" fill="#666">低地址</text>
+          <line x1="392" y1="20" x2="392" y2="230" stroke="#666" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="280" y="262" text-anchor="middle" font-size="13" fill="#666">栈帧：一次函数调用的全部家当，函数返回就整体收回</text>
+          <text x="280" y="284" text-anchor="middle" font-size="13" fill="#b91c1c">危险：buf 写超了会一路向上改掉 x、参数，甚至返回地址</text>
+        </svg>
+        <figcaption>图：一个函数的栈帧——局部数组和返回地址住在同一摞盘子里</figcaption>
+      </figure>
+      <p>注意图里一个关键细节：局部数组 <code>buf</code> 和返回地址住在同一块栈帧里，中间只隔着几个变量。这就是栈溢出能造成大祸的物理原因：数组写超了，多出来的字节不会凭空消失，它们会顺着内存地址一路向上，把隔壁的变量、参数、最后连“函数结束回哪去”的返回地址一起改掉。返回地址一改，函数结束时程序就跳到一个错误的地方去——轻则崩溃，重则按攻击者安排的路径执行。历史上无数的严重漏洞，根子都在这一张图上。</p>
+      <h2>缓冲区溢出是怎么发生的</h2>
+      <p>缓冲区溢出（buffer overflow）是最经典的内存错误，意思很直白：往一个只有 10 个格子的缓冲区里塞了 20 个字节，多出来的 10 个字节溢到邻居的地盘上。发生的原因永远是同一个：<strong>程序在写数据之前，没有检查数据有多长</strong>。</p>
+      <p>一个最常见的场景是读用户输入：程序准备了一个 64 字节的数组来装用户名，却没限制用户能输入多长。正常用户输入“zhangsan”，8 个字节，安然无恙；但输入可以是任意长的，程序不检查，写多少就收多少。C 标准库里一些老函数更是“帮凶”：<code>strcpy</code> 只管复制不管长度，<code>gets</code> 只管读一行不管缓冲够不够大——这些函数本身就是设计上有缺陷的，现代开发里已经被明确禁止使用，编译器见到它们都会发出警告。</p>
+      <p>溢出的后果分三档：最轻的是程序崩溃——写坏了关键数据，程序自己撑不住就退出了，用户看到的就是闪退；中等的是数据被悄悄改坏——比如隔壁变量是一个“是不是管理员”的标志位，溢出的字节正好把它从 0 改成 1，程序逻辑就被改写了；最严重的是控制流被劫持——返回地址被改掉，程序跳到攻击者指定的位置执行。防御者要记住的是：溢出本身只是一个“写超了”的错误，但它造成的后果可以从一次闪退一路升级到整台机器被控制。这就是为什么安全行业把缓冲区溢出当作头号敌人研究了几十年，也是为什么<a href="m4c21-secure-coding-deep.html">第 21 章</a>会把“永远不信任输入、永远检查长度”列为安全编码的第一条。</p>
+      <h2>堆：自己申请、自己归还的地盘</h2>
+      <p>栈是系统自动打理的，函数进出就自动分配收回；堆（heap）不一样，它是程序自己向系统要来的地盘：用 <code>malloc</code> 申请一块，用完用 <code>free</code> 归还。堆适合放“大小现在还不知道、活得比一个函数更久”的数据，比如读进来的整个文件、一个不断增长的用户列表。自由的代价是责任：申请和归还的每一步都要程序员自己记账，记错账就出事。</p>
+      <p>堆溢出和栈溢出是同一个毛病换了个地方：往堆上申请的 100 字节里写了 200 字节，多出来的会改掉堆上相邻的块。堆有自己的管理结构——每一块前面都记着“这块多大、下一块在哪”，溢出改坏了这些管理信息，之后再申请或释放内存时，堆管理器就会按错误的账本办事，程序轻则崩溃，重则被操纵。</p>
+      <h2>悬空指针、内存泄漏、用后释放</h2>
+      <p>堆上还有三种只属于它的经典错误，名字听着吓人，意思其实都简单：</p>
+      <p><strong>悬空指针（dangling pointer）：</strong>一块内存已经 <code>free</code> 归还了，但指针还指着它。就像退了房还留着房卡：房子已经给别人住了，你拿着旧房卡再去开门，开到的就不是你的房间了。程序通过悬空指针读写，已经归还的内存可能已经被别的变量重新占用，读到的是别人的数据，写进去的是在改别人的东西。</p>
+      <p><strong>用后释放（use-after-free）：</strong>悬空指针的“使用版”——在 <code>free</code> 之后又去使用那块内存。这是最危险的堆错误之一：攻击者可以想办法让那块刚释放的内存被自己控制的数据重新占住，程序再通过旧指针去用，就等于在用攻击者准备好的数据。许多浏览器的严重漏洞都是这个类型。</p>
+      <p><strong>内存泄漏（memory leak）：</strong>申请了内存，用完忘了 <code>free</code>。一次泄漏几百字节看不出来，但一个长期运行的服务——比如跑几个月的网站后台——每次处理请求都漏一点，内存会被慢慢吃光，最后系统开始变慢、服务崩溃。泄漏不会立刻爆炸，它是慢性病：发现的时候，往往是服务器半夜内存耗尽、服务挂掉的时候。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="三种堆内存错误示意图">
+          <rect x="20" y="20" width="160" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="45" text-anchor="middle" font-size="14" fill="#1a1a2e">malloc 申请</text>
+          <text x="100" y="65" text-anchor="middle" font-size="13" fill="#666">指针 p 指向这块内存</text>
+          <rect x="200" y="20" width="160" height="60" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="45" text-anchor="middle" font-size="14" fill="#1a1a2e">free 归还</text>
+          <text x="280" y="65" text-anchor="middle" font-size="13" fill="#666">内存还给系统了</text>
+          <rect x="380" y="20" width="160" height="60" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+          <text x="460" y="45" text-anchor="middle" font-size="14" fill="#b91c1c">p 还指着它</text>
+          <text x="460" y="65" text-anchor="middle" font-size="13" fill="#b91c1c">悬空指针诞生</text>
+          <line x1="180" y1="50" x2="198" y2="50" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="360" y1="50" x2="378" y2="50" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="20" y="110" width="250" height="70" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+          <text x="145" y="138" text-anchor="middle" font-size="14" fill="#b91c1c">用后释放：free 之后又用 p 读写</text>
+          <text x="145" y="160" text-anchor="middle" font-size="13" fill="#b91c1c">那块内存可能已被别人占用</text>
+          <rect x="290" y="110" width="250" height="70" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+          <text x="415" y="138" text-anchor="middle" font-size="14" fill="#b91c1c">内存泄漏：malloc 之后忘了 free</text>
+          <text x="415" y="160" text-anchor="middle" font-size="13" fill="#b91c1c">内存越漏越多，直到耗尽</text>
+          <text x="280" y="215" text-anchor="middle" font-size="13" fill="#666">正确做法：free 之后立刻把指针置为 NULL，再用就会立刻报错而不是悄悄出错</text>
+          <text x="280" y="240" text-anchor="middle" font-size="13" fill="#666">free(p); p = NULL; —— 两行，养成习惯</text>
+        </svg>
+        <figcaption>图：堆上三种错误都源于“申请—归还”这本账没记好</figcaption>
+      </figure>
+      <h2>为什么现代语言要防这些</h2>
+      <p>看到这里你可能会问：C 语言这么危险，为什么还在用？因为它快、直接、离硬件最近，操作系统、驱动、嵌入式设备都离不开它。但代价是真实的：过去三十年里，最严重的安全漏洞有一大半是内存错误造成的。于是后来的语言做了一个交易——拿走程序员直接碰内存的自由，换来“这一类错误从根上消失”：</p>
+      <p>Python、Java 这类语言：数组越界会立刻报错而不是悄悄写坏邻居；对象不用了由垃圾回收自动收走，没有 <code>free</code>，也就没有悬空指针和用后释放；字符串长度是对象自己记着的，复制时自动检查。Rust 更进一步：在编译时就检查每一块内存“同一时间只能有一个主人”，把 use-after-free 这类错误挡在程序运行之前。代价是学习成本和一点性能，但换来的是一整类漏洞直接归零——对安全来说，这笔买卖很划算。</p>
+      <p>这也是学安全的你为什么既要学 C 又要学 Python：<a href="m3c5-tcp-udp.html">模块三</a>的网络知识告诉你攻击发生在哪里，C 告诉你漏洞在内存里是怎么长出来的，Python 告诉你日常工具应该怎么写才安全。三者拼起来，你才既能看懂漏洞报告，又能写出不带漏洞的工具。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>刚入行时我审过一份老代码，里面有个函数用 strcpy 把配置文件里读到的路径拷进一个 128 字节的数组，配置文件是管理员手写的，大家都觉得“路径能有多长”。直到有一天某个路径真的超过了 128 字节，服务半夜崩溃，重启之后又崩——因为每次启动都会读同一份配置文件。修好花了十分钟：换成带长度检查的复制，超长就报错退出。但定位问题花了一整天，因为崩溃现场离写坏的地方隔着好几个函数。从那以后我审代码只看一件事：所有往固定大小缓冲区里写数据的地方，有没有在写之前先问一句“够不够长”。这一问，能拦住一半以上的内存漏洞。还有一点现场体会：内存错误最难的不是修，是复现——它不报错、不崩溃，只是悄悄改坏数据，等你发现时早就不知道是哪一行干的了。所以别指望“跑起来没报错就是对的”，要用工具去查，下一节动手做里就有一个。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里写一个只有 10 个格子的 <code>char buf[10]</code> 的 C 程序，故意用循环往里面写 20 个字符再打印，观察程序是崩溃、打印乱码，还是“看起来正常”——三种结果都可能出现，记下你这次看到的是哪一种，再想想为什么“看起来正常”反而更危险。<br>2. 在同一台虚拟机上给上面的程序装上 AddressSanitizer 再编译一次（<code>gcc -fsanitize=address -g 程序.c -o 程序</code>），重新运行，对比它报出的错误信息：它会精确指出哪一行写超了、写超了几个字节——这就是安全工程师找内存错误的标准工具。<br>3. 写一个 <code>malloc</code> 100 字节、用完 <code>free</code>、再把指针置 <code>NULL</code> 的小程序，然后故意去掉置 NULL 那一行，在 <code>free</code> 之后再读一次指针指向的内容，观察会发生什么；再用 Valgrind（<code>valgrind ./程序</code>）跑一遍，看它能不能把这次“用后释放”和一次故意制造的内存泄漏都抓出来。<br>4. 把第 1 步的危险写法改写成安全版：用 <code>strncpy</code> 或 <code>snprintf</code> 这类带长度上限的函数，超长输入直接截断并报错。只在虚拟机里做这些实验，不要拿真实软件练手。</p>
+      <h2>避坑</h2>
+      <p>别以为“程序跑起来没报错就是没问题”：内存错误最常见的表现就是不报错，错在暗处；别用 <code>gets</code>、<code>strcpy</code>、<code>sprintf</code> 这些不检查长度的老函数，现代 C 代码里它们已经被更安全的带长度版本取代；别在 <code>free</code> 之后还留着旧指针能用，养成 <code>free</code> 后立刻置 NULL 的习惯；别以为内存泄漏是小事：短期程序看不出来，长期运行的服务会被它慢慢拖垮；别把“在自己电脑上试一次没崩”当成安全结论：内存错误的表现和编译器、系统、输入都有关，这次没崩不代表下次不崩；最后，别拿这些知识去碰真实软件的漏洞：本章只讲原理，找真实软件的内存错误并加以利用是违法行为，也是安全工作的红线。</p>
+      <p>内存错误的原理摸清了，下一章换一个战场：<a href="m4c18-concurrency.html">第 18 章：并发编程：线程与锁</a>——一个程序里几条线同时跑，数据会被谁改、什么时候改，就成了新的问题。回头看<a href="m4c16-log-analyzer.html">第 16 章</a>的日志分析器：它一次只处理一个文件，所以没有这些烦恼；但第 14 章的端口扫描器如果想一次扫几百个端口，就绕不开并发。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>栈是函数调用的记事本：栈帧里装着局部变量、参数和返回地址，函数返回就整体收回；局部数组和返回地址住在一起，是栈溢出能造成大祸的物理原因。</li>
+          <li>缓冲区溢出的根子永远是“写之前没检查长度”：多出来的字节会改掉邻居变量、返回地址，后果从闪退一路升级到控制流被劫持。</li>
+          <li>堆是自己申请、自己归还的地盘：悬空指针是 free 之后指针还指着旧内存，用后释放是 free 之后又去用它，内存泄漏是申请了忘了还。</li>
+          <li>现代语言用边界检查和垃圾回收（Rust 用编译时检查）把这一整类错误从根上防住，代价是少一点自由，换来少一整类漏洞。</li>
+          <li>找内存错误别靠“跑起来没报错”：AddressSanitizer 和 Valgrind 能精确指出哪一行写超了、哪一块泄漏了，是安全工程师的标准工具。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c16-log-analyzer.html">← 上一章：第 16 章：动手：写一个日志分析小工具</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c18-concurrency.html">下一章：第 18 章：并发编程：线程与锁 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

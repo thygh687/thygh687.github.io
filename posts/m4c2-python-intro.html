@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 2 章：Python 入门 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 2 章：Python 入门</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p><a href="m4c1-what-is-programming.html">上一章</a>我们讲了编程的四个基本概念：变量、判断、循环、函数。这一章把它们翻译成一种真实的编程语言——Python。为什么选 Python？三个理由：第一，它离人话最近，<code>print("你好")</code> 这种代码不用解释也能猜出意思；第二，安全圈里几乎人人用它，写小工具、分析日志、做自动化，首选都是 Python；第三，它装起来简单，写完就能跑，不用先学一堆配置。这一章的目标很具体：装好 Python，在虚拟机里跑出第一行代码，最后写一个能用的小工具——“算密码长度”。</p>
+      <h2>先装 Python：只在虚拟机里装</h2>
+      <p>动手之前先立规矩：本模块所有代码都在虚拟机里写、虚拟机里跑。虚拟机是<a href="lesson-07-linux-vm.html">第 7 课</a>搭好的那个实验环境——它和你的真机器隔开，写错代码、跑错程序，最多弄坏虚拟机，重启或恢复快照就好，真机器毫发无损。以后每一章的“动手做”都默认在虚拟机里，不再重复提醒。</p>
+      <p>如果你虚拟机里是 Ubuntu / Debian 类 Linux，打开终端，先检查 Python 在不在：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">python3 --version</pre>
+      <p>看到 <code>Python 3.x.x</code> 这样的输出，说明已经装好了，可以直接用。如果提示找不到命令，装一个：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">sudo apt update
+sudo apt install -y python3</pre>
+      <p>如果你的虚拟机是 Windows，做法一样，只是去 Python 官网下载安装包。注意安装时勾选“Add python.exe to PATH”（把 Python 加到系统路径），否则终端里敲 <code>python</code> 会提示找不到。装完在终端里跑 <code>python --version</code> 验证。版本号只要是 3.8 以上都可以，教程里的代码都兼容。</p>
+      <h2>第一行代码：print 是什么</h2>
+      <p>打开终端，输入 <code>python3</code> 回车，会看到一个 <code>&gt;&gt;&gt;</code> 提示符，这就是 Python 的交互模式：你敲一行，它立刻执行一行，适合随手试验。敲：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">&gt;&gt;&gt; print("你好，安全世界")
+你好，安全世界</pre>
+      <p><code>print</code> 是 Python 里最常用的函数，作用就是把括号里的东西显示到屏幕上。引号里的文字叫字符串（string），就是一串字符。<code>print</code> 是你学编程最好的朋友：程序哪里不对，先 <code>print</code> 出来看一看，十有八九能找到原因。想退出交互模式，敲 <code>exit()</code> 或者按 Ctrl+D。</p>
+      <p>交互模式适合试验，正式写程序要把代码存成文件。新建一个文件 <code>hello.py</code>，写进一行：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">print("你好，安全世界")</pre>
+      <p>保存后在终端里跑：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">python3 hello.py</pre>
+      <p>屏幕上出现“你好，安全世界”，你的第一个程序就跑起来了。文件以 <code>.py</code> 结尾是 Python 程序的约定，<code>python3 文件名</code> 就是“请 Python 解释器按顺序执行这个文件里的指令”。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Python 程序从源文件到执行的过程">
+          <defs>
+            <marker id="c2ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="70" width="130" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="85" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">hello.py</text>
+          <text x="85" y="115" text-anchor="middle" font-size="13" fill="#666">你写的源代码</text>
+          <line x1="150" y1="100" x2="195" y2="100" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c2ar)"/>
+          <rect x="195" y="70" width="130" height="60" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="260" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">解释器</text>
+          <text x="260" y="115" text-anchor="middle" font-size="13" fill="#666">逐行读、逐行执行</text>
+          <line x1="325" y1="100" x2="370" y2="100" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c2ar)"/>
+          <rect x="370" y="70" width="170" height="60" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="455" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">屏幕输出结果</text>
+          <text x="455" y="115" text-anchor="middle" font-size="13" fill="#666">你好，安全世界</text>
+          <text x="280" y="175" text-anchor="middle" font-size="13" fill="#666">Python 是解释型语言：不用编译，写完直接跑</text>
+        </svg>
+        <figcaption>图：Python 程序的执行过程——解释器逐行读你的代码、逐行执行</figcaption>
+      </figure>
+      <p>这里顺便理解一个概念：Python 是“解释型”语言，解释器读一行执行一行，错了立刻报错停下；<a href="m1c4-assembly.html">模块一第 4 章</a>讲过的 C 语言那类是“编译型”，要先整个翻译成机器码再运行。解释型的好处是改起来快、试起来快，写小工具正合适；代价是跑得比编译型慢一些，但对我们这个阶段的工具来说完全够用。</p>
+      <h2>input：让程序问你要东西</h2>
+      <p>只会自己输出的程序是死的，会问你要输入的程序才是活的。<code>input</code> 就是向使用者提问的函数：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">name = input("请输入你的名字：")
+print("你好，", name)</pre>
+      <p>运行后程序会停在那里等你打字，你输入 <code>yufei</code> 回车，它就把“yufei”装进变量 <code>name</code>，再打印出来。注意：<code>input</code> 拿到的永远是字符串，哪怕你输入的是数字 12，它拿到的是文字“12”，不是数字 12。想当数字用，要转换：<code>int("12")</code> 变成整数 12，<code>int()</code> 就是“转成整数”的函数。反过来，<code>str(12)</code> 把数字转回文字。这个坑后面写密码工具时会再遇到。</p>
+      <h2>字符串与数字：两种最常见的数据</h2>
+      <p>字符串能做的事比“打印出来”多得多。几个最常用的操作：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">s = "Abc123"
+print(len(s))        # 6：len 是“长度”，字符串里有几个字符
+print(s.upper())     # ABC123：全转大写
+print(s.lower())     # abc123：全转小写
+print("123" in s)    # True：检查一段文字在不在里面</pre>
+      <p><code>len()</code> 是“长度”函数，后面写密码工具的核心就是它。数字的运算和数学课一样：<code>+ - * /</code>，再加一个 <code>%</code>（取余数，比如 <code>10 % 3</code> 是 1）和 <code>**</code>（乘方，<code>2 ** 10</code> 是 1024）。<code>2 ** 10 = 1024</code> 这个数在安全里会反复出现——密码的组合数就是这么算出来的。</p>
+      <p>字符串和数字不能直接相加：<code>"年龄：" + 18</code> 会报错，因为计算机不知道你是想算数还是想拼文字。正确做法是先转：<code>"年龄：" + str(18)</code>。报错信息要学会读：Python 的报错最后几行通常会说清错在哪一行、错在什么类型，读懂报错是程序员的基本功，报错不是失败，是程序在告诉你哪里不对。</p>
+      <h2>写一个小工具：算密码长度</h2>
+      <p>现在把<a href="m4c1-what-is-programming.html">上一章</a>的四个概念拼起来，写第一个真正有用的安全小工具：输入一个密码，告诉你它有多长、够不够 8 位、有没有大小写和数字。这个工具只在你自己的虚拟机里跑，只处理你自己输入的测试密码，绝不要把真实密码贴进来练手——测试用“Abc12345”这样的假密码就够了。</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;"># password_check.py：密码长度与强度初查
+password = input("请输入一个测试密码：")
+
+length = len(password)
+print("密码长度：", length)
+
+if length &lt; 8:
+    print("太短了！长度不到 8 位，很容易被猜出来。")
+else:
+    print("长度过关（至少 8 位）。")
+
+has_upper = False
+has_digit = False
+for ch in password:
+    if ch.isupper():
+        has_upper = True
+    if ch.isdigit():
+        has_digit = True
+
+if has_upper and has_digit:
+    print("同时有大写字母和数字，不错。")
+else:
+    print("建议加上大写字母和数字，混着用更难猜。")</pre>
+      <p>逐行读一遍这个程序：第一行 <code>#</code> 开头的是注释，写给人看的，计算机直接跳过——好习惯是每段代码都写一句注释说明它在干什么。<code>input</code> 拿密码，<code>len</code> 算长度，<code>if/else</code> 判断够不够 8 位，<code>for ch in password</code> 是循环：对密码里的每一个字符（<code>ch</code>），检查它是不是大写（<code>isupper()</code>）、是不是数字（<code>isdigit()</code>），是就把对应的标记改成 <code>True</code>。最后再用一个 <code>if</code> 汇总判断。<a href="lesson-11-passwords.html">第 11 课</a>讲过好密码的标准是“长、混、独”，这个小工具就是把“长”和“混”变成了可以运行的检查。</p>
+      <p>注意缩进：Python 靠缩进来表示“哪些行属于同一个 if、同一个 for”。<code>if</code> 下面那行前面多了四个空格，就表示它是 if 成立时才执行的；缩进回到原位，就表示 if 结束了。缩进乱了，程序的意思就变了——这是 Python 新手最常见的报错来源。编辑器里一般按一下 Tab 键就是四个空格，保持一致就行。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我第一次用 Python 写安全工具，是帮同事批量检查几百个账号的密码有没有用默认密码。逻辑和这章的小工具一模一样：循环读每一行，判断长度、判断字符种类，不合格的记下来。真正的现场经验有两条：第一，永远别拿真实密码练手——我那次用的是导出的“密码哈希”清单和测试账号，真密码绝不进脚本、绝不进聊天记录；第二，工具第一次跑通的时候别急着扩大，先拿三五个已知结果的假数据验证——比如你明知道“123456”不合格、“Abcdef12”合格，跑一遍看工具的判断和你想的一不一样。对上了，再上真数据。这是所有安全工具都通用的规矩：先验证，再信任。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里装好 Python 3，跑 <code>python3 --version</code> 确认版本；在交互模式里试 <code>print("你好")</code>、<code>print(2 ** 10)</code>、<code>print(len("password"))</code>，看输出是不是你想的那样。<br>2. 把上面那个 password_check.py 原样敲进文件（别复制粘贴，亲手敲一遍，手指会记住语法），跑起来，用“123456”“Abc12345”“a”三个假密码各试一次，记下每次的输出。<br>3. 给工具加一个功能：如果密码里有小写字母也加分——自己写一个 <code>has_lower</code> 标记，用 <code>ch.islower()</code> 判断，最后输出“有小写字母”或“建议加上小写字母”。改完再跑一遍验证。<br>4. 故意制造一个报错：把 <code>print("密码长度：", length)</code> 改成 <code>print("密码长度：" + length)</code>，跑一下，读懂报错信息（它会说字符串和整数不能相加），再改回来。学会读报错，比少写错更重要。</p>
+      <h2>避坑</h2>
+      <p>别在真机上装一堆东西练手：所有代码都在虚拟机里跑；别拿真实密码、真实账号做测试：永远用自己编的假数据；别忽视缩进：Python 里缩进就是结构，混用 Tab 和空格会报错；别被报错吓住：报错信息的最后一行通常就是答案，先读它；别把 <code>input</code> 拿到的东西直接当数字用：记得先 <code>int()</code> 转换，否则 <code>"12" + 1</code> 会报错；别跳过注释：现在写下的注释，是三个月后的你唯一能看懂这段代码的线索。</p>
+      <p>这个小工具还很简陋：它不知道“12345678”虽然够 8 位、但全是常见弱密码，也不知道怎么查一本常用密码表。这些升级，<a href="m4c3-data-structures.html">下一章：数据结构</a>会给你零件——把常用弱密码放进一个列表里，一行行比对；<a href="m4c7-files-exceptions.html">第 7 章</a>会教你从文件里读这份清单；<a href="m4c8-regex.html">第 8 章</a>的正则表达式能一次检查更复杂的密码规则。先把这一章的 print、input、len、if、for 跑熟，后面的零件才接得上。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>Python 是解释型语言：写完直接跑，改起来快，适合写安全小工具；装好后用 <code>python3 --version</code> 验证。</li>
+          <li><code>print</code> 输出、<code>input</code> 提问、<code>len</code> 量长度，是最先要熟的三个函数；<code>input</code> 拿到的永远是字符串。</li>
+          <li>字符串能转大小写、能查包含；数字运算有 <code>+ - * / % **</code>；字符串和数字不能直接相加，要先 <code>str()</code> 转换。</li>
+          <li>判断（if/else）+ 循环（for）+ 变量，拼起来就是一个能用的密码检查小工具；注释用 <code>#</code> 写。</li>
+          <li>Python 靠缩进表示结构；报错信息的最后一行通常就是答案；测试永远用假数据，别用真密码练手。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c1-what-is-programming.html">← 上一章：第 1 章：编程是怎么回事</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c3-data-structures.html">下一章：第 3 章：数据结构 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

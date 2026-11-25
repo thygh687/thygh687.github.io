@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块五第 8 章：TLS 握手全过程 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块五第 8 章：TLS 握手全过程</h1>
+      <div class="meta"><span class="tag">数据库与密码学</span>2026-11-25 · 模块五</div>
+      <p>每次打开一个 https 开头的网站，浏览器地址栏左边都会出现一把小锁。这把锁不是装饰，它背后是一场在几百毫秒里完成的谈判：浏览器和服务器要互相确认身份、商量出一套加密办法、生成一把只有它俩知道的会话密钥，然后才开始传网页。这一整套谈判就叫 <strong>TLS 握手</strong>。这一章以现在主流的 <strong>TLS 1.3</strong> 为主讲透它，顺带拿 TLS 1.2 做对比。你学完这一章，再看到浏览器报“证书有问题”“连接不安全”，就知道问题出在哪一步。</p>
+      <p>先把位置摆清楚：TLS 工作在传输层之上、应用层之下。浏览器要访问网站，先是 <a href="m3c5-tcp-udp.html">模块三第 5 章</a>讲的 TCP 三次握手把连接建起来，然后才在 TCP 连接里面做 TLS 握手，最后才开始传 HTTP 的内容——这就是 HTTPS：HTTP + TLS。<a href="m3c7-dns-http-tls.html">模块三第 7 章</a>已经讲过 HTTPS 的大意，这一章是把当时一笔带过的握手过程彻底展开。<a href="m5c7-hash-signature-cert.html">上一章</a>讲了哈希、签名和证书，那是握手的零件：证书用来证明“你真是你要找的那个服务器”，签名用来证明“这话确实是你说的”，哈希用来给每条消息做“指纹”，防止被偷改。握手就是把这些零件按顺序组装起来用。</p>
+      <h2>握手要解决哪三个问题</h2>
+      <p>握手开始之前，浏览器和服务器之间是“素不相识”的状态：浏览器不知道对面是不是真的那个网站（可能是个冒牌货），服务器不知道浏览器是谁（这倒不要紧，服务器一般不验证浏览器是谁），双方也没有共享的密钥（网上发密钥会被偷看）。握手必须一次解决三个问题：<strong>第一，身份</strong>——对面的服务器是不是真的？靠证书和签名解决。<strong>第二，密钥</strong>——双方怎么在众目睽睽之下商量出一把共享密钥？靠密钥协商算法解决，TLS 1.3 用的是（椭圆曲线）Diffie-Hellman，也就是（EC）DHE。<strong>第三，完整性</strong>——握手过程里传的每句话有没有被人改过？靠每条消息的哈希和最后的 Finished 消息验证解决。三个问题缺一个，握手都不算成功。</p>
+      <p>还有一个容易被忽略的前提：握手本身也要防“偷听”。如果商量密钥的过程是明文的，中间人直接抄走密钥，后面的加密就全白费了。所以 TLS 1.3 的设计思路是：<strong>越早加密越好</strong>。ClientHello 和 ServerHello 这两条还是明文的（没办法，总得先打个招呼），但从 ServerHello 之后，服务器发的所有东西——包括证书——就都是加密的了。这和 TLS 1.2 是个大区别，1.2 里证书是明文传的，路上的任何人都能看到你在访问哪个网站的证书。</p>
+      <h2>TLS 1.3 握手：1-RTT 是怎么回事</h2>
+      <p><strong>1-RTT</strong> 的意思是：从浏览器发出第一个包，到双方可以开始传加密的应用数据，只需要 <strong>一个往返</strong>（Round-Trip Time）——浏览器发一轮，服务器回一轮，完事。对比一下：TLS 1.2 需要两个往返，慢了一倍。TLS 1.3 能做到 1-RTT，靠的是一个大胆的改动：浏览器在第一条消息里就<strong>猜</strong>服务器会选哪种密钥协商方式，并把自己的密钥协商材料（key share）提前发过去。猜对了，服务器直接接着算，不用再等一轮；猜错了，服务器回一条 HelloRetryRequest 让浏览器重发一次，那就多一轮，但这在现实中很少见，因为浏览器会把最常见的几种都发过去。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 620 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TLS 1.3 握手时序图">
+          <defs>
+            <marker id="c8ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="10" width="120" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="35" text-anchor="middle" font-size="15" fill="#1a1a2e">浏览器（客户端）</text>
+          <rect x="480" y="10" width="120" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="540" y="35" text-anchor="middle" font-size="15" fill="#1a1a2e">服务器</text>
+          <line x1="80" y1="50" x2="80" y2="455" stroke="#1a1a2e" stroke-width="1" stroke-dasharray="4 4"/>
+          <line x1="540" y1="50" x2="540" y2="455" stroke="#1a1a2e" stroke-width="1" stroke-dasharray="4 4"/>
+          <line x1="82" y1="78" x2="538" y2="78" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c8ar)"/>
+          <text x="310" y="68" text-anchor="middle" font-size="13" fill="#1a1a2e">1. ClientHello：我支持这些版本、算法，这是我的 key share</text>
+          <line x1="538" y1="128" x2="82" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c8ar)"/>
+          <text x="310" y="118" text-anchor="middle" font-size="13" fill="#1a1a2e">2. ServerHello：就用这个版本和算法，这是我的 key share</text>
+          <line x1="538" y1="172" x2="82" y2="172" stroke="#2563eb" stroke-width="1.5" marker-end="url(#c8ar)"/>
+          <text x="310" y="162" text-anchor="middle" font-size="13" fill="#2563eb">3. EncryptedExtensions（已加密）</text>
+          <line x1="538" y1="216" x2="82" y2="216" stroke="#2563eb" stroke-width="1.5" marker-end="url(#c8ar)"/>
+          <text x="310" y="206" text-anchor="middle" font-size="13" fill="#2563eb">4. Certificate：我的证书（已加密）</text>
+          <line x1="538" y1="260" x2="82" y2="260" stroke="#2563eb" stroke-width="1.5" marker-end="url(#c8ar)"/>
+          <text x="310" y="250" text-anchor="middle" font-size="13" fill="#2563eb">5. CertificateVerify：签名，证明私钥在我手里（已加密）</text>
+          <line x1="538" y1="304" x2="82" y2="304" stroke="#2563eb" stroke-width="1.5" marker-end="url(#c8ar)"/>
+          <text x="310" y="294" text-anchor="middle" font-size="13" fill="#2563eb">6. Finished：握手内容没被改过（已加密）</text>
+          <line x1="82" y1="352" x2="538" y2="352" stroke="#2563eb" stroke-width="1.5" marker-end="url(#c8ar)"/>
+          <text x="310" y="342" text-anchor="middle" font-size="13" fill="#2563eb">7. Finished（客户端，已加密）</text>
+          <line x1="82" y1="398" x2="538" y2="398" stroke="#16a34a" stroke-width="2" marker-end="url(#c8ar)"/>
+          <text x="310" y="388" text-anchor="middle" font-size="13" fill="#16a34a">8. 应用数据（加密传输）—— 1 个往返就开始了</text>
+          <text x="310" y="438" text-anchor="middle" font-size="12" fill="#666">蓝色 = 握手密钥加密后才发送；第 2–6 步是服务器同一轮回包</text>
+        </svg>
+        <figcaption>图：TLS 1.3 握手时序——1 个往返完成，之后全是加密的应用数据</figcaption>
+      </figure>
+      <p>把图里的每一步展开说：</p>
+      <p><strong>第 1 步 ClientHello。</strong>浏览器发：我支持 TLS 1.3、我会这些加密套件（cipher suite）、我支持这些密钥协商组，附上一个随机数和一个 key share——也就是自己这边 Diffie-Hellman 的公开值。它还会带上 SNI（Server Name Indication），告诉服务器“我要找的是哪个域名”，因为一台服务器可能托管很多网站。注意：ClientHello 是明文的，SNI 也是明文的，路上的人能看到你想访问哪个域名（这就是为什么后来有了 ECH 加密 SNI，但那是进阶内容）。</p>
+      <p><strong>第 2 步 ServerHello。</strong>服务器挑一个双方都支持的版本和加密套件，回自己的随机数和 key share。从这一步起，双方各自都能用对方的公开值加上自己的私有值，算出同一个共享密钥，再从这个共享密钥派生出握手密钥——后面的消息就用握手密钥加密。</p>
+      <p><strong>第 3 步 EncryptedExtensions。</strong>服务器发一些扩展参数，比如协商好的应用层协议（ALPN：到底用 HTTP/1.1 还是 HTTP/2），已经加密了。</p>
+      <p><strong>第 4 步 Certificate。</strong>服务器把自己的证书链发过来：自己的证书 + 中间 CA 的证书。证书里有服务器的域名、公钥、有效期和 CA 的签名。浏览器拿到后要验：证书是不是过期了？域名对不对得上？签名是不是受信任的 CA 签的？链能不能一路追溯到浏览器内置的根 CA？有一项不过，浏览器就弹警告。这一步的位置很关键——<strong>证书验证就发生在握手里，在任何应用数据传输之前</strong>。验不过，握手直接失败，网页根本不会加载。</p>
+      <p><strong>第 5 步 CertificateVerify。</strong>光有证书还不够：证书是公开的，任何人都能拿一份。服务器必须证明自己真的持有证书对应的私钥。它把之前所有握手消息的哈希拿来，用私钥签个名发过来。浏览器用证书里的公钥验签：验得过，说明对面确实有私钥，不是拿了别人证书来冒充的。</p>
+      <p><strong>第 6、7 步 Finished。</strong>双方各发一条 Finished，内容是“到目前为止所有握手消息的哈希再做一次签名/认证”。这一步是防篡改的最后一道关：如果中间人改过前面任何一条消息（比如偷偷把加密套件改成弱的），双方算出来的哈希就对不上，Finished 验证失败，握手立刻终止。验证通过后，双方把握手密钥换成应用密钥，开始传真正的网页内容。</p>
+      <h2>密钥协商与前向保密：为什么偷了私钥也解不开旧的流量</h2>
+      <p>TLS 1.3 的密钥协商只用一种办法：<strong>（椭圆曲线）Diffie-Hellman 临时密钥交换，简称（EC）DHE</strong>，而且每次握手都用<strong>临时生成</strong>的一次性密钥对。它的原理可以这么理解：双方各选一个秘密数字，各算出一个公开值发给对方，然后各自用“对方的公开值 + 自己的秘密数字”算出同一个结果当共享密钥。偷听者只看到两个公开值，算不出共享密钥，因为反推秘密数字在数学上极难。</p>
+      <p>“临时”两个字带来一个至关重要的安全属性：<strong>前向保密（Forward Secrecy）</strong>。每次握手的密钥对都是一次性的，用完就扔。哪怕攻击者今天偷到了服务器的长期私钥，也解不开昨天、前天录下来的加密流量——因为那些流量的会话密钥是用当时的一次性密钥算出来的，长期私钥根本参与不了会话密钥的计算。长期私钥在 TLS 1.3 里只干一件事：给 CertificateVerify 签名，证明身份。身份和密钥协商是分开的，身份丢了不等于历史流量全丢。这是 TLS 1.3 强制（EC）DHE 的根本原因。</p>
+      <p>顺带提一句 0-RTT：TLS 1.3 允许浏览器用上一次握手留下的票据，在发 ClientHello 的同时就捎带上第一批应用数据，零个往返就能开始传。但这有代价：0-RTT 的数据没有前向保密，而且能被重放（攻击者把同一份请求复制一份再发一遍，服务器可能执行两次——比如重复下单）。所以浏览器只对“读”操作用 0-RTT，或者干脆不用。初学阶段记住一句话就够了：<strong>0-RTT 是快，但不适合会产生副作用的操作</strong>。</p>
+      <h2>TLS 1.2 只做对比：多一轮，少一份保障</h2>
+      <p>TLS 1.2 的握手需要 <strong>2 个往返</strong>：浏览器先发 ClientHello，服务器回 ServerHello + 证书 + ServerHelloDone，浏览器再发自己的密钥材料，服务器最后回 Finished。光是流程就长一倍，在跨洋链路上每次握手要多等几十上百毫秒。更重要的是安全上的差别：1.2 允许用 <strong>RSA 密钥交换</strong>——浏览器生成一个随机数，用服务器证书里的公钥加密发过去，服务器用私钥解出来当会话密钥。这种办法没有前向保密：一旦服务器私钥泄露，攻击者可以解密所有录下来的历史流量。1.2 还支持一堆现在已知有问题的老算法和老模式（比如 CBC 模式、SHA-1 签名、RC4），而 1.3 把它们全部删掉了，只留少数几个经过严格审查的加密套件。</p>
+      <p>所以今天的结论很简单：<strong>服务器应当只开 TLS 1.2 和 1.3，优先 1.3；能关 1.0、1.1 就全关掉。</strong>浏览器也一样：现代浏览器默认只接受 1.2 及以上。如果你以后在服务器配置里看到“TLS 1.0/1.1 已启用”，那就是一个要修的配置问题，<a href="m5c10-pki-deep.html">第 10 章</a>讲证书选型和配置时会再提到。</p>
+      <h2>中间人为什么插不进来</h2>
+      <p>把攻击者的视角摆出来：中间人坐在浏览器和服务器之间，能看到、能改、能重发所有包。他有三条路，每条都被握手堵死了。<strong>第一条：偷看。</strong>ClientHello 和 ServerHello 是明文，但里面没有密钥本身，只有公开值；从第 3 步起全是加密的，偷看也看不懂。<strong>第二条：冒充服务器。</strong>他可以自己发一份证书，但他没有真正服务器的私钥，CertificateVerify 的签名验不过；他也可以发一份自己签的证书，浏览器验链时发现签发者不在信任列表里，直接弹警告。<strong>第三条：偷改。</strong>他把 ClientHello 里的加密套件改成弱算法？Finished 的哈希对不上，握手失败。他把证书换成自己的？签名验不过。他重放一段旧的握手？每次握手都有新鲜的随机数，旧消息重放进来哈希对不上。</p>
+      <p>中间人唯一能成的办法，是绕过握手本身：比如让用户点掉浏览器的证书警告（“高级 → 继续前往”），或者给用户的电脑装一个流氓根证书。证书警告不是摆设，点掉它就等于亲手把中间人放进来。这就是为什么安全培训总在强调：<strong>证书警告出现时，停下来，不要点“继续”</strong>。排错时也一样：先看警告说的是什么——过期、域名不匹配、还是自签名——每一种指向的修法都不同。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>现场最常见的 TLS 问题根本不是什么高深攻击，而是证书过期。网站半夜突然打不开，运维一查：证书昨天过期了，没人续。还有一次，客户说“网站时好时坏”，抓包一看：负载均衡后面有几台服务器，其中一台的证书是旧的，轮到它就报错。我的习惯是：给所有证书设到期前 30 天、7 天两级提醒；新证书上线后，用 <code>openssl s_client</code> 当场验一次链和有效期（这条命令<a href="m5c12-openssl-lab.html">第 12 章</a>会手把手练）；凡是用户报“浏览器说不安全”，第一句先问他警告原文是什么——过期、域名不符、自签名，三种原因三种修法，猜错了白忙半天。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里打开终端，对你自己的本地服务跑 <code>openssl s_client -connect 127.0.0.1:443 -servername localhost</code>（如果没有本地 HTTPS 服务，先跳到<a href="m5c12-openssl-lab.html">第 12 章</a>用 OpenSSL 生成自签名证书搭一个），观察输出里的 TLS 版本、加密套件和证书链。<br>2. 在虚拟机里用浏览器打开一个你常去的 https 网站，点地址栏的小锁 →“证书”→ 看颁发者、有效期、用的什么签名算法；再故意访问一个过期证书的测试站（只在虚拟机里），看浏览器怎么警告，记下警告原文。<br>3. 在虚拟机里用 Wireshark 抓一次自己访问本地 HTTPS 服务的握手（只抓 127.0.0.1 的流量），找到 ClientHello 和 ServerHello，对照本章的图数一数：从 ClientHello 到第一批应用数据，经历了几个往返？<br>4. 在虚拟机里用 Python 的 <code>ssl</code> 模块连一次本地 HTTPS 服务，打印出协商到的 TLS 版本和加密套件，确认是不是 TLS 1.3。所有实验只连自己的虚拟机和本地地址，绝不拿真实网站练手。</p>
+      <h2>避坑</h2>
+      <p>别把 TLS 1.2 和 1.3 的流程混成一个：1.3 是 1 个往返、证书加密传输、只用（EC）DHE；1.2 是 2 个往返、证书明文传输、还允许 RSA 密钥交换。别以为“有小锁就绝对安全”：小锁只证明连接加密且对面身份经过验证，不证明网站本身是好人——钓鱼网站也可以有合法证书。别点掉证书警告继续访问：那等于亲手放中间人进来。别在生产服务器上留着 TLS 1.0/1.1：老版本有已知漏洞，该关就关。别把 0-RTT 用在会产生副作用的操作上：重放攻击会让同一个请求被执行两次。</p>
+      <p>握手解决的是“怎么安全地建立连接”，连接建好后真正要传的东西是什么、密码怎么存，那是后面的事：密码在服务器上该怎么存，<a href="m5c9-password-storage.html">下一章</a>讲加盐哈希；证书过期、吊销、选型这些证书的“售后问题”，<a href="m5c10-pki-deep.html">第 10 章</a>会系统讲。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>TLS 1.3 握手是 1 个往返：ClientHello → ServerHello →（加密的）EncryptedExtensions、Certificate、CertificateVerify、Finished → 客户端 Finished → 应用数据。</li>
+          <li>握手解决三个问题：身份（证书+签名验证）、密钥（（EC）DHE 协商）、完整性（Finished 校验握手消息没被改过）。</li>
+          <li>证书验证发生在握手里、应用数据传输之前；验不过就握手失败，网页根本不加载。</li>
+          <li>前向保密靠每次握手都用临时（EC）DHE 密钥：长期私钥泄露也解不开录下来的历史流量；RSA 密钥交换没有这个保障。</li>
+          <li>中间人插不进来是因为：偷看只能看到公开值，冒充没有私钥签不过验证，偷改会被 Finished 的哈希发现；真正的破口是用户点掉证书警告或电脑被装了流氓根证书。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m5c7-hash-signature-cert.html">← 上一章：第 7 章：哈希、签名与证书</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m5c9-password-storage.html">下一章：第 9 章：密码存储：加盐哈希 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

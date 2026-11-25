@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块五第 6 章：对称与非对称加密 —— 两把钥匙的故事 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块五第 6 章：对称与非对称加密 —— 两把钥匙的故事</h1>
+      <div class="meta"><span class="tag">数据库与密码学</span>2026-11-25 · 模块五</div>
+      <p>加密说到底只解决一个问题：东西要经过不安全的地方（网络、硬盘、别人的服务器），怎么保证只有想给的人能看懂？人类想出的答案有两大家族：对称加密和非对称加密。这一章讲清它俩各是什么、各自的软肋在哪、以及现实世界为什么总是把两者混着用。数学底子在<a href="m5c5-crypto-maths.html">上一章</a>，这一章是把数学变成工具。</p>
+      <h2>对称加密：一把钥匙开两把锁</h2>
+      <p>对称加密是：加密和解密用<strong>同一把钥匙</strong>。你用钥匙把明文锁成密文，对方用同一把钥匙解开。今天的标杆是 AES（高级加密标准）：它把数据切成 128 位一块一块，用钥匙经过多轮“替换、移位、混合”变成密文；钥匙越长（128、192、256 位）越难暴力破解，AES-256 的钥匙空间大到全世界的计算机一起猜也猜不完。</p>
+      <p>对称加密的优点是<strong>快</strong>：AES 用硬件加速每秒能处理几 GB 的数据，给硬盘加密、给视频流加密都靠它。缺点也只有一个，但很致命：<strong>钥匙怎么交给对方</strong>？你和对方从没见过面，钥匙通过网络发过去，半路就可能被人截获——钥匙一丢，加密等于没加。这叫密钥分发难题。古时候靠信使骑马送钥匙，今天靠的，就是下面要讲的非对称加密。</p>
+      <h2>非对称加密：一把锁，一把钥匙，成对出现</h2>
+      <p>非对称加密是：钥匙成对出现，一把<strong>公钥</strong>（可以公开，谁都能拿），一把<strong>私钥</strong>（自己藏好，绝不示人）。公钥加密的东西，只有对应的私钥能解开；反过来，私钥“签”过的东西，谁都能用公钥验证。最著名的是 RSA：它的数学根基在<a href="m5c5-crypto-maths.html">第 5 章</a>——两个大素数的乘积公开了，拆开它却难如登天。</p>
+      <p>用个比喻：公钥像一个敞开的信箱口，任何人都能往里投信（加密），但只有拿着信箱钥匙（私钥）的人能把信取出来（解密）。这样一来，密钥分发难题就解决了：你想给我发加密消息，不用先跟我约一把共同的钥匙，直接拿我的公钥加密就行——公钥本来就是公开的，截获了也没用，因为没有私钥解不开。</p>
+      <p>但非对称加密也有软肋：<strong>慢</strong>。RSA 加解密一次要做大数模幂运算，比 AES 慢几百到几千倍，拿它直接加密一个几 GB 的文件是不现实的。而且它一次只能加密比钥匙短一点点的数据。所以现实世界从不用它直接加密大数据。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="混合加密流程：用 RSA 传 AES 钥匙，再用 AES 传数据">
+          <defs>
+            <marker id="c6ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="20" width="120" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="80" y="45" text-anchor="middle" font-size="14" fill="#1a1a2e">发送方</text>
+          <rect x="460" y="20" width="120" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="520" y="45" text-anchor="middle" font-size="14" fill="#1a1a2e">接收方</text>
+          <line x1="80" y1="60" x2="80" y2="240" stroke="#1a1a2e" stroke-width="1" stroke-dasharray="4 4"/>
+          <line x1="520" y1="60" x2="520" y2="240" stroke="#1a1a2e" stroke-width="1" stroke-dasharray="4 4"/>
+          <line x1="82" y1="85" x2="478" y2="85" stroke="#2563eb" stroke-width="1.5" marker-end="url(#c6ar)"/>
+          <text x="280" y="76" text-anchor="middle" font-size="13" fill="#2563eb">① RSA 公钥加密 AES 会话钥匙（很小，很快）</text>
+          <line x1="82" y1="130" x2="478" y2="130" stroke="#16a34a" stroke-width="1.5" marker-end="url(#c6ar)"/>
+          <text x="280" y="121" text-anchor="middle" font-size="13" fill="#16a34a">② AES 加密真正的数据（很大，很快）</text>
+          <line x1="478" y1="175" x2="82" y2="175" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c6ar)"/>
+          <text x="280" y="166" text-anchor="middle" font-size="13" fill="#1a1a2e">③ 接收方：私钥解出会话钥匙 → AES 解出数据</text>
+          <text x="280" y="215" text-anchor="middle" font-size="12" fill="#666">慢的 RSA 只传一把小钥匙，快的 AES 干所有的重活</text>
+        </svg>
+        <figcaption>图：混合加密——非对称解决“钥匙怎么送”，对称解决“数据怎么快”，这就是 TLS 每天在做的事</figcaption>
+      </figure>
+      <h2>混合加密：现实世界的标准答案</h2>
+      <p>既然对称快但送钥匙难，非对称送钥匙容易但加密慢，答案就很自然了：<strong>混着用</strong>。随机生成一把一次性的 AES 会话钥匙，用对方的 RSA 公钥把它加密发过去（这把钥匙很小，RSA 加密它毫不费力）；之后真正的数据，全部用这把 AES 会话钥匙加密传输。接收方用私钥解出会话钥匙，再用它解开数据。每次会话换一把新的会话钥匙，就算某一把泄露了，也只影响那一次会话。</p>
+      <p>这就是你在<a href="m3c7-dns-http-tls.html">模块三第 7 章</a>见过的 TLS 的做法：浏览器打开一个 https 网站时，后台做的第一件事就是这样一套混合加密的握手。下一章的哈希、签名和证书，再加上<a href="m5c8-tls-handshake.html">第 8 章的 TLS 握手全过程</a>，会把这幅图彻底补全。</p>
+      <h2>速度对比：数字说话</h2>
+      <p>同样一台普通电脑上，AES-256 加密的速度大约是每秒几百 MB 到几 GB（有硬件加速更快），RSA-2048 加密 1KB 数据可能就要几毫秒——换算下来，AES 比 RSA 快几百到上千倍。还有一个数字要记住：对称钥匙 128 位就已经足够安全，而非对称要达到差不多的安全强度，RSA 需要 3072 位、ECC 需要 256 位（<a href="m5c5-crypto-maths.html">第 5 章</a>算过这笔账）。钥匙越长，算得越慢，这也是混合加密非用不可的另一个原因。</p>
+      <p>最后补一个容易混淆的点：<strong>加密不等于认证</strong>。公钥加密只能保证“除了私钥持有者没人能看懂”，不能保证“发消息的人就是他自称的那个人”——攻击者也可以拿你的公钥给你发消息。想确认对方身份，要靠数字签名和证书，那是<a href="m5c7-hash-signature-cert.html">下一章</a>的事。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>现场最常见的加密错误，不是选错了算法，而是把钥匙弄丢了——或者反过来，把钥匙随手放在了代码里、配置文件里、甚至传到了 GitHub 上。加密算法本身极少被攻破，钥匙管理才是重灾区：我见过一个系统用 AES-256 加密数据库，钥匙就写在和数据库同一台服务器上的一个文本文件里，服务器一被拿下，加密等于白做。记住三条铁律：钥匙和数据分开存；钥匙不要进代码仓库；钥匙要能轮换（定期换一把新的）。另外，<a href="lesson-14-encryption.html">第 14 课</a>讲过加密的基本概念，那里说的“加密是把明文变成密文”在这里就有了两套具体的实现——对称一把钥匙，非对称一对钥匙。</div>
+      <h2>动手做</h2>
+      <p>只在虚拟机里做，用 OpenSSL（虚拟机一般自带，没有就 <code>sudo apt install -y openssl</code>）：<br>1. 生成一对 RSA 密钥：<code>openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out private.pem</code>，再从私钥导出公钥：<code>openssl pkey -in private.pem -pubout -out public.pem</code>；<br>2. 写一个小文本文件 secret.txt（自己编一句话），用 AES 加密它：<code>openssl enc -aes-256-cbc -salt -in secret.txt -out secret.enc -pass pass:自己编的口令</code>，再解密回来验证内容一样；<br>3. 用 RSA 公钥加密一个很短的东西（比如把 AES 口令写进 key.txt，用 <code>openssl pkeyutl -encrypt -pubin -inkey public.pem -in key.txt -out key.enc</code>），再用私钥解开，对比一下：RSA 加密大文件会直接报错，因为它一次只能加密很短的数据——亲手撞一次这个限制，比看十遍书记得牢；<br>4. 计时对比：用 <code>time</code> 命令分别给一个 10MB 的文件做 AES 加密和 RSA 加密（RSA 那步会失败，失败本身就是答案），体会“快几百倍”是什么意思。<br>OpenSSL 的完整玩法在<a href="../course.html#m5">模块五第 12 章</a>，这一章先摸到钥匙和密文长什么样。</p>
+      <h2>避坑</h2>
+      <p>别用自己编的加密算法，永远用 AES、RSA、ECC 这类经过千锤百炼的标准算法；别把钥匙写进代码、配置文件或传到网上，钥匙和数据分开存；别拿 RSA 直接加密大文件，它是用来传钥匙的，不是用来传数据的；别以为加密了就等于对方身份可信，认证要靠签名和证书；别用 ECB 模式（同样的明文块会加密出同样的密文块，肉眼就能看出规律），用 CBC 或 GCM 这类安全的分组模式——分组模式的细节在<a href="../course.html#m5">模块五第 18 章</a>。</p>
+      <p>加密解决了“别人看不懂”，但还有两个问题没解决：对方怎么知道数据“没被改过”？又怎么知道公钥“真的是你的”？答案是哈希、签名与证书——<a href="m5c7-hash-signature-cert.html">第 7 章：哈希、签名与证书</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>对称加密（AES）加解密用同一把钥匙，速度快，软肋是钥匙怎么安全送到对方手里。</li>
+          <li>非对称加密（RSA/ECC）公钥加密、私钥解密，解决了密钥分发难题，但速度慢、一次只能加密很短的数据。</li>
+          <li>现实用混合加密：非对称只传一把一次性的 AES 会话钥匙，真正的数据全用 AES 加密；这就是 TLS 的做法。</li>
+          <li>同等安全强度下，AES 钥匙 128 位、ECC 256 位、RSA 3072 位；AES 比 RSA 快几百到上千倍。</li>
+          <li>加密不等于认证：确认对方身份要靠签名和证书；钥匙管理（分开存、能轮换、不进代码仓库）比选算法更重要。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m5c5-crypto-maths.html">← 上一章：第 5 章：密码学需要的数学</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m5c7-hash-signature-cert.html">下一章：第 7 章：哈希、签名与证书 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

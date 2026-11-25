@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块二第 16 章：调度深入：MLFQ、CFS 与多核调度 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块二第 16 章：调度深入：MLFQ、CFS 与多核调度</h1>
+      <div class="meta"><span class="tag">操作系统</span>2026-11-25 · 模块二</div>
+      <p><a href="m2c6-scheduling.html">第 6 章</a>讲过调度：CPU 同一时间只能跑一个进程，调度器决定谁先跑、跑多久。那一章讲了先来先服务、短作业优先、时间片轮转这些基本算法。这一章讲真实系统里在用的两套调度思路：Windows 用的多级反馈队列（MLFQ），和 Linux 用的完全公平调度（CFS）。先把一句话钉死在这里，后面会反复强调：<strong>Linux 的 CFS 不是多级反馈队列</strong>——它是另一种公平调度的思路，Windows 用的是 MLFQ 一类的调度，两者不要混为一谈。</p>
+      <p>为什么需要比“轮转”更复杂的调度？因为真实世界里的进程脾气差别很大。有的进程是交互型的：你敲键盘、点鼠标，它要立刻响应，CPU 用一点点就去等输入了；有的进程是计算型的：视频转码、压缩文件，一拿 CPU 就想用很久。调度器要同时满足两种脾气：交互型进程等不得，计算型进程饿不得。基本算法各有短板：先来先服务对短任务不公平，短作业优先要预知任务多长（现实里不知道），时间片轮转对所有进程一视同仁、但分不出“谁更急”。MLFQ 和 CFS 是两种不同的回答。</p>
+
+      <h2>回顾：FCFS、SJF、RR 各自的短板</h2>
+      <p>先来先服务（FCFS）：按到达顺序排队，谁先到谁先跑到底。简单，但一个长任务先到，后面所有短任务都得等着，响应时间惨不忍睹。短作业优先（SJF）：先跑预计最短的任务，平均等待时间最优，但“预计多长”在现实里没法提前知道，只能靠猜过去的表现来估计。时间片轮转（RR）：每个进程轮流跑一个时间片（比如 10 毫秒），用完就换下一个，公平是公平了，但它不知道哪个进程更急——正在等你回车键的编辑器，和后台默默压缩文件的程序，拿到的时间片是一样的。</p>
+      <p>所以真实调度器要解决的核心矛盾是：调度器事先不知道一个进程是交互型还是计算型，也不知道它这次要用多久 CPU。MLFQ 的办法是“看表现再定”：先假设所有进程都急，给它高优先级、短时间片；跑着跑着发现它一直在用 CPU 不放手，再把它降级。CFS 的办法是“算一笔公平账”：给每个进程记一个虚拟运行时间，谁的账最少，谁先跑。</p>
+
+      <h2>MLFQ：多条队列，优先级升降</h2>
+      <p>多级反馈队列（Multilevel Feedback Queue，MLFQ）是 Windows 调度器采用的一类思路。想象调度器面前摆着好几条队列，从高到低排着队：最上面的队列优先级最高、时间片最短（比如 20 毫秒），越往下优先级越低、时间片越长。规则有三条。第一，新来的进程先放进最高优先级的队列，给它一个短时间片试一试。第二，如果它在一个时间片里没跑完——说明它是个计算型进程，需要很多 CPU——把它降一级，放到下一条队列里，下次给它更长的时间片。第三，如果一个进程在队列里等了很久都没轮到它（怕它饿死），把它提升回高优先级队列，这叫“老化”或“优先级提升”，防止低优先级进程永远等不到 CPU。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="多级反馈队列示意图">
+          <defs>
+            <marker id="c16ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="30" y="20" width="300" height="44" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="180" y="48" text-anchor="middle" font-size="13" fill="#1a1a2e">队列 0（最高优先级，时间片最短）</text>
+          <rect x="30" y="84" width="300" height="44" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="180" y="112" text-anchor="middle" font-size="13" fill="#1a1a2e">队列 1（中优先级，时间片中等）</text>
+          <rect x="30" y="148" width="300" height="44" rx="6" fill="#fff7ed" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="180" y="176" text-anchor="middle" font-size="13" fill="#1a1a2e">队列 2（低优先级，时间片最长）</text>
+          <text x="180" y="225" text-anchor="middle" font-size="12" fill="#1a1a2e">新进程先进队列 0；用完时间片没跑完 → 降一级</text>
+          <text x="180" y="247" text-anchor="middle" font-size="12" fill="#1a1a2e">等太久没轮到 → 提升回高队列（防饿死）</text>
+          <text x="180" y="269" text-anchor="middle" font-size="12" fill="#666">交互型进程：用一点 CPU 就去等输入，一直留在高队列，响应快</text>
+          <line x1="330" y1="42" x2="380" y2="42" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c16ar)"/>
+          <line x1="330" y1="106" x2="380" y2="106" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c16ar)"/>
+          <rect x="390" y="20" width="140" height="44" rx="6" fill="#1a1a2e"/>
+          <text x="460" y="48" text-anchor="middle" font-size="13" fill="#fff">CPU：先跑队列 0</text>
+          <rect x="390" y="84" width="140" height="44" rx="6" fill="#f1f5f9" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="112" text-anchor="middle" font-size="12" fill="#1a1a2e">队列 0 空了才跑队列 1</text>
+        </svg>
+        <figcaption>图：MLFQ——新进程先进高优先级队列，用不完时间片就降级，等太久就提升；交互型进程自然留在高处</figcaption>
+      </figure>
+      <p>MLFQ 漂亮的地方在于，它不用事先知道进程的脾气，而是从行为里学出来：交互型进程每次只用一点点 CPU 就去等键盘、等网络，时间片总也用不完，永远留在高优先级队列里，所以你点鼠标它立刻有反应；计算型进程每次都把时间片用满，一级一级往下掉，最后在低优先级队列里拿长片时间安静地算，不打扰交互型进程。代价是规则复杂：降级多快、提升多久、每级时间片多长，都要调参，调不好就会出现交互卡顿或低优先级进程饿死。</p>
+      <p>Windows 的调度器就是 MLFQ 一类的设计：32 个优先级，进程有基础优先级和动态优先级，动态优先级会根据行为上下调整；前台窗口的进程还会得到优先照顾。你在 Windows 上感觉“点哪里都跟手”，背后就是这套机制在把交互型进程留在高处。</p>
+
+      <h2>Linux CFS：完全公平调度，算一笔虚拟时间的账</h2>
+      <p>Linux 从 2.6.23 版本起用的调度器叫 CFS（Completely Fair Scheduler，完全公平调度器），思路和 MLFQ 完全不同。CFS 不设多条优先级队列，而是给每个可运行的进程记一个数，叫虚拟运行时间（vruntime）。每个进程实际跑了多久 CPU，要按权重折算成 vruntime：权重高的进程（nice 值小、优先级高），跑同样长的时间，vruntime 涨得慢；权重低的，vruntime 涨得快。调度器每次挑 vruntime 最小的进程来跑——也就是“到目前为止占 CPU 最少的那个”。跑一会儿之后，它的 vruntime 涨上去了，调度器再换一个 vruntime 更小的来跑。久而久之，所有进程的 vruntime 被拉到差不多齐平，谁也没多占、谁也没少占——这就是“完全公平”的意思。</p>
+      <p>CFS 用一棵红黑树来装所有可运行的进程，按 vruntime 排序，最左边的就是 vruntime 最小的，下一个该跑的进程。红黑树是自平衡的二叉搜索树，找最小值很快，插入删除也很快，进程数再多也不会慢到哪里去。调度时，CFS 会定一个“调度周期”：在这一周期里，每个进程按权重分到一段 CPU 时间；进程数越多，每人分到的越少，但保证每个人都轮得上。</p>
+      <p>再强调一次本章的红线：<strong>CFS 不是多级反馈队列</strong>。MLFQ 靠多条队列和优先级升降来区分进程，CFS 靠一个 vruntime 数字和一棵红黑树来保证公平。两者目标有重叠——都想让交互型进程响应快、计算型进程不饿死——但机制完全不同。把 CFS 说成 MLFQ，是概念上的硬错误，考试和面试里都会被揪出来。记住区分口诀：看到“多条队列、升降级”想 MLFQ、想 Windows；看到“虚拟运行时间、红黑树”想 CFS、想 Linux。</p>
+      <p>公平不等于“每人一样多”：CFS 的公平是按权重来的。nice 值是 Linux 给进程的“客气程度”，范围 -20 到 19，nice 值越小权重越大、分到的 CPU 越多。普通用户进程默认 nice 值是 0；想让一个后台任务少抢 CPU，可以把它 nice 值调大（用 <code>nice</code> 或 <code>renice</code> 命令），它分到的 CPU 就少了。权重这件事，在 MLFQ 里是靠优先级队列体现的，在 CFS 里是靠 vruntime 的折算速度体现的——同一个“谁多谁少”的问题，两种不同的账本。</p>
+
+      <h2>多核调度：不止一个 CPU 时怎么办</h2>
+      <p>上面的讨论都假设只有一个 CPU。真实电脑有 4 核、8 核、16 核，调度器要回答一个新问题：哪个进程放哪个核上跑？多核调度的两个关键词是负载均衡和亲和性。负载均衡（load balancing）：每个 CPU 核心有自己的就绪队列，调度器要定期把进程从忙的核挪到闲的核上，避免一个核累死、一个核闲着。亲和性（affinity）：进程刚在某个核上跑过，它的缓存里还留着数据，挪到另一个核上，缓存就白热了，还得重新从内存读——所以调度器尽量让进程留在同一个核上跑，这叫缓存亲和性；只有当负载实在不均衡时，才忍痛搬家。</p>
+      <p>多核调度还有一个安全视角：超线程（一个物理核虚拟成两个逻辑核）共享执行单元，一个逻辑核上的恶意进程可能通过共享的缓存和执行单元，偷窥另一个逻辑核上进程的数据——这就是 Meltdown、Spectre、MDS 这类硬件漏洞的背景。云厂商因此会给不同租户分不同的物理核，或者干脆关掉超线程。调度器分核的决策，在云环境里直接关系到租户之间的隔离。</p>
+      <p>从排错角度看，多核调度解释了一个常见现象：任务管理器里 CPU 总占用率只有 25%，但程序还是卡——因为这台机器是 4 核，25% 意味着一个核跑满了、另外三个核闲着，而这个程序是单线程的，只能用一个核。单线程程序的性能天花板就是一个核的速度，再多核也帮不上忙。这也是 <a href="m2c3-thread.html">第 3 章</a>讲多线程的意义：想用满多核，程序自己得拆成多个线程。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>挖矿木马是我见过最诚实的“调度器试金石”：它不弹窗、不改文件，就一个特征——CPU 占用率长期居高不下，而且是所有核一起高。正常程序的 CPU 曲线是起起伏伏的，有高峰有低谷；挖矿程序的曲线是一条平直的高线，半夜三点也不下来。有一次用户说电脑风扇半夜狂转，我远程一看，任务管理器里一个名字像系统进程的东西占了 90% 的 CPU，父进程却是个浏览器——浏览器早关了，它的“孩子”还在挖矿。调度器本身不会告诉你哪个进程是坏的，但它给你的数字不会说谎：一个进程的 CPU 占用率、它在哪个核上跑、它的 nice 值是多少，连起来看，异常就藏不住了。还有一句现场口诀：单核跑满是程序问题，多核跑满先看是不是挖矿，再看是不是正常的大任务。</div>
+
+      <h2>动手做</h2>
+      <p>全部在虚拟机里做。1. 在虚拟机里的 Linux 上跑 <code>ps -eo pid,ni,comm --sort=-ni | head</code>，看进程的 nice 值；再跑 <code>chrt -p 1</code> 看 systemd 的调度策略，输出里会写着 SCHED_OTHER——这就是 CFS 管的普通进程用的策略。2. 开两个终端：一个跑 <code>yes &gt; /dev/null &amp;</code>（一个吃满一个核的计算型进程），另一个跑 <code>top</code>，按 1 键看每个核的占用，确认是不是只有一个核跑满、其他核闲着；然后跑 <code>kill %1</code>（或用 <code>pkill yes</code>）把它停掉。3. 在 Windows 上打开任务管理器 → 详细信息 → 右键列标题 → 选择列，勾上“基本优先级”，看不同进程的基础优先级有什么不同；再打开资源监视器 → CPU，看哪个进程占 CPU 最多。4. 在虚拟机里跑 <code>cat /proc/cpuinfo | grep "processor" | wc -l</code> 数逻辑核数，再跑 <code>taskset -pc $$</code> 看当前 shell 的 CPU 亲和性掩码。</p>
+      <h2>避坑</h2>
+      <p>红线再说一遍：Linux CFS 不是多级反馈队列，Windows 用的是 MLFQ 一类的调度，两者机制不同，不要混着说；别把“公平”理解成“每人一样多”：CFS 的公平是按权重来的，nice 值越小分得越多；别被 CPU 总占用率骗了：4 核机器上 25% 可能就是一个核跑满了，单线程程序卡，先看它是不是只用了一个核；nice 值只能调低自己的优先级（普通用户只能把 nice 调大、让自己更客气），想调小需要管理员权限；不要在真实服务器上用 yes 这类命令压测 CPU，只在虚拟机里练。</p>
+      <p>CPU 时间怎么分，到这里就讲透了。下一章讲比锁更丰富的同步工具：<a href="m2c17-sync-primitives.html">第 17 章：同步原语深入</a>——信号量、管程、条件变量与死锁检测。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>MLFQ 是多条优先级队列：新进程先进高队列，用满时间片就降级，等太久就提升防饿死；交互型进程自然留在高处，Windows 用的是这一类调度。</li>
+          <li>Linux CFS 不是多级反馈队列：它给每个进程记虚拟运行时间 vruntime，每次挑 vruntime 最小的跑，用红黑树排序，公平是按权重算的。</li>
+          <li>nice 值决定权重：nice 越小权重越大、分到的 CPU 越多；普通用户只能把自己的 nice 调大。</li>
+          <li>多核调度要做负载均衡，还要照顾缓存亲和性：进程尽量留在同一个核上，实在不均衡时才搬家。</li>
+          <li>单线程程序最多用满一个核：4 核机器上总占用 25% 可能就是一个核跑满了，先看线程数再下结论。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m2c15-segmentation.html">← 上一章：第 15 章：分段与地址转换</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m2c17-sync-primitives.html">下一章：第 17 章：同步原语深入：信号量、管程、条件变量与死锁检测 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

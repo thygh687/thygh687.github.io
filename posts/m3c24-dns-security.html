@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块三第 24 章：DNS 安全深入：DNSSEC 与邮件认证 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块三第 24 章：DNS 安全深入：DNSSEC 与邮件认证</h1>
+      <div class="meta"><span class="tag">计算机网络</span>2026-11-25 · 模块三</div>
+      <p><a href="m3c7-dns-http-tls.html">第 7 章</a>讲过，DNS 是把名字变成地址的电话本，整个互联网每天都要查它几万亿次。但 DNS 生下来就有一个致命的简历缺陷：它不验证回答的真假——谁回了答案，问的人就信谁。这一章讲 DNS 有什么弱点、DNSSEC 怎么给回答加上签名、以及邮件世界的三件套 SPF、DKIM、DMARC 各自防什么、三者怎么配合。</p>
+      <h2>DNS 有什么弱点：投毒与劫持</h2>
+      <p>DNS 查询用 UDP（见<a href="m3c5-tcp-udp.html">第 5 章</a>和<a href="m3c20-headers.html">第 20 章</a>），而 UDP 不握手、不确认，查询包里只有一个 16 位的事务 ID 用来配对“哪个回答对应哪个问题”。攻击者的思路就是抢答：他猜中事务 ID、抢在真正的 DNS 服务器之前发一个假回答，解析器收到假回答就信了，还把它存进缓存——这叫 DNS 缓存投毒（cache poisoning）。一旦毒进了缓存，接下来一段时间内，所有来问这个域名的人都会拿到假地址，被带去假网站。2008 年 Kaminsky 披露的攻击手法让投毒变得更容易：他不是猜一次，而是对同一个域名下成百上千个不存在的子域名轮番提问，每问一次就有一次抢答的机会，猜中的概率被大大放大。</p>
+      <p>另一类弱点是劫持：DNS 劫持不抢答，而是直接改答案的来源——家用路由器被入侵后，DNS 服务器地址被改成攻击者的；公共 Wi-Fi 上的假 DNS，把所有查询都引向假网站；运营商层面的劫持则更隐蔽。还有一种“合法”的伤害：域名注册商的账号被盗，域名解析记录被直接改掉，全世界都会跟着错。共同点是：DNS 本身没有任何机制能告诉你“这个回答是不是真的”，所以任何一个环节被动手脚，用户都无从察觉。</p>
+      <p>防御的第一层是传输层面的修补：解析器用随机的源端口和随机的事务 ID，让抢答者更难猜；DNS 查询走 TCP 或加密的 DNS（DoT、DoH）也能挡住路上的窃听和篡改。但这些只能防“路上的坏人”，防不了“权威服务器本身被改了记录”——要防后者，需要给 DNS 回答加上签名，这就是 DNSSEC。</p>
+      <h2>DNSSEC：给 DNS 回答加上签名链</h2>
+      <p>DNSSEC（DNS 安全扩展）的思路很直白：权威服务器用私钥给每一条 DNS 记录签名，生成 RRSIG 记录，和记录一起发回来；解析器用公钥验证签名，对得上才信，对不上就丢掉。公钥本身放在 DNSKEY 记录里发回来——但公钥也可能被伪造，所以要有一条信任链：子域的公钥由父域签名（DS 记录，放在父域里，存的是子域公钥的摘要），父域的公钥由根域签名，一直签到根。链条顶端的根公钥就是信任锚（trust anchor）：解析器预先内置了根的公钥，从根开始一级级验证下来，整条链都对得上，答案才可信。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DNSSEC 签名信任链示意图">
+          <defs>
+            <marker id="dns1" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="180" y="15" width="200" height="46" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="33" text-anchor="middle" font-size="14" fill="#1a1a2e">根（.）：信任锚</text>
+          <text x="280" y="51" text-anchor="middle" font-size="12" fill="#666">解析器预先内置根公钥</text>
+          <rect x="180" y="85" width="200" height="46" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="103" text-anchor="middle" font-size="14" fill="#1a1a2e">顶级域（.org）</text>
+          <text x="280" y="121" text-anchor="middle" font-size="12" fill="#666">DS 记录：签发 example.org 的公钥</text>
+          <rect x="180" y="155" width="200" height="46" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="173" text-anchor="middle" font-size="14" fill="#1a1a2e">example.org</text>
+          <text x="280" y="191" text-anchor="middle" font-size="12" fill="#666">DNSKEY + RRSIG：给记录签名</text>
+          <rect x="180" y="225" width="200" height="40" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="250" text-anchor="middle" font-size="13" fill="#1a1a2e">回答：A 记录 + 签名，验签通过才信</text>
+          <line x1="280" y1="61" x2="280" y2="83" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#dns1)"/>
+          <line x1="280" y1="131" x2="280" y2="153" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#dns1)"/>
+          <line x1="280" y1="201" x2="280" y2="223" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#dns1)"/>
+        </svg>
+        <figcaption>图：DNSSEC 信任链——根是信任锚，父域给子域的公钥签名，子域给自己的记录签名</figcaption>
+      </figure>
+      <p>DNSSEC 能防的是“答案在路上被改了”和“假服务器冒充真服务器”；它不能防的也要说清楚：它不加密查询内容（谁查了什么域名，路上照样看得见，加密要靠 DoT/DoH），也不能保证权威服务器本身没被入侵——如果域名注册商账号被盗、记录在源头就被改了，签名照样是“真签名”，签的却是假内容。DNSSEC 解决的是“传输中的真假”，不是“源头的好坏”。另外，DNSSEC 的部署还有一层现实：签名要定期更新、密钥要轮换，配错了会让整个域名解析失败——所以很多域名至今没开 DNSSEC，验证端（解析器）开没开验证，也要单独确认。</p>
+      <h2>SPF：这封邮件从哪台服务器发出来才算数</h2>
+      <p>邮件的发件人地址是可以随便写的——SMTP 的 MAIL FROM 和信头里的 From 都没有验证（见<a href="m3c22-app-protocols.html">第 22 章</a>）。SPF（发件人策略框架）就是给域名加一条 TXT 记录，白纸黑字写明“哪些服务器有权替我发邮件”。收件方收到邮件时，查发件域名的 SPF 记录，再看这封邮件实际是从哪台服务器来的：对得上就放行，对不上就按策略处理。</p>
+      <p>看一个真实的例子。example.org 的 SPF 记录是 <code>v=spf1 -all</code>，意思是：这个域名不授权任何服务器替它发邮件（<code>-all</code> 表示“除此之外全部拒绝”）。如果你收到一封自称来自 example.org 的邮件，它的 SPF 检查一定失败——因为 example.org 根本没授权任何发信服务器。这条记录很短，但意思很明确：example.org 不是用来发邮件的域名，冒充它发信的都是假的。</p>
+      <p>SPF 的语法里，<code>v=spf1</code> 是版本号；<code>ip4:1.2.3.4</code> 表示授权某个 IP，<code>include:别人</code> 表示“去查那个域名的 SPF 记录、照它的来”，<code>-all</code> 是硬拒绝（fail），<code>~all</code> 是软拒绝（softfail，标记可疑但先放行），<code>?all</code> 是中立。SPF 只看“发信服务器的 IP 在不在白名单里”，不看邮件内容，也不看信头里的 From 和实际发信人是不是同一个人——这正是它防不住的那类伪造：攻击者可以用自己有 SPF 的域名发信、信头里却写别人的名字，SPF 检查照样通过。</p>
+      <h2>DKIM：给邮件正文盖个章</h2>
+      <p>DKIM（域名密钥识别邮件）补的是 SPF 不管的那一半：内容有没有被改过。发件服务器用私钥给邮件的关键部分（信头里的 From、Subject、正文等）算一个签名，放在信头的 DKIM-Signature 字段里发出去；收件方用发件域名 DNS 里的公钥（存在一个 TXT 记录里）验证签名：对得上，说明邮件从发件服务器发出后没被改过；对不上，说明内容被动过。</p>
+      <p>DKIM 防的是“中途改内容”，不防“发件人本身就是坏人”：攻击者用自己的域名、自己的密钥签一封钓鱼邮件，DKIM 验证照样通过——签名只能证明“这封邮件确实是这个域名发出来的、内容没被改”，不能证明“这个域名是好人”。所以 DKIM 从来不是单独用的，它要和 SPF、DMARC 配合。</p>
+      <h2>DMARC：三者怎么配合，收件方到底该怎么做</h2>
+      <p>DMARC（基于域名的邮件认证、报告与一致性）是站在 SPF 和 DKIM 上面的“总指挥”：它规定两件事。第一是<strong>对齐（alignment）</strong>：SPF 验证通过的域名、DKIM 签名的域名，必须和信头里 From 的域名一致（或属于同一组织域），才算数——这就堵住了“用自己的域名发信、信头写别人的名字”那个洞。第二是<strong>策略</strong>：发件域名在 DMARC 记录里写明，验证失败的邮件收件方该怎么处理：<code>p=none</code>（只监控、先报告），<code>p=quarantine</code>（进垃圾箱），<code>p=reject</code>（直接拒收），外加一个收件方把验证结果报告回发件域名的地址（rua），发件方靠这些报告看清“谁在冒充我发信”。</p>
+      <p>三者配合的完整链条是这样的：一封邮件到达时，收件方先查 SPF（发信服务器在不在白名单），再验 DKIM（内容有没有被改），最后用 DMARC 对齐（SPF 或 DKIM 里至少有一个的域名要和 From 一致），再按 DMARC 策略决定放行、隔离还是拒收。SPF 管“谁发的”，DKIM 管“内容改没改”，DMARC 管“对得上号吗、失败了怎么办”。只配 SPF 不配 DMARC，失败的邮件怎么处理没人说了算；只配 DKIM 不配 SPF，发信服务器的身份没人核对；三件套齐了，冒充发件域名的钓鱼邮件才会被成规模地挡下来。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SPF DKIM DMARC 配合流程图">
+          <defs>
+            <marker id="dm1" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="20" width="150" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="47" text-anchor="middle" font-size="13" fill="#1a1a2e">SPF：谁发的？</text>
+          <rect x="205" y="20" width="150" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="47" text-anchor="middle" font-size="13" fill="#1a1a2e">DKIM：改没改？</text>
+          <rect x="390" y="20" width="150" height="44" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="47" text-anchor="middle" font-size="13" fill="#1a1a2e">DMARC：对得上吗？</text>
+          <line x1="170" y1="42" x2="203" y2="42" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#dm1)"/>
+          <line x1="355" y1="42" x2="388" y2="42" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#dm1)"/>
+          <rect x="130" y="100" width="300" height="60" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="122" text-anchor="middle" font-size="13" fill="#1a1a2e">对齐检查：SPF 或 DKIM 的域名</text>
+          <text x="280" y="143" text-anchor="middle" font-size="13" fill="#1a1a2e">必须和 From 的域名一致</text>
+          <rect x="130" y="185" width="300" height="60" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="207" text-anchor="middle" font-size="13" fill="#1a1a2e">按 DMARC 策略处置：放行 / 隔离 / 拒收</text>
+          <text x="280" y="228" text-anchor="middle" font-size="12" fill="#666">并把结果报告回发件域名</text>
+          <line x1="280" y1="64" x2="280" y2="98" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#dm1)"/>
+          <line x1="280" y1="160" x2="280" y2="183" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#dm1)"/>
+        </svg>
+        <figcaption>图：SPF 管谁发的，DKIM 管内容改没改，DMARC 管对齐和失败了怎么办</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>现场查钓鱼邮件，我先看信头里的三个结果：SPF、DKIM、DMARC 各是通过还是失败。三个全过也不能直接放行——攻击者完全可以用自己的域名、三件套配得整整齐齐地发钓鱼邮件，签名和策略都是真的，域名是坏人的。所以三件套防的是“冒充别人的域名”，不防“坏人用自己的域名”。还有一次，客户的正常邮件全进了垃圾箱：一查，DMARC 策略写了 p=reject，但他们新换的发信服务商没加进 SPF 白名单——自己的合法邮件被自己的策略拒收了。改策略之前，先把所有合法发信方都加进 SPF、都配好 DKIM，再从 p=none 开始、看几天报告，确认没问题再收紧到 quarantine、最后才是 reject。DNSSEC 也一样：配之前先确认解析器开验证，配错了整个域名会解析失败。</div>
+      <h2>动手做</h2>
+      <p>1. 只查公开记录，不做任何攻击性操作。在自己的虚拟机里查 example.org 的 SPF 记录：Windows 跑 <code>nslookup -type=txt example.org</code>，Linux 跑 <code>dig txt example.org</code>。你会看到 <code>v=spf1 -all</code>——对照本章讲的，读出它的意思：example.org 不授权任何服务器替它发邮件。<br>2. 再查一次 DKIM 和 DMARC 的记录长什么样。跑 <code>dig txt _dmarc.example.org</code> 看 DMARC 记录（如果域名配了的话），注意策略字段 p= 后面写的是 none、quarantine 还是 reject。再想想：如果一个域名完全没有 DMARC 记录，收件方对验证失败的邮件该怎么处理？答案是：没有统一说法，全看收件方自己的策略——这就是 DMARC 存在的意义。<br>3. 检查 DNSSEC 验证开没开。在 Linux 虚拟机里跑 <code>dig +dnssec example.org</code>，看回答里有没有 RRSIG 记录；再跑 <code>dig +cd +dnssec example.org</code> 对比。只做查询，不对任何域名做投毒、劫持或伪造测试。<br>4. 读一封真实邮件的信头（只读自己邮箱里收到的邮件）。在邮件客户端里找到“查看原始邮件 / 显示信头”，找到 Authentication-Results 那一行，认一认 spf、dkim、dmarc 各是通过（pass）还是失败（fail）。只读自己的邮件，不分析别人的邮件。</p>
+      <h2>避坑</h2>
+      <p>别以为 DNSSEC 能加密查询：它只做签名验证，不加密内容，防窃听要靠 DoT / DoH；别以为开了 DNSSEC 就万事大吉：源头记录被改了，签名签的也是假内容，注册商账号安全同样重要；别只配 SPF 就以为防住了伪造：SPF 只看发信服务器 IP，不管信头 From 写的是谁，要靠 DMARC 对齐来堵这个洞；别只配 DKIM 就以为安全：签名只能证明内容没被改、确实是这个域名发的，坏人用自己的域名签名照样能通过；别一上来就把 DMARC 策略设成 p=reject：先从 p=none 看报告、确认所有合法发信方都配好了，再一步步收紧，不然自己的合法邮件会被自己拒收；别做任何攻击性操作：不投毒、不劫持、不伪造发信，只查公开记录、只读自己的邮件。</p>
+      <p>DNS 安全讲完，模块三的攻防线也完整了：<a href="m3c12-attacks.html">第 12 章</a>的嗅探与欺骗、<a href="m3c13-hardening.html">第 13 章</a>的加固、这一章的 DNSSEC 与邮件认证——“路上的包并不安全”这句话，现在有了具体的补法。下一章是模块三的结课实战：把前面学到的本事合起来，给一个小网络做一次完整的安全体检：<a href="m3c18-capstone.html">结课实战——给一个小网络做安全体检</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>DNS 不验证回答真假：缓存投毒靠抢答猜事务 ID，劫持改答案来源；随机端口和事务 ID、加密 DNS 只能防路上的坏人。</li>
+          <li>DNSSEC 给记录加签名：RRSIG 签记录、DNSKEY 发公钥、DS 链到父域、根是信任锚；它防篡改，不加密查询，也不保证源头没被入侵。</li>
+          <li>SPF 是发件域名的白名单：example.org 的记录是 v=spf1 -all，表示不授权任何服务器替它发邮件。</li>
+          <li>DKIM 给邮件内容盖章：私钥签名、公钥在 DNS 里验证，防中途改内容，不防坏人用自己的域名发信。</li>
+          <li>DMARC 是总指挥：要求 SPF 或 DKIM 的域名与 From 对齐，再按 p=none / quarantine / reject 处置失败邮件并回报告；三件套齐了才算完整。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m3c23-sdn-qos.html">← 上一章：第 23 章：SDN、QoS 与网络管理</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m3c18-capstone.html">下一章：结课实战——给一个小网络做安全体检 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

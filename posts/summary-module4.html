@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四小结：从一行代码到一个小工具 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四小结：从一行代码到一个小工具</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · 模块四第 1–24 章</div>
+      <p>二十四章讲的其实是一件事：从一行代码出发，走到一个别人拿到就能用的安全小工具。每一章都是这条路上的一个环节：先学会让电脑听懂你的话，再学会把话组织成程序，然后学会让程序去碰内存、碰网络、碰数据库，最后学会让程序不出漏洞、出了 bug 能找到、修好了不再犯——收尾时，三个练手脚本变成了一个带菜单、带数据库、带日志、带测试的工具集。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="模块四二十四章知识串联图">
+          <defs>
+            <marker id="arrm4" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="130" y="10" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">编程入门：变量、判断、循环、函数</text>
+          <rect x="130" y="70" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">Python 与数据结构算法：列表、字典、搜索排序</text>
+          <rect x="130" y="130" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">组织代码：函数、模块、面向对象、文件异常</text>
+          <rect x="130" y="190" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">C 与内存：指针、栈、堆、内存错误</text>
+          <rect x="130" y="250" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="275" text-anchor="middle" font-size="14" fill="#1a1a2e">三个动手项目：端口扫描器、密码检查器、日志分析器</text>
+          <rect x="130" y="310" width="300" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="335" text-anchor="middle" font-size="14" fill="#1a1a2e">收尾：并发、网络、数据库、安全编码、测试、工具集</text>
+          <line x1="280" y1="50" x2="280" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm4)"/>
+          <line x1="280" y1="110" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm4)"/>
+          <line x1="280" y1="170" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm4)"/>
+          <line x1="280" y1="230" x2="280" y2="248" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm4)"/>
+          <line x1="280" y1="290" x2="280" y2="308" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm4)"/>
+        </svg>
+        <figcaption>图：二十四章讲的其实是一件事——从一行代码到一个小工具</figcaption>
+      </figure>
+      <h2>这二十四章是怎么连起来的</h2>
+      <p>先学会让电脑听懂你的话。<a href="m4c1-what-is-programming.html">第 1 章</a>讲编程是怎么回事：变量、判断、循环、函数——程序就是把“要做的事”拆成电脑能一步步执行的指令；<a href="m4c2-python-intro.html">第 2 章</a>用 Python 写出第一个安全小工具，语言只是工具，思路才是本体。</p>
+      <p>然后是数据结构与算法。<a href="m4c3-data-structures.html">第 3 章</a>讲列表、字典、集合什么时候用哪个；<a href="m4c4-algorithms.html">第 4 章</a>讲搜索、排序、递归和 Big-O——同样的任务，不同的写法速度能差几百倍；<a href="m4c5-data-structures-advanced.html">第 5 章</a>进阶到栈、队列、链表、树、哈希表、图，这些结构在后面的章节里一个一个派上了用场：栈出现在第 17 章的函数调用和第 22 章的 DFS 里，队列出现在第 18 章的线程协作和第 22 章的 BFS 里。</p>
+      <p>再学会把代码组织得不乱。<a href="m4c6-functions-oop.html">第 6 章</a>讲函数、模块与面向对象；<a href="m4c7-files-exceptions.html">第 7 章</a>讲文件操作与异常处理——读文件、出错了怎么办；<a href="m4c8-regex.html">第 8 章</a>的正则表达式是安全工作里天天用的模式匹配，第 16 章的日志分析器全靠它从日志里抠出 IP 和时间；<a href="m4c9-html-css-js.html">第 9 章</a>讲 HTML、CSS、JavaScript 与 DOM——学 Web 攻击之前，先会搭网页；<a href="m4c10-shell-scripting.html">第 10 章</a>的 Shell 脚本让重复的活自动跑；<a href="m4c11-maths-for-programming.html">第 11 章</a>补上编程需要的数学：离散数学与概率入门，密码学和 AI 都要用到它；<a href="m4c12-software-engineering.html">第 12 章</a>讲软件工程与安全编码：调试、测试、代码评审——第 23 章会把这里的概念亲手做一遍。</p>
+      <p>接着是 C 与内存。<a href="m4c13-c-pointers.html">第 13 章</a>讲 C 语言的指针与内存——直接碰内存的语言；<a href="m4c17-c-deep.html">第 17 章</a>往深处挖：栈帧、缓冲区溢出、堆溢出、悬空指针、内存泄漏、用后释放——只讲原理和危害，不教利用。这一章是整个模块的分水岭：从这里开始，你不再只是“会写代码”，而是开始懂得“代码是怎么出事的”。</p>
+      <p>然后是三个动手项目。<a href="m4c14-port-scanner.html">第 14 章</a>写一个端口扫描器——socket 的第一次实战，用的正是<a href="m3c5-tcp-udp.html">模块三第 5 章</a>的 TCP 和端口知识：三次握手怎么建连、端口开着和关着在包里长什么样；<a href="m4c15-password-checker.html">第 15 章</a>写一个密码强度检查器——按 NIST SP 800-63B Rev.4，长度优先，单独使用的密码至少 15 位，不迷信复杂度；<a href="m4c16-log-analyzer.html">第 16 章</a>写一个日志分析小工具——从日志里找异常，分析的正是模块三里抓包和排错时见过的日志。</p>
+      <p>最后是把工具做大、做稳的本事。<a href="m4c18-concurrency.html">第 18 章</a>的并发让扫描器一次扫几百个端口；<a href="m4c19-http-api.html">第 19 章</a>用代码调 HTTP 与 API，让工具能和别的系统说话；<a href="m4c20-db-programming.html">第 20 章</a>的数据库编程让结果留下来、查得出来，参数化查询是防注入的第一步；<a href="m4c21-secure-coding-deep.html">第 21 章</a>把安全编码收成六条规矩：永远不信任输入、白名单验证、输出编码、密钥不要写死、错误信息别泄露、依赖及时更新；<a href="m4c22-graph-dp.html">第 22 章</a>的图算法与动态规划让网络拓扑和攻击路径有了算的办法；<a href="m4c23-debugging-testing.html">第 23 章</a>的调试与测试让 bug 有处找、有处验；<a href="m4c24-capstone.html">第 24 章</a>收尾，把三个动手项目整合成一个带命令行菜单的小工具集，加 README、检查清单和验收标准。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>写一个端口扫描器：用 socket 连目标端口判断开闭，用线程池一次扫几百个端口，结果写进 SQLite，目标只限自己的虚拟机和 127.0.0.1。</li>
+        <li>写一个密码强度检查器：按 NIST SP 800-63B Rev.4 的长度优先规则打分，单独使用的密码至少 15 位，并给它写了单元测试、覆盖了边界情况。</li>
+        <li>写一个日志分析小工具：用正则从日志里抠出时间和 IP，数出失败登录最多的地址，可疑的写进数据库、标出来。</li>
+        <li>把三个工具整合成一个带命令行菜单的工具集：一个入口、三个模块、共用一个结果库和一份日志，配 README、检查清单和验收标准，别人拿到就能用。</li>
+        <li>读懂一份内存错误的漏洞描述：说得出栈溢出、堆溢出、悬空指针、用后释放各是怎么发生的，以及现代语言是怎么防住它们的。</li>
+        <li>按安全编码的六条规矩写代码：输入先验证（白名单）、输出按目的地编码、密钥放环境变量、SQL 用参数化、错误信息分两套、依赖定期更新。</li>
+        <li>给自己的代码写测试、调调试器：断点停住看变量，单元测试覆盖正常、边界、异常三类输入，修 bug 先写复现测试，测试全绿才算修完。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>模块五，数据库与密码学。模块四教会你“写工具”，模块五教会你“工具要处理的数据到底是什么”：数据存在哪、怎么查、怎么保证不被偷看、不被改——SQL 注入是怎么发生的、密码怎么存才安全、TLS 握手全过程。模块四第 20 章的参数化查询和第 21 章的密钥管理，在模块五里会展开成完整的数据库加固和密码学体系。编程不是换一个话题，是把“用手查”的本事变成“用代码查”的本事；数据库与密码学也不是换一个话题，是把“代码里的数据”变成“值得信任的数据”。</p>
+      <div class="lesson-nav">
+        <a href="m4c24-capstone.html">← 模块四第 24 章：动手：综合实战——写一个自己的安全小工具集</a>
+        <a href="../course.html">课程目录</a>
+        <a href="../course.html#maths">下一站：数学基础专项 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

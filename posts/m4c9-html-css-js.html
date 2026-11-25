@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 9 章：HTML、CSS、JavaScript 与 DOM · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 9 章：HTML、CSS、JavaScript 与 DOM</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p>你每天打开的每一个网页，背后都是三样东西拼出来的：HTML 搭骨架，CSS 涂颜色摆位置，JavaScript 让它动起来。这一章先把网页是怎么搭起来的讲清楚——因为学安全的人迟早要面对 Web 攻击：跨站脚本（XSS）往页面里塞恶意代码，跨站请求伪造（CSRF）借你的登录状态发请求，钓鱼页面仿冒登录框骗密码。这些攻击听起来吓人，但它们的战场只有一个，就是这一章要讲的网页本身。看不懂网页的结构，就看不懂攻击发生在哪一层。所以先学会搭一个网页，再学怎么拆它。</p>
+      <p>先把三者的分工钉死：<strong>HTML 是结构</strong>——这是一段标题、那是一段文字、这里有个输入框、那里有个按钮；<strong>CSS 是样子</strong>——标题多大、什么颜色、按钮放左边还是右边；<strong>JavaScript 是行为</strong>——点按钮之后发生什么、输入错了怎么提示、不用刷新页面怎么换内容。三者各管一摊，写在一个文件里也可以，分开写也可以。浏览器拿到这三样东西，就能把网页画出来给你看。</p>
+      <h2>HTML：给内容贴标签</h2>
+      <p>HTML 不是编程语言，它是一种标记语言：用一对对的标签（tag）把内容框起来，告诉浏览器“这是什么”。<code>&lt;h1&gt;</code> 是最大号的标题，<code>&lt;p&gt;</code> 是一段文字，<code>&lt;a&gt;</code> 是一个链接，<code>&lt;img&gt;</code> 是一张图片，<code>&lt;form&gt;</code> 是一个表单。标签可以嵌套：一个 <code>&lt;div&gt;</code> 里可以装好几个 <code>&lt;p&gt;</code>，像盒子套盒子。每个标签还可以带属性（attribute），比如 <code>&lt;a href="https://example.com"&gt;</code> 里的 <code>href</code> 就是告诉浏览器点这个链接要去哪。</p>
+      <p>一个最简网页长这样：</p>
+      <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html lang="zh-CN"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;title&gt;我的第一页&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;你好，世界&lt;/h1&gt;
+  &lt;p&gt;这是我的第一个网页。&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      <p><code>&lt;head&gt;</code> 里放的是“给浏览器看的”信息：标题、编码、引用的 CSS；<code>&lt;body&gt;</code> 里放的是“给人看的”内容。记住这个分界：攻击者想往页面里塞东西，塞的永远是 <code>&lt;body&gt;</code> 里的内容；而防御者要检查的，也是用户输入最后出现在了页面的哪个位置。</p>
+      <h2>CSS：样子和布局</h2>
+      <p>CSS 用“选择器 + 声明”的方式给元素定样子：<code>h1 { color: red; font-size: 32px; }</code> 的意思是“所有一级标题，红色，32 像素”。选择器可以按标签名（<code>p</code>）、按类名（<code>.warning</code>，前面一个点）、按 id（<code>#login-box</code>，前面一个 #）来挑元素。类名可以多个元素共用，id 在一个页面里应当唯一——这个“唯一”后面会反复用到，因为 JavaScript 常常靠 id 找到某个元素。</p>
+      <p>CSS 还管布局：元素是横着排还是竖着排、居中还是靠左、盒子有多宽。初学阶段不用背全所有属性，知道“样子归 CSS 管、别往 HTML 标签里硬塞样式”就够了。安全上 CSS 有一个冷知识：它也能被用来“看不见”地偷信息——比如把一个输入框藏起来、把链接伪装成按钮。钓鱼页面常用的就是这一手：页面看着像真网站，其实每个元素的样子都是 CSS 精心伪装的。</p>
+      <h2>JavaScript：让页面动起来</h2>
+      <p>JavaScript 是真正运行在浏览器里的编程语言。它能做的事很多：读输入框里的字、检查格式对不对、点按钮后换一段文字、定时刷新内容、向服务器发请求拿数据。最基础的几样东西：变量（<code>let name = "yufei";</code>）、判断（<code>if</code>）、循环、函数。函数就是“一段起了名字的代码”，比如 <code>function checkPassword() { ... }</code>，按钮一点就去执行它。</p>
+      <p>一个关键概念：<strong>事件</strong>。网页里的大多数 JavaScript 都是“等人来触发”：用户点了按钮（click 事件）、在输入框里敲了字（input 事件）、页面刚加载完（load 事件）。写 JavaScript 很多时候就是在写“当某某事发生时，做某某事”。理解了事件，就理解了为什么 XSS 攻击那么危险——攻击者注入的脚本等的也是事件：页面一加载，脚本就跑起来，浏览器分不清这段脚本是网站自己写的还是攻击者塞进来的。</p>
+      <h2>DOM：浏览器眼里的网页是一棵树</h2>
+      <p>浏览器读完 HTML 之后，不会把它当成一串文字记着，而是把它变成一棵树，叫 DOM（Document Object Model，文档对象模型）。树的根是 <code>document</code>，往下是 <code>html</code>，再往下分 <code>head</code> 和 <code>body</code>，<code>body</code> 下面再分标题、段落、表单……每个标签都是树上的一个节点（node），节点之间是父子、兄弟关系。JavaScript 操作网页，操作的其实就是这棵树：找到某个节点、改它的文字、改它的样式、给它加一个子节点、把它删掉。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DOM 树结构图">
+          <rect x="220" y="12" width="120" height="36" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">document</text>
+          <rect x="220" y="72" width="120" height="36" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">html</text>
+          <rect x="110" y="132" width="120" height="36" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="170" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">head</text>
+          <rect x="330" y="132" width="120" height="36" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="390" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">body</text>
+          <rect x="60" y="192" width="120" height="36" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="120" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">title</text>
+          <rect x="210" y="192" width="120" height="36" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="270" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">h1</text>
+          <rect x="350" y="192" width="120" height="36" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="410" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">form</text>
+          <rect x="310" y="252" width="120" height="36" rx="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="370" y="275" text-anchor="middle" font-size="13" fill="#1a1a2e">input（用户名）</text>
+          <rect x="440" y="252" width="120" height="36" rx="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="500" y="275" text-anchor="middle" font-size="13" fill="#1a1a2e">button（登录）</text>
+          <line x1="280" y1="48" x2="280" y2="72" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="108" x2="170" y2="132" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="108" x2="390" y2="132" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="170" y1="168" x2="120" y2="192" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="390" y1="168" x2="270" y2="192" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="390" y1="168" x2="410" y2="192" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="410" y1="228" x2="370" y2="252" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="410" y1="228" x2="500" y2="252" stroke="#1a1a2e" stroke-width="1.5"/>
+        </svg>
+        <figcaption>图：DOM 树——HTML 标签在浏览器里变成一棵父子关系的树，JavaScript 改的就是这棵树</figcaption>
+      </figure>
+      <p>举个例子：<code>document.getElementById("username").value</code> 这行代码的意思是：在 DOM 树里找到 id 是 username 的那个节点，读出它里面的值。XSS 攻击的核心手法也正是这样：攻击者让一段恶意 JavaScript 跑进这棵树，它就能像网站自己的脚本一样读输入框、改页面内容、把数据发出去。所以学 Web 安全，第一步永远是先看懂 DOM——攻击者和防御者争的，就是谁能往这棵树里写东西。</p>
+      <h2>表单是怎么提交数据的</h2>
+      <p>登录、注册、搜索、留言，背后都是表单（form）。一个登录表单通常长这样：两个输入框（用户名、密码）加一个提交按钮。点“登录”之后发生什么？浏览器把输入框里的内容按表单的设定打包，发出一个 HTTP 请求给服务器——<a href="lesson-05-http.html">第 5 课</a>讲过 HTTP 请求长什么样：方法（GET 或 POST）、地址、请求头、请求体。登录表单一般用 POST，用户名和密码放在请求体里发过去；搜索框常用 GET，关键词直接拼在地址栏里，所以你搜过什么，地址栏一眼就能看出来。</p>
+      <p>这里有两个安全要点，现在就要记在心里。第一，<strong>浏览器里做的任何检查都只是“好心提醒”，不是防线</strong>：JavaScript 可以检查“密码不能少于 8 位”，但攻击者完全可以绕过浏览器，直接发一个请求给服务器——真正的检查必须在服务器端再做一遍。第二，<strong>密码在传输中必须加密</strong>：表单走 HTTP 明文发出去，路上任何人都能看见；走 HTTPS，内容才会被加密。以后看到登录页，先看地址栏是不是 https，再决定要不要输密码——这是<a href="lesson-12-phishing.html">第 12 课</a>钓鱼识别里最实在的一招。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我第一次给客户做 Web 安全检查，打开登录页，输入框里输了一串 <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>，点提交，页面弹了个框——这就是最简单的 XSS 概念验证：用户输入原样出现在了页面上，还被浏览器当成代码执行了。后来我养成一个习惯：看任何一个网站，先看它把我的输入放在了哪里——是当成文字显示，还是当成代码执行。分清这一点，就分清了网站安不安全的一大半。还有一次，某个后台的搜索框用 GET 传参数，管理员搜什么、查什么，全写在地址栏和服务器日志里，任何人翻日志都看得见。所以记住：敏感的东西不要放进 GET 地址里，地址栏是公开场合。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里新建一个文件夹 <code>web-lab</code>，写一个 <code>login.html</code>：一个登录表单，两个输入框（用户名、密码）加一个登录按钮，再加一小段 CSS 让它看起来像个正经登录页——居中、白底卡片、圆角按钮。<br>2. 给按钮加一段 JavaScript：点登录时先检查密码是不是空的，空就弹提示“密码不能为空”，不空就在页面上显示“你输入的用户名是：XXX”（只显示，不发给任何服务器）。<br>3. 在虚拟机里用浏览器打开这个文件（直接双击打开就行，不连任何服务器），打开浏览器的开发者工具（按 F12），在“元素”面板里找到你的表单节点，对照着看 DOM 树和你写的 HTML 是不是一一对应；再在“控制台”里敲 <code>document.getElementById("username").value</code>，看能不能读出你刚输入的用户名。<br>4. 试着在用户名框里输入 <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> 再点登录：观察页面显示的是这串字符本身，还是弹了个框？想一想：为什么有的写法会弹框、有的只显示文字——这正是下一阶段 Web 攻击课的入口。</p>
+      <h2>避坑</h2>
+      <p>别把 HTML 当编程语言：它只管结构，逻辑归 JavaScript；别在 HTML 里写满样式：样子归 CSS，混在一起以后改不动也查不出问题；别以为浏览器里的检查就够了：前端校验只是提醒，真正的安全检查永远在服务器端；别在自己的练习页里输真实密码：实验用的登录页不连服务器，但养成习惯——密码只输给真正信任的、带 https 的网站；别拿真实网站练手：所有实验都在虚拟机和自己的文件上做，不要往别人的网站表单里乱输测试代码。</p>
+      <p>会搭网页之后，下一步是让电脑替你干重复的活：<a href="m4c10-shell-scripting.html">第 10 章：Shell 脚本</a>讲 Bash 和 PowerShell。回头看<a href="m4c8-regex.html">第 8 章</a>的正则表达式——它在 JavaScript 里也是现成的工具，表单校验、日志里抽 IP，都离不开它。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>HTML 管结构、CSS 管样子、JavaScript 管行为，三者分工明确，浏览器把它们拼成你看到的网页。</li>
+          <li>浏览器把 HTML 变成 DOM 树：每个标签是一个节点，JavaScript 操作网页就是在操作这棵树。</li>
+          <li>表单提交就是发一个 HTTP 请求：登录多用 POST（数据在请求体里），搜索多用 GET（关键词拼在地址栏里）。</li>
+          <li>前端校验只是提醒不是防线，真正的安全检查在服务器端；密码只输给带 https 的可信网站。</li>
+          <li>XSS 的本质是攻击者的脚本混进了页面的 DOM 树并被浏览器当成代码执行——看懂 DOM，才能看懂 Web 攻击。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c8-regex.html">← 上一章：第 8 章：正则表达式</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c10-shell-scripting.html">下一章：第 10 章：Shell 脚本：Bash 与 PowerShell →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

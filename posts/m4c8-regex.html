@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 8 章：正则表达式 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 8 章：正则表达式</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p><a href="m4c7-files-exceptions.html">上一章</a>我们学会了逐行读日志，用 <code>"ERROR" in line</code> 这样的整词匹配找可疑的行。但真实的需求往往更细：我要的不是“这一行有没有 ERROR”，而是“这一行里的 IP 是多少、状态码是多少、日期是哪天”——把藏在文字里的特定模式抠出来。正则表达式（regular expression，简称 regex）就是干这个的：它是一种描述“文字长什么样”的微型语言，写一个模式，就能从一堆文字里把符合这个模式的片段全抓出来。安全工作里天天用它：从日志里抽 IP、从流量里找邮箱、从配置里筛端口。这一章把最常用的符号讲透，再用一个日志分析的动手练习收尾。</p>
+      <h2>正则表达式是什么：文字的“长相描述”</h2>
+      <p>先看一个最简单的例子。你想在一行日志里找到所有的数字，正则表达式写成 <code>\d+</code>：<code>\d</code> 的意思是“一个数字”，<code>+</code> 的意思是“一个或多个”。合起来就是“连续的一串数字”。在 Python 里用 <code>re</code> 模块：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">import re
+
+line = "2026-11-25 08:02:03 10.0.0.9 登录失败"
+print(re.findall(r"\d+", line))
+# ['2026', '11', '25', '08', '02', '03', '10', '0', '0', '9']</pre>
+      <p><code>re.findall</code> 的意思是“找出所有符合模式的片段，装进列表还给你”。注意模式字符串前面有个 <code>r</code>，表示原始字符串——正则里反斜杠很多，用 <code>r"..."</code> 可以避免 Python 把 <code>\d</code> 当成转义字符，这是写正则的固定习惯。</p>
+      <p>正则表达式的核心思想是：普通字符匹配它自己（<code>abc</code> 就匹配文字“abc”），特殊字符（叫元字符）有特殊含义。记住下面这批最常用的，就能覆盖日常 90% 的需求。</p>
+      <h2>最常用的符号：. * + ? [] () |</h2>
+      <p><strong><code>.</code>（点）</strong>：匹配任意一个字符（除了换行）。<code>a.c</code> 能匹配“abc”“a1c”“a c”，但不能匹配“ac”（因为点要求中间必须有一个字符）。<br><strong><code>*</code>（星号）</strong>：前面的东西出现 0 次或多次。<code>ab*c</code> 能匹配“ac”（b 出现 0 次）、“abc”、“abbbc”。<br><strong><code>+</code>（加号）</strong>：前面的东西出现 1 次或多次。<code>ab+c</code> 能匹配“abc”“abbbc”，但不能匹配“ac”——和 <code>*</code> 的区别就是“至少要有一次”。<br><strong><code>?</code>（问号）</strong>：前面的东西出现 0 次或 1 次。<code>colou?r</code> 能匹配“color”和“colour”——问号让那个 u 可有可无。<br><strong><code>[]</code>（方括号）</strong>：在括号里任选一个字符。<code>[0-9]</code> 是任意一个数字，<code>[a-z]</code> 是任意一个小写字母，<code>[abc]</code> 是 a、b、c 三个里的任意一个。<code>[^0-9]</code> 的 <code>^</code> 在括号里表示“除了”，就是“任意一个非数字”。<br><strong><code>()</code>（圆括号）</strong>：分组。既能把几个符号绑成一组（<code>(ab)+</code> 是“ab”重复多次），也能把匹配到的部分单独取出来（分组提取，后面讲 IP 时会用到）。<br><strong><code>|</code>（竖线）</strong>：或者。<code>ERROR|WARN</code> 匹配“ERROR”或者“WARN”，写日志过滤时最常用。</p>
+      <p>再加三个常用的简写：<code>\d</code> 是数字（等价于 <code>[0-9]</code>），<code>\w</code> 是字母、数字或下划线，<code>\s</code> 是空白字符（空格、制表符）。它们的反义是大写：<code>\D</code> 是非数字，<code>\W</code> 是非字母数字下划线，<code>\S</code> 是非空白。还有两个定位符：<code>^</code> 表示“一行的开头”，<code>$</code> 表示“一行的结尾”——<code>^ERROR</code> 只匹配行首就是 ERROR 的行。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="正则表达式常用符号速查图">
+          <text x="280" y="25" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">正则表达式常用符号</text>
+          <rect x="30" y="40" width="240" height="34" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="150" y="62" text-anchor="middle" font-size="14" fill="#1a1a2e">.  任意一个字符</text>
+          <rect x="290" y="40" width="240" height="34" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="410" y="62" text-anchor="middle" font-size="14" fill="#1a1a2e">*  前面 0 次或多次</text>
+          <rect x="30" y="84" width="240" height="34" rx="6" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="150" y="106" text-anchor="middle" font-size="14" fill="#1a1a2e">+  前面 1 次或多次</text>
+          <rect x="290" y="84" width="240" height="34" rx="6" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="410" y="106" text-anchor="middle" font-size="14" fill="#1a1a2e">?  前面 0 次或 1 次</text>
+          <rect x="30" y="128" width="240" height="34" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="150" y="150" text-anchor="middle" font-size="14" fill="#1a1a2e">[ ]  括号里任选一个</text>
+          <rect x="290" y="128" width="240" height="34" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="410" y="150" text-anchor="middle" font-size="14" fill="#1a1a2e">( )  分组</text>
+          <rect x="30" y="172" width="240" height="34" rx="6" fill="#fdf2f8" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="150" y="194" text-anchor="middle" font-size="14" fill="#1a1a2e">|  或者</text>
+          <rect x="290" y="172" width="240" height="34" rx="6" fill="#fdf2f8" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="410" y="194" text-anchor="middle" font-size="14" fill="#1a1a2e">\d \w \s  数字 / 字符 / 空白</text>
+          <text x="280" y="230" text-anchor="middle" font-size="13" fill="#666">记住这 8 个，日常 90% 的正则都能写</text>
+        </svg>
+        <figcaption>图：最常用的正则符号——先记住这 8 个，再慢慢加</figcaption>
+      </figure>
+      <h2>贪婪与非贪婪：* 到底吃多少</h2>
+      <p>正则里最容易踩的坑，是 <code>*</code> 和 <code>+</code> 默认是“贪婪”的：它们会尽可能多地吃字符。看这个例子：文字是 <code>&lt;div&gt;你好&lt;/div&gt;&lt;div&gt;再见&lt;/div&gt;</code>，你想用 <code>&lt;div&gt;.*&lt;/div&gt;</code> 匹配出第一个 div：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">import re
+html = "&lt;div&gt;你好&lt;/div&gt;&lt;div&gt;再见&lt;/div&gt;"
+print(re.findall(r"&lt;div&gt;.*&lt;/div&gt;", html))
+# ['&lt;div&gt;你好&lt;/div&gt;&lt;div&gt;再见&lt;/div&gt;']：贪婪，一口吃到了最后</pre>
+      <p><code>.*</code> 一路吃到了最后一个 <code>&lt;/div&gt;</code>，把两个 div 合成了一个匹配。想要“吃到第一个就停”，在量词后面加一个 <code>?</code>，变成非贪婪模式：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">print(re.findall(r"&lt;div&gt;.*?&lt;/div&gt;", html))
+# ['&lt;div&gt;你好&lt;/div&gt;', '&lt;div&gt;再见&lt;/div&gt;']：非贪婪，吃到第一个就停</pre>
+      <p>记住这条规则：<code>*</code>、<code>+</code> 后面跟 <code>?</code>，就从贪婪变非贪婪。写正则时如果匹配结果比你想的长，第一反应就该是“是不是贪婪了”。日志分析里这个坑很常见：想抓一对方括号里的内容，贪婪模式会一路抓到行尾的最后一个括号。</p>
+      <h2>实战：匹配 IP、邮箱、日志里的日期</h2>
+      <p>现在把符号拼成三个安全里最常用的模式。先是 IP 地址：四组数字，每组 1 到 3 位，中间用点隔开：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">ip_pattern = r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"
+# \d{1,3} 是“1 到 3 个数字”，\. 是真正的点（点本身是元字符，要转义）</pre>
+      <p>注意 <code>\.</code>：点在正则里是“任意字符”，想匹配真正的点，要在前面加反斜杠转义。这个模式有个小瑕疵：它会把“999.999.999.999”也当成 IP——因为它只检查“长得像”，不检查“每组数字不超过 255”。日常日志分析里这完全够用；要严格校验，再加一层 <code>if</code> 判断每组数字的范围，或者用更复杂的模式。正则的哲学是“先抓到、再校验”，别指望一个模式解决所有问题。</p>
+      <p>邮箱的模式是：<code>r"[\w.]+@[\w.]+\.[a-z]{2,}"</code>——<code>@</code> 前面是一串字母数字下划线或点，后面是域名，再加一个点和至少两个字母的后缀。日志里的日期：<code>r"\d{4}-\d{2}-\d{2}"</code> 匹配“2026-11-25”这种格式。状态码：<code>r" (\d{3}) "</code> 在一串空格包围的三位数字里找 HTTP 状态码（200、404、500）。</p>
+      <p>还有一个常用函数 <code>re.search</code>：它只找第一个匹配，返回一个匹配对象，用 <code>.group(1)</code> 可以取出圆括号分组里的内容。比如想从一行日志里同时取出 IP 和状态码：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">import re
+line = '10.0.0.9 - - [25/Nov/2026:08:02:03] "GET /login HTTP/1.1" 401'
+m = re.search(r"(\d+\.\d+\.\d+\.\d+).*? (\d{3})", line)
+if m:
+    print("IP:", m.group(1))       # 10.0.0.9
+    print("状态码:", m.group(2))   # 401</pre>
+      <p>两个圆括号就是两个分组，<code>group(1)</code> 是第一个，<code>group(2)</code> 是第二个。中间的 <code>.*?</code> 是非贪婪的“随便什么内容”，意思是“IP 和状态码之间隔着什么都行”。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>正则表达式是我每天打开频率最高的工具，没有之一。现场最常见的用法就三个：从日志里批量抽 IP、从告警里筛出特定状态码、验证用户输入的格式对不对（比如注册表单里的邮箱）。但也有两个血泪教训：第一，千万别拿正则去“解析”完整的 HTML 或 JSON——嵌套结构是正则的天敌，<code>&lt;div&gt;.*?&lt;/div&gt;</code> 遇到嵌套的 div 就会抓错，正确做法是用专门的解析库；第二，正则写出来一定要先拿三五条已知数据测——我有一次写了个匹配 IP 的模式，漏了转义点，结果把“10a0b0c9”这种东西也当 IP 抓出来了，报告里多了一堆假 IP。我的习惯是：写模式 → 拿 5 条真数据跑 → 一条一条核对 → 再上全量数据。还有，网上抄来的超长正则（比如号称能完美校验邮箱的几百字符模式），看不懂就别用，看得懂的短模式才是好模式。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里新建 <code>access.log</code>，存进下面这 5 行假日志（自己编的假 IP，只在虚拟机里用）：<br><code>10.0.0.9 - - [25/Nov/2026:08:02:03] "GET /login HTTP/1.1" 401</code><br><code>10.0.0.5 - - [25/Nov/2026:08:03:40] "GET /index HTTP/1.1" 200</code><br><code>10.0.0.9 - - [25/Nov/2026:08:04:22] "GET /login HTTP/1.1" 401</code><br><code>10.0.0.23 - - [25/Nov/2026:08:05:10] "GET /admin HTTP/1.1" 403</code><br><code>10.0.0.9 - - [25/Nov/2026:08:06:31] "GET /login HTTP/1.1" 401</code><br>2. 写程序逐行读这个文件，用 IP 的正则把每行的 IP 抽出来，再用状态码的正则把状态码抽出来，打印成“IP — 状态码”的形式。<br>3. 升级：用<a href="m4c3-data-structures.html">第 3 章</a>的字典统计每个 IP 出现了几次、每个状态码出现了几次；再加一个判断：状态码是 401 的行，额外记一次“登录失败”，最后输出“哪个 IP 登录失败最多”。<br>4. 试验贪婪与非贪婪：用 <code>&lt;div&gt;.*&lt;/div&gt;</code> 和 <code>&lt;div&gt;.*?&lt;/div&gt;</code> 分别匹配 <code>&lt;div&gt;你好&lt;/div&gt;&lt;div&gt;再见&lt;/div&gt;</code>，看两次结果的差别，写下你的结论。</p>
+      <h2>避坑</h2>
+      <p>别忘了模式字符串前面的 <code>r</code>：不用原始字符串，<code>\d</code> 会被 Python 先转义一次，正则就读不懂了；别忘了转义真正的点：匹配 IP 时写 <code>\.</code>，写 <code>.</code> 会把“10a0b0c9”也当成 IP；别用贪婪模式抓“第一个就停”的内容：想停就加 <code>?</code> 变成非贪婪；别拿正则解析嵌套的 HTML 或 JSON：那是解析库的工作，正则只适合扁平的文字模式；别直接用网上抄来的超长模式：看不懂的正则就是未来的 bug，先拿已知数据一条一条验证；别在真实网站、真实网络上练手：所有日志都是自己造的假数据，所有实验都在虚拟机里。</p>
+      <p>到这里，模块四的前 8 章讲完了：从“编程是怎么回事”出发，经过 Python、数据结构、算法、进阶结构、代码组织、文件操作，最后到正则表达式——一套能写出真正能用的安全小工具的完整底子。<a href="m4c9-html-css-js.html">下一章</a>会换一个方向：网页是怎么做的（HTML、CSS、JavaScript）——因为安全工程师迟早要读懂网页，才能理解针对网页的攻击从哪来。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>正则表达式是描述“文字长什么样”的微型语言；Python 里用 <code>re</code> 模块，<code>findall</code> 找全部，<code>search</code> 找第一个。</li>
+          <li><code>.</code> 任意字符、<code>*</code> 零次或多次、<code>+</code> 一次或多次、<code>?</code> 零次或一次、<code>[]</code> 任选其一、<code>()</code> 分组、<code>|</code> 或者；<code>\d \w \s</code> 是数字、字符、空白。</li>
+          <li><code>*</code> 和 <code>+</code> 默认贪婪（尽可能多吃），后面加 <code>?</code> 变非贪婪（吃到第一个就停）。</li>
+          <li>IP 模式是 <code>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}</code>；点要转义成 <code>\.</code>；模式字符串前面要加 <code>r</code>。</li>
+          <li>圆括号分组 + <code>group(1)</code>、<code>group(2)</code> 能一次取出 IP 和状态码；正则适合扁平文字，不适合解析嵌套的 HTML/JSON。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c7-files-exceptions.html">← 上一章：第 7 章：文件操作与异常处理</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c9-html-css-js.html">下一章：第 9 章：HTML、CSS 与 JavaScript →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

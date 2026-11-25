@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块二第 19 章：I/O 子系统与驱动模型 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块二第 19 章：I/O 子系统与驱动模型</h1>
+      <div class="meta"><span class="tag">操作系统</span>2026-11-25 · 模块二</div>
+      <p>程序想读硬盘上的文件、想往屏幕上写字、想从网卡收数据，都不能直接碰硬件——<a href="m2c1-os-intro.html">第 1 章</a>就立过这个规矩。这一章讲这条规矩具体是怎么执行的：从程序的一次系统调用开始，数据经过哪些层、每一层干什么，最后怎么到达硬件，再怎么回来。理解了这条 I/O 栈，你也就理解了驱动为什么是内核里最危险的一块代码，以及为什么“驱动出问题就蓝屏”。</p>
+      <p>先接上<a href="m1c5-io.html">模块一第 5 章</a>的总线与输入输出和<a href="m1c9-interrupt.html">模块一第 9 章</a>的中断与 DMA：那两章讲的是硬件层面的机制——总线怎么传数据、中断怎么通知 CPU、DMA 怎么不经过 CPU 搬数据。这一章讲的是操作系统层面的组织：内核怎么把这些硬件机制包成程序能用的接口，驱动在其中扮演什么角色。</p>
+
+      <h2>I/O 栈：一次读文件，数据走过哪些层</h2>
+      <p>以“程序读一个文件”为例，数据走过的层是这样的。最上层是程序调的库函数（比如 C 的 fread），它把请求整理好，调系统调用 read，进入内核。内核的虚拟文件系统（VFS）先看：这个文件描述符对应的是哪个文件系统、哪个文件——VFS 是一层抽象，让 read 不用关心底层是 ext4 还是 NTFS、是硬盘还是 U 盘。再往下是具体的文件系统（<a href="m2c18-filesystem-internals.html">第 18 章</a>讲的 inode、数据块就在这一层被翻译成“读第几号块”）。再往下是块设备层：把“读块”排队、合并、排序，决定先读哪个后读哪个。然后是设备驱动：把块读写翻译成硬件能懂的命令，写进控制器的寄存器里。最底层是控制器和设备：硬盘控制器收到命令，去盘片上把数据读出来，通过总线传回内存。数据原路返回，每一层做完自己的事再往上传，最后回到程序手里。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="I/O 栈分层示意图">
+          <defs>
+            <marker id="c19ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="130" y="10" width="300" height="38" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="13" fill="#1a1a2e">程序：fread / read 系统调用</text>
+          <rect x="130" y="60" width="300" height="38" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="85" text-anchor="middle" font-size="13" fill="#1a1a2e">虚拟文件系统 VFS：不管底层是什么文件系统</text>
+          <rect x="130" y="110" width="300" height="38" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="135" text-anchor="middle" font-size="13" fill="#1a1a2e">文件系统：inode → 数据块号</text>
+          <rect x="130" y="160" width="300" height="38" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="185" text-anchor="middle" font-size="13" fill="#1a1a2e">块设备层：排队、合并、排序读写请求</text>
+          <rect x="130" y="210" width="300" height="38" rx="6" fill="#1a1a2e"/>
+          <text x="280" y="235" text-anchor="middle" font-size="13" fill="#fff">驱动：把块读写翻译成硬件命令</text>
+          <rect x="130" y="260" width="300" height="30" rx="6" fill="#f1f5f9" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="280" text-anchor="middle" font-size="13" fill="#1a1a2e">控制器 → 设备：硬盘 / 网卡 / 键盘</text>
+          <line x1="280" y1="48" x2="280" y2="60" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c19ar)"/>
+          <line x1="280" y1="98" x2="280" y2="110" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c19ar)"/>
+          <line x1="280" y1="148" x2="280" y2="160" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c19ar)"/>
+          <line x1="280" y1="198" x2="280" y2="210" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c19ar)"/>
+          <line x1="280" y1="248" x2="280" y2="260" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c19ar)"/>
+        </svg>
+        <figcaption>图：一次读文件走过的 I/O 栈——每层只干自己的事，驱动是内核与硬件之间的翻译</figcaption>
+      </figure>
+      <p>分层的意义在于隔离变化：换一块硬盘，只要换驱动，上面几层不用动；换一个文件系统，只要 VFS 下面接上新的实现，程序不用动。排错时也按层查：程序读文件慢，是程序的问题、文件系统的问题、还是硬盘本身的问题？一层一层往下量，才能定位。Linux 下的 iostat、iotop，Windows 下的资源监视器 → 磁盘，量的就是不同层面的数字。</p>
+
+      <h2>轮询、中断、DMA：三种等硬件的办法</h2>
+      <p><a href="m1c9-interrupt.html">模块一第 9 章</a>讲过这三种方式，这里再放在操作系统层面比较一次。轮询（polling）：CPU 不停地问设备“好了没？好了没？”——简单，但 CPU 全耗在问问题上了，只适合很快就能好的设备，或者系统刚启动、还没建好中断机制的时候。中断（interrupt）：CPU 发完命令就去干别的，设备好了发一个中断通知 CPU，CPU 停下手头的事来处理——CPU 利用率高，是键盘、网卡这些“不知道什么时候来数据”的设备的标准做法，代价是每次中断都有上下文切换的开销，设备太忙时中断会多到 CPU 忙不过来。DMA（直接内存访问）：设备和内存之间直接搬数据，不经过 CPU，搬完了发一个中断告诉 CPU 一声——大块数据传输（硬盘读写、网卡收发）的标准做法，CPU 基本不参与搬运，只负责开头下命令、结尾收通知。</p>
+      <p>三者的取舍是一条线：数据量小、来得没规律，用中断；数据量大、连续传输，用 DMA；设备简单到不值得建中断，或者系统刚启动，用轮询。现代网卡还会用“中断合并”：攒一批数据包再发一次中断，避免每个包都打断 CPU 一次；高性能场景还会用轮询模式的驱动（比如 DPDK），让一个 CPU 核专门轮询网卡，换取最低的延迟——代价是一个核全耗在轮询上，这是用 CPU 换延迟的买卖。</p>
+
+      <h2>阻塞与非阻塞 I/O：等，还是不等</h2>
+      <p>程序调 read 读数据，数据还没到怎么办？有两种态度。阻塞 I/O（blocking I/O）：程序停在那里等，数据到了再往下走——写法简单，符合直觉，大多数程序默认就是阻塞的。代价是等的时候这个线程什么也干不了，想同时干别的事就得开多个线程。非阻塞 I/O（non-blocking I/O）：数据没到，read 立刻返回一个“还没好”的错误，程序可以先去干别的事，过一会儿再来问——写法麻烦，但一个线程能同时管很多个连接，服务器程序爱用这个。</p>
+      <p>非阻塞之上还有异步 I/O：程序发一个“帮我读，读好了通知我”的请求就走了，内核在后台把数据读好，再通过回调或信号通知程序。Windows 的 IOCP、Linux 的 io_uring，都是异步 I/O 的高性能实现。理解这三种的区别，对看懂服务器程序和恶意软件都很重要：一个程序开几千个线程每个都阻塞等数据，和一个程序只开几个线程、用非阻塞加事件循环管几千个连接，资源占用天差地别——后者是正常高性能服务器的写法，前者如果出现在一个小程序身上，就要多看一眼它在等什么。</p>
+
+      <h2>驱动模型：谁写驱动，驱动跑在哪</h2>
+      <p>驱动是硬件和内核之间的翻译，<a href="m2c12-kernels.html">第 12 章</a>讲过：驱动跑在内核态，一个有漏洞的驱动等于直接给了攻击者内核权限。Windows 的驱动要经过微软签名才能加载——没签名的驱动装不上，这是防恶意驱动的一道关；Linux 的驱动很多直接编进内核或以模块加载，开启了 Secure Boot 加模块签名的内核会拒绝没签名的模块。两种系统都在用签名这道关，拦的是同一类东西：来路不明的内核代码。</p>
+      <p>驱动模型还有一个趋势值得知道：用户态驱动。有些设备不需要跑在内核里也能工作——比如打印机、部分 USB 设备——操作系统就把驱动放到用户态跑：崩了只崩驱动自己，不拖垮内核；权限也低得多，想干坏事也干不了多少。Linux 的 UIO/VFIO、Windows 的 UMDF，都是这个思路。代价是用户态和内核态之间来回传数据有额外开销，对性能要求极高的设备（显卡、高速网卡）还是得用内核态驱动。安全上这是一笔很划算的买卖：能放用户态的驱动，就不要放内核态——攻击面越小越好。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>修电脑时“蓝屏先怀疑驱动”这句话，是血泪换来的。有一次用户新装了一个“万能驱动包”，第二天开始不定时蓝屏，蓝屏代码每次都不一样——这是驱动问题的典型特征：崩的地方不固定，因为坏驱动在内核里到处写。我没去一个一个试驱动，先进安全模式，把最近装的那个驱动卸了，蓝屏就停了。还有一次是网卡驱动的旧版本和系统更新冲突，表现是“网时断时续”，设备管理器里网卡还带个黄色感叹号——先看设备管理器有没有感叹号，再看事件查看器里有没有驱动加载失败的记录，这个顺序能省一半时间。记住：驱动只从硬件厂商官网或系统自带的更新拿，不要用第三方驱动包——来路不明的驱动跑在内核态，等于把整台电脑的钥匙交给了陌生人。</div>
+
+      <h2>动手做</h2>
+      <p>全部在虚拟机里做，只看不动。1. 在虚拟机里的 Linux 上跑 <code>ls /dev/</code>，看设备文件：sda 是硬盘、tty 是终端、null 是一个“黑洞”设备（写进去的数据全丢掉）；再跑 <code>ls -l /dev/sda</code>，看第一个字母是 b（块设备）还是 c（字符设备），想一想硬盘和键盘为什么一个是块设备、一个是字符设备。2. 跑 <code>lspci</code> 看 PCI 设备列表，<code>lsusb</code> 看 USB 设备，再跑 <code>lsmod | head -20</code> 看当前加载的内核模块，对照一下：网卡、显卡各对应哪个模块。3. 跑 <code>iostat -x 1 3</code>（没有就先装 sysstat），看磁盘的读写速度和利用率；再跑 <code>iotop</code>（需要管理员权限），看哪个进程的磁盘读写最多。4. 在 Windows 上打开设备管理器，看有没有带黄色感叹号的设备；再打开资源监视器 → 磁盘，看哪个进程在读写磁盘、读写的是哪个文件。</p>
+      <h2>避坑</h2>
+      <p>驱动只从厂商官网或系统更新拿：第三方驱动包跑在内核态，风险极高；蓝屏先怀疑最近装的驱动和它带的软件，先看设备管理器有没有感叹号；别把“阻塞”等同于“卡死”：阻塞是程序在等数据，是正常状态，卡死是等一个永远不会来的数据，要分清；DMA 不是“不用 CPU”：CPU 不参与搬数据，但开头下命令、结尾收通知还是 CPU 的事；用户态驱动崩了只崩自己、内核态驱动崩了就是蓝屏——这就是驱动分层的意义。</p>
+      <p>I/O 栈讲完了，下一章把机器本身也虚拟化：<a href="m2c20-virtualization.html">第 20 章：虚拟化与容器基础</a>——虚拟机、命名空间与 cgroup，一台机器怎么变出很多台。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>I/O 栈分层：程序 → 系统调用 → VFS → 文件系统 → 块设备层 → 驱动 → 控制器 → 设备，每层只干自己的事，换硬件只要换驱动。</li>
+          <li>轮询是 CPU 不停地问，中断是设备好了通知 CPU，DMA 是设备和内存直接搬数据、搬完通知一声；数据量大用 DMA，来得没规律用中断。</li>
+          <li>阻塞 I/O 是没数据就等着，非阻塞是没数据立刻返回、过会儿再问，异步是读好了再通知；高性能服务器多用非阻塞加事件循环。</li>
+          <li>驱动跑在内核态，有漏洞就是内核级漏洞：Windows 靠驱动签名拦，Linux 靠 Secure Boot 加模块签名拦；能放用户态的驱动就不要放内核态。</li>
+          <li>蓝屏先怀疑最近装的驱动；排错按层查，先看设备管理器有没有感叹号，再看事件日志里驱动加载失败的记录。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m2c18-filesystem-internals.html">← 上一章：第 18 章：文件系统内部：inode、日志与崩溃一致性</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m2c20-virtualization.html">下一章：第 20 章：虚拟化与容器基础：虚拟机、命名空间与 cgroup →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

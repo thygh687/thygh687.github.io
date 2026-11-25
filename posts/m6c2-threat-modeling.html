@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块六第 2 章：威胁建模 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块六第 2 章：威胁建模</h1>
+      <div class="meta"><span class="tag">网络安全基础</span>2026-11-25 · 模块六</div>
+      <p>上一章我们学了安全的第一套共同语言：守什么（CIA）、管什么人（AAA）、用什么守（控制分类）。这一章把这套语言用起来，干一件安全工程师每天都在干的事：<strong>威胁建模</strong>——在攻击发生之前，先站在攻击者的角度，把自己的系统想一遍：它有什么值钱的东西？谁会来打它的主意？从哪条路进来？哪块最脆弱？</p>
+      <p>威胁建模不是什么高深的数学，而是一种思考习惯。盖房子之前要想“小偷会从哪儿进”，做系统之前要想“攻击者会怎么想”。没有这一步，防护就是乱花钱：该加固的地方没加固，不重要的地方堆了一堆设备。做了这一步，花出去的每一分钱、每一行配置都有了理由。</p>
+      <h2>四个基本词：资产、威胁、脆弱点、风险</h2>
+      <p>威胁建模有四个词要先分清，很多人一辈子把它们混着用。</p>
+      <p><strong>资产（Asset）：值得保护的东西。</strong>不只是服务器和电脑，还包括数据、账号、品牌名声，甚至是“系统能正常用的时间”。对你的博客来说，资产是：文章和读者数据、管理员账号、域名、网站的声誉。对一家医院来说，资产还包括病人的生命安全——系统停了，手术就可能做不了。列资产时要问：丢了什么会让我睡不着觉？那个就是核心资产。</p>
+      <p><strong>威胁（Threat）：可能伤害资产的坏事。</strong>威胁来自“威胁行为者”——可能是人，也可能是自然灾害、系统故障。钓鱼邮件、勒索软件、DDoS 攻击、内部员工泄密、机房断电，都是威胁。注意：威胁是“可能发生的事”，不是“已经发生的攻击”。</p>
+      <p><strong>脆弱点（Vulnerability）：能被利用的弱点。</strong>威胁要变成真正的伤害，得有个口子钻。没打补丁的软件、弱密码、配置错了的权限、写错了的一行代码，都是脆弱点。没有脆弱点，威胁就只是“想想而已”；有了脆弱点，威胁才有了落脚点。</p>
+      <p><strong>风险（Risk）：威胁碰上脆弱点之后，可能造成的损失有多大。</strong>风险 ≈ 发生的可能性 × 造成的影响。一个可能性很低、影响也不大的风险，可以先放着；一个可能性不高但一旦发生就致命的风险（比如数据库没有备份），必须优先处理。安全预算永远有限，风险排序就是花钱的顺序。</p>
+      <p>四者的关系一句话：<strong>威胁利用脆弱点，伤害资产，造成风险。</strong>威胁建模的工作，就是把这条链上的每一环找出来，再决定在哪一环动手切断它。</p>
+      <h2>STRIDE：六类威胁，一张检查表</h2>
+      <p>对着一个系统干想“会有什么威胁”，很容易漏。微软总结了一套检查表，叫 <strong>STRIDE</strong>，六个字母对应六类威胁。画图的时候，对着每个部件逐项过一遍，漏掉的就少多了。</p>
+      <p><strong>S — 假冒（Spoofing）：冒充别人。</strong>攻击者冒充成用户、冒充成服务器、冒充成管理员。例子：钓鱼网站冒充银行登录页；攻击者偷到会话令牌，冒充已登录的用户。对应的是<a href="m6c1-security-framework.html">第 1 章</a>的认证被攻破。</p>
+      <p><strong>T — 篡改（Tampering）：偷偷改东西。</strong>数据在传输或存储中被改掉。例子：下载的安装包被换成带毒的版本；数据库里的一条记录被悄悄改了金额。对应的是完整性被破坏。</p>
+      <p><strong>R — 否认（Repudiation）：干了坏事不认账。</strong>做了操作却没有证据证明是他做的。例子：员工删了重要文件，系统却没有日志，查不出是谁干的。这就是<a href="m6c1-security-framework.html">第 1 章</a>讲的审计缺失造成的威胁。</p>
+      <p><strong>I — 信息泄露（Information Disclosure）：不该看的被看到了。</strong>例子：报错页面把数据库结构抖了出来；备份文件忘在公开的地方；员工把客户名单发错了人。对应的是机密性被破坏。</p>
+      <p><strong>D — 拒绝服务（Denial of Service）：让系统用不了。</strong>例子：DDoS 攻击把网站打瘫；一个死循环请求把服务器 CPU 占满。对应的是可用性被破坏，<a href="m3c12-attacks.html">模块三第 12 章</a>讲过这类攻击。</p>
+      <p><strong>E — 权限提升（Elevation of Privilege）：拿到不该有的权限。</strong>例子：普通用户通过一个漏洞拿到了管理员权限；博客的投稿人发现自己能改网站设置。对应的是授权被绕过。</p>
+      <p>记住 STRIDE 有个窍门：它和 CIA + AAA 是一一对应的——假冒破认证、篡改破完整性、否认破审计、信息泄露破机密性、拒绝服务破可用性、权限提升破授权。六个字母背后，其实还是<a href="m6c1-security-framework.html">第 1 章</a>的那套框架。</p>
+      <h2>画一张数据流图：把系统画出来再想威胁</h2>
+      <p>威胁建模的第一步不是想威胁，而是<strong>把系统画出来</strong>。画一张简单的数据流图：有哪些参与者（用户、管理员）、有哪些部件（浏览器、服务器、数据库）、数据在它们之间怎么流动。图一画出来，威胁藏在哪儿就清楚多了。下面是这个博客的简化数据流图——你的动手做就是照着这个样子，画你自己的版本。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="博客数据流图与威胁标注">
+          <defs>
+            <marker id="c2ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="120" width="100" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="70" y="146" text-anchor="middle" font-size="14" fill="#1a1a2e">访客</text>
+          <text x="70" y="166" text-anchor="middle" font-size="11" fill="#666">浏览器</text>
+          <rect x="230" y="120" width="110" height="60" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="285" y="146" text-anchor="middle" font-size="14" fill="#1a1a2e">博客服务器</text>
+          <text x="285" y="166" text-anchor="middle" font-size="11" fill="#666">网页 + 登录</text>
+          <rect x="440" y="120" width="100" height="60" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="490" y="146" text-anchor="middle" font-size="14" fill="#1a1a2e">数据库</text>
+          <text x="490" y="166" text-anchor="middle" font-size="11" fill="#666">文章 + 账号</text>
+          <line x1="120" y1="150" x2="230" y2="150" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c2ar)"/>
+          <text x="175" y="138" text-anchor="middle" font-size="11" fill="#666">访问 / 登录</text>
+          <line x1="340" y1="150" x2="440" y2="150" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c2ar)"/>
+          <text x="390" y="138" text-anchor="middle" font-size="11" fill="#666">读 / 写</text>
+          <rect x="20" y="30" width="100" height="44" rx="8" fill="#fff" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5 3"/>
+          <text x="70" y="48" text-anchor="middle" font-size="12" fill="#dc2626">威胁 1：钓鱼</text>
+          <text x="70" y="64" text-anchor="middle" font-size="11" fill="#dc2626">冒充管理员</text>
+          <rect x="230" y="230" width="110" height="44" rx="8" fill="#fff" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5 3"/>
+          <text x="285" y="248" text-anchor="middle" font-size="12" fill="#dc2626">威胁 2：注入 / 越权</text>
+          <text x="285" y="264" text-anchor="middle" font-size="11" fill="#dc2626">篡改文章、提权</text>
+          <rect x="440" y="230" width="100" height="44" rx="8" fill="#fff" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5 3"/>
+          <text x="490" y="248" text-anchor="middle" font-size="12" fill="#dc2626">威胁 3：拖库</text>
+          <text x="490" y="264" text-anchor="middle" font-size="11" fill="#dc2626">账号密码泄露</text>
+          <rect x="20" y="230" width="100" height="44" rx="8" fill="#fff" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5 3"/>
+          <text x="70" y="248" text-anchor="middle" font-size="12" fill="#dc2626">威胁 4：DDoS</text>
+          <text x="70" y="264" text-anchor="middle" font-size="11" fill="#dc2626">网站打不开</text>
+          <text x="280" y="315" text-anchor="middle" font-size="12" fill="#666">红框是威胁：每条数据流、每个部件，都可能藏着威胁</text>
+        </svg>
+        <figcaption>图：博客的简化数据流图——先画出数据怎么流，再把威胁标在对应的位置上</figcaption>
+      </figure>
+      <p>图的画法有讲究：方框是部件和参与者，箭头是数据流，红框是威胁。威胁要标在它发生的位置上——钓鱼标在“访客”那儿，因为骗的是人；注入标在服务器那儿，因为攻击打的是程序；拖库标在数据库那儿，因为偷的是数据；DDoS 标在访客到服务器的线上，因为堵的是路。这样标的好处是：防护措施也有了位置——防钓鱼靠培训和双因素，防注入靠代码和输入检查，防拖库靠加密和备份，防 DDoS 靠流量清洗。威胁和措施一一对应，就不会出现“花了钱却不知道防住了什么”的情况。</p>
+      <h2>威胁建模的四个步骤</h2>
+      <p><strong>第一步：画出系统，列出资产。</strong>画数据流图，把值钱的东西列出来，分个轻重缓急。核心资产先标出来。</p>
+      <p><strong>第二步：找出威胁。</strong>拿着 STRIDE 检查表，对着图的每个部件、每条数据流逐项过：这里会被假冒吗？会被篡改吗？会被泄露吗？会被打瘫吗？能想到的都先写下来，不用先判断靠不靠谱。</p>
+      <p><strong>第三步：排风险，定优先级。</strong>对每条威胁问两个问题：发生的可能性有多大？一旦发生影响有多大？可能性大、影响大的先处理；可能性小、影响小的可以接受，或者先记下来以后再说。这一步最容易犯的错是“什么都想防”——预算和时间都有限，排优先级才是威胁建模的价值所在。</p>
+      <p><strong>第四步：定措施，写下来。</strong>针对排在前面的威胁，定防护措施：是预防（挡住）、检测（发现）、纠正（恢复）？谁负责？什么时候做完？写下来、排进计划、定期复查。系统会变，威胁也会变——新功能上线、换了供应商、出了新的攻击手法，模型都要跟着更新。威胁建模不是做一次就完事的作业，而是一份要一直维护的清单。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我见过两种极端：一种是完全不做威胁建模，上来就买设备，买回来才发现防的不是自家最要命的东西；另一种是把威胁建模做成几十页的文档，写完就锁进柜子再也没人看。真正有用的威胁建模，往往就是一页纸、一张图、十来条威胁，贴在墙上，团队每周看一眼。有一次给一个小电商做建模，图一画出来大家才发现：最值钱的不是网站，而是存着供应商报价的那台旧电脑——它没密码、没备份、还连着公网，真正的风险在那儿，不在网站上。记住：威胁建模最大的价值常常不是发现了什么高深的攻击，而是让所有人第一次在同一张图上看到“我们到底在守什么”。</div>
+      <h2>动手做</h2>
+      <p>只在虚拟机或自己的实验环境里做，不要碰真实网站、真实网络。<br>1. 照着本章的图，给自己的博客（或者虚拟机里搭的一个本地测试网站）画一张数据流图：访客、服务器、数据库，数据怎么流。画在纸上或用画图工具都可以。<br>2. 拿着 STRIDE 六类威胁，对着你的图逐项过一遍，每类至少找出一条威胁，标在图上对应的位置。写不出来的时候，换个角度想：如果我是攻击者，我会先打哪儿？<br>3. 给找出来的威胁排个序：选出“可能性大、影响也大”的前三条，针对每条写一条防护措施（可以是技术措施，也可以是制度，比如“管理员开双因素”“每周备份一次”）。<br>4. 把这张图和清单保存下来。学完<a href="m6c3-threat-actors-attack.html">第 3 章</a>的 ATT&CK 之后，再回来给每条威胁补上“攻击者可能用的手法”，你的模型就又进了一步。</p>
+      <h2>避坑</h2>
+      <p>别把“威胁”和“脆弱点”混着说：威胁是“可能发生的坏事”，脆弱点是“能被利用的弱点”，风险是“坏事真的发生后的损失”；别追求一次建个完美的模型：先有一张粗糙的图、十条威胁，比没有强得多，模型是越改越准的；别只想着外部黑客：内部人员误操作、离职员工、供应商出问题，常常比外部攻击更常见、更难防；别建完模就锁进柜子：系统一变模型就要跟着变，不更新的模型比没有模型更危险，因为它会让你误以为自己是安全的；别在真实系统上“验证”威胁：想试攻击手法，去虚拟机里搭靶场，绝不在真实网站、真实网络上练手。</p>
+      <p>威胁建模回答了“攻击者会怎么想”，下一章回答“攻击者是谁”：<a href="m6c3-threat-actors-attack.html">第 3 章：威胁行为者与 MITRE ATT&CK 入门</a>——把常见的攻击者分分类，再学一套全世界安全团队都在用的攻击手法词典。回头看<a href="m6c1-security-framework.html">第 1 章</a>的 CIA 和 AAA：STRIDE 的六类威胁，正好一类破一样，框架和检查表就这样互相咬合。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>威胁建模是站在攻击者的角度想问题：有什么资产、谁会来打主意、从哪条路进来、哪块最脆弱。</li>
+          <li>四个基本词：资产（值得保护的东西）、威胁（可能发生的坏事）、脆弱点（能被利用的弱点）、风险（可能性 × 影响）。</li>
+          <li>STRIDE 是六类威胁的检查表：假冒、篡改、否认、信息泄露、拒绝服务、权限提升，和 CIA + AAA 一一对应。</li>
+          <li>建模四步：画系统列资产 → 用 STRIDE 找威胁 → 按风险排优先级 → 定措施并定期更新。</li>
+          <li>最好的模型是一页纸一张图，贴在墙上常看常改，而不是锁进柜子的几十页文档。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m6c1-security-framework.html">← 上一章：第 1 章：安全基础框架：CIA、AAA 与控制分类</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m6c3-threat-actors-attack.html">下一章：第 3 章：威胁行为者与 MITRE ATT&CK 入门 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

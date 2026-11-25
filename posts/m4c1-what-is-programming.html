@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 1 章：编程是怎么回事 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 1 章：编程是怎么回事</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p>前面三个模块，我们把计算机从里到外拆了一遍：<a href="m1c1-binary.html">第 1 模块</a>讲了二进制、CPU 和内存是怎么工作的，<a href="m2c1-os-intro.html">第 2 模块</a>讲了操作系统怎么管进程和文件，<a href="m3c1-layers.html">第 3 模块</a>讲了网络怎么把数据从一台机器送到另一台。<a href="summary-module3.html">模块三小结</a>里留了一个问题：知道这些原理之后，怎么让计算机替我们干活？答案就是编程。这一章不写一行正式代码，先把“编程到底是怎么回事”讲明白：程序是什么、变量是什么、判断和循环是什么、函数是什么。把这四个概念想通了，<a href="m4c2-python-intro.html">下一章</a>拿起 Python 的时候，你会发现自己不是在背语法，而是在用一种新语言说你早就懂的事。</p>
+      <h2>程序就是一步步的指令</h2>
+      <p>先忘掉“编程”这个词。想象你要教一个完全不懂、但执行力极强的新手做一件小事：泡一杯速溶咖啡。你会怎么说？大概是：“拿一个杯子；倒一包咖啡粉；倒热水到八分满；搅拌十下；放下勺子。”这就是程序：一串写得清清楚楚、按顺序执行的指令。计算机就是那个新手：它不会猜你的意思，不会“大概、差不多、看着办”，但只要指令写对了，它能一秒钟执行几亿步，而且从不嫌烦。</p>
+      <p>这就是编程的全部秘密：把一件你想让计算机做的事，拆成它能听懂的一步步指令，再用一种它能读懂的语言（编程语言）写下来。写指令的人是你，执行指令的是计算机，写下来的那份指令清单就是程序。所谓“写程序”，不是在跟机器比聪明，而是在练习把事情说清楚。</p>
+      <p>回想<a href="m1c2-cpu.html">模块一第 2 章</a>：CPU 的工作就是不断地“取指令、执行指令、取下一条”。程序在 CPU 眼里，就是内存里排成一排的指令。高级语言写的程序最终也会被翻译成这样的指令，只是我们不用直接写二进制了。<a href="m1c4-assembly.html">模块一第 4 章</a>的汇编就是离机器最近的那层语言，而 Python 这类语言离人更近——这一章讲的思想，在哪种语言里都一样。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="程序执行流程图">
+          <defs>
+            <marker id="c1ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="200" y="10" width="160" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="15" fill="#1a1a2e">你：写下指令清单</text>
+          <line x1="280" y1="50" x2="280" y2="70" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c1ar)"/>
+          <rect x="200" y="70" width="160" height="40" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="15" fill="#1a1a2e">程序：排好队的指令</text>
+          <line x1="280" y1="110" x2="280" y2="130" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c1ar)"/>
+          <rect x="200" y="130" width="160" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="15" fill="#1a1a2e">CPU：一步步执行</text>
+          <line x1="280" y1="170" x2="280" y2="190" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c1ar)"/>
+          <rect x="200" y="190" width="160" height="40" rx="8" fill="#fdf2f8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="215" text-anchor="middle" font-size="15" fill="#1a1a2e">结果：屏幕上的输出</text>
+        </svg>
+        <figcaption>图：程序从“你写下的清单”到“CPU 执行”再到“结果”的过程</figcaption>
+      </figure>
+      <p>为什么学安全的人一定要会编程？因为安全工作里大量时间花在重复劳动上：检查几千行日志里有没有可疑 IP、把一份端口扫描结果整理成表格、批量验证一堆密码的强度、每小时巡检一次服务器状态。手工做一遍要半天，写个小程序几秒就做完了。更重要的是，不会编程，你就只能用别人写好的工具，别人没做的事你做不了；会编程，工具不够用的时候你能自己造一个。安全工程师和“只会点工具的人”，分界线往往就在这里。</p>
+      <h2>变量：贴了标签的盒子</h2>
+      <p>程序要处理数据，数据总得有个地方放。变量就是给数据起个名字、放到一个“盒子”里，需要的时候按名字取出来。想象你的桌子上有几个盒子，每个盒子贴着标签：一个写着“用户名”，里面装着“yufei”；一个写着“登录次数”，里面装着数字 3；一个写着“密码长度”，里面装着 12。程序里写 <code>用户名 = "yufei"</code>，意思就是：拿一个盒子贴上“用户名”的标签，把“yufei”放进去。以后任何地方写到“用户名”，计算机就去那个盒子里取东西。</p>
+      <p>盒子里的东西可以换：登录次数从 3 变成 4，就是把盒子里的东西拿出来换一个新的。这就是“变量”这个名字的来历：它的值是可变的。标签一旦贴好，程序后面都认这个标签，盒子本身不会乱跑。</p>
+      <p>这和<a href="m1c3-memory.html">模块一第 3 章</a>讲的内存是一回事：变量名是给人看的标签，计算机真正记住的是内存地址。变量让我们不用记“第 1048576 号内存格子”，只要记“登录次数”就行了。数据类型也很直观：数字就是数字，文字叫字符串（因为它是一串字符），“是/否”叫布尔值——<a href="m1c6-logic.html">模块一第 6 章</a>的逻辑门玩的就是布尔值，只不过那时它叫 0 和 1。后面<a href="m4c3-data-structures.html">第 3 章</a>会讲更复杂的“盒子”：能装一排东西的列表、按名字取东西的字典。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="变量是贴标签的盒子">
+          <rect x="30" y="40" width="150" height="110" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="55" y="20" width="100" height="30" rx="6" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="105" y="41" text-anchor="middle" font-size="14" fill="#1a1a2e">用户名</text>
+          <text x="105" y="105" text-anchor="middle" font-size="18" fill="#1a1a2e">yufei</text>
+          <rect x="205" y="40" width="150" height="110" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="230" y="20" width="100" height="30" rx="6" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="41" text-anchor="middle" font-size="14" fill="#1a1a2e">登录次数</text>
+          <text x="280" y="105" text-anchor="middle" font-size="18" fill="#1a1a2e">3</text>
+          <rect x="380" y="40" width="150" height="110" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="405" y="20" width="100" height="30" rx="6" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="455" y="41" text-anchor="middle" font-size="14" fill="#1a1a2e">密码长度</text>
+          <text x="455" y="105" text-anchor="middle" font-size="18" fill="#1a1a2e">12</text>
+          <text x="280" y="185" text-anchor="middle" font-size="13" fill="#666">标签是名字，盒子里是值；值可以换，标签不变</text>
+        </svg>
+        <figcaption>图：变量就是贴了标签的盒子——名字不变，里面的值可以换</figcaption>
+      </figure>
+      <p>一个常见的初学困惑是：<code>登录次数 = 登录次数 + 1</code> 这行字在数学上是错的（一个数不可能等于自己加一），在程序里却完全合法。读法是：“把‘登录次数’盒子里的值取出来，加 1，再放回同一个盒子”。等号在程序里不是“等于”，而是“把右边算出来的结果，装进左边的盒子”。这个读法一建立，后面就不会再晕。</p>
+      <h2>判断：程序的岔路口</h2>
+      <p>如果程序只能从上往下直着跑，它和计算器没什么区别。真正让程序“聪明”起来的是判断：遇到岔路口，根据条件决定走哪条路。生活里全是判断：“如果下雨，就带伞；否则不带。”“如果密码长度小于 8，就提示太短；否则放行。”程序里的判断就是这句话的翻版，关键字通常叫 <code>if</code>（如果），后面跟条件，条件成立走一支，不成立走另一支（<code>else</code>，否则）。</p>
+      <p>判断可以一层套一层：先判断“是不是管理员”，再判断“密码对不对”，两层都过了才放行。安全里几乎所有检查都是判断的组合：登录验证、防火墙放行还是拦截、文件是不是可疑——本质上都是一连串的“如果……那么……否则……”。<a href="m3c13-hardening.html">模块三第 13 章</a>的防火墙规则，翻译成程序就是一堆 if 语句：源地址对不对？端口允不允许？协议合不合规？一条一条过，全部通过才放行。</p>
+      <h2>循环：让计算机替你重复</h2>
+      <p>判断管“走哪条路”，循环管“同一条路走多少遍”。生活例子：检查 100 个学生的作业，你不会写 100 遍“检查第 1 本、检查第 2 本……”，你会说“对每一本作业，重复：翻开、核对、合上”。程序里的循环就是这个“重复”的意思：<code>for</code>（对每一个……）和 <code>while</code>（只要……就一直……）。</p>
+      <p>循环是安全工作里最值钱的结构。一份日志有十万行，手工翻要翻到天亮；写个循环，让计算机一行一行读，遇到可疑的就记下来——十万行也就是一眨眼的事。端口扫描也是循环：对 1 到 1024 号端口挨个敲门，看哪个开着；密码强度检查也是循环：对密码里的每个字符挨个看，有没有大写、有没有数字、有没有符号。<a href="m4c2-python-intro.html">下一章</a>的“算密码长度”小工具里，你就会第一次写循环。</p>
+      <p>循环最容易出的错是“停不下来”：条件写错了，循环永远不结束，程序就卡死在那里，这叫死循环。写循环时养成一个习惯：先想清楚“什么时候停”，再写“每次做什么”。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="判断与循环流程图">
+          <defs>
+            <marker id="c1ar2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="200" y="10" width="160" height="36" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="33" text-anchor="middle" font-size="14" fill="#1a1a2e">开始：拿第一行日志</text>
+          <path d="M280 46 L340 80 L280 114 L220 80 Z" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="76" text-anchor="middle" font-size="13" fill="#1a1a2e">有可疑 IP？</text>
+          <text x="280" y="92" text-anchor="middle" font-size="13" fill="#1a1a2e">判断</text>
+          <rect x="380" y="62" width="150" height="36" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="455" y="85" text-anchor="middle" font-size="14" fill="#1a1a2e">是：记下来</text>
+          <text x="370" y="58" text-anchor="middle" font-size="12" fill="#666">是 →</text>
+          <rect x="200" y="130" width="160" height="36" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="153" text-anchor="middle" font-size="14" fill="#1a1a2e">还有下一行吗？</text>
+          <rect x="200" y="182" width="160" height="36" rx="8" fill="#fdf2f8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="205" text-anchor="middle" font-size="14" fill="#1a1a2e">结束：输出结果</text>
+          <line x1="280" y1="166" x2="280" y2="182" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c1ar2)"/>
+          <path d="M220 148 C120 148 120 92 210 92" fill="none" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c1ar2)"/>
+          <text x="105" y="128" text-anchor="middle" font-size="12" fill="#666">有：回到开头</text>
+          <text x="370" y="128" text-anchor="middle" font-size="12" fill="#666">否 → 下一行</text>
+        </svg>
+        <figcaption>图：判断 + 循环——逐行读日志、只记可疑行的完整流程</figcaption>
+      </figure>
+      <h2>函数：把步骤打包，起个名字</h2>
+      <p>程序写长了会发现：同一组步骤要在好几个地方用。比如“检查密码强度”这个步骤，注册时要用一次，改密码时又要用一次，难道每次都把十几行代码抄一遍？函数就是解决办法：把一组步骤打包，起个名字，以后想用就喊它的名字，顺便把需要的数据递进去，完事它把结果还给你。</p>
+      <p>生活里你每天都在用“函数”：去面馆点一碗牛肉面，你不用告诉厨师“先烧水、再下面、煮三分钟、捞出来、加汤、放牛肉”——你只说“牛肉面一碗”，厨师就知道整套步骤。你喊的名字就是函数名，“牛肉面”是你要的东西。编程里的函数也一样：<code>检查密码强度("abc123")</code> 这一行，意思就是“用‘检查密码强度’这套步骤处理一下 abc123，告诉我结果”。步骤只写一次，处处能用；步骤要改，也只改一处。</p>
+      <p>函数是把大问题拆成小问题的关键工具。一个“扫描日志找攻击”的大任务，可以拆成几个函数：一个负责读文件，一个负责判断某一行可不可疑，一个负责把结果写成报告。每个函数只做一件事，每个都好写、好测、好改。拆得好，程序就清晰；拆不好，程序就成了一团乱麻。<a href="m4c6-functions-oop.html">第 6 章</a>会专门讲函数和模块怎么组织代码，这里先记住这个感觉：函数 = 打包好的步骤 + 一个名字。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我刚入行时接到过一个任务：从一份几十万行的防火墙日志里，找出所有在半夜反复尝试登录失败的 IP。同事手工筛了一上午，我写了个不到 30 行的小程序：循环读每一行，判断“时间在 0 点到 5 点之间”而且“结果是登录失败”，把 IP 记进一个列表，最后按出现次数排序输出。跑了不到 10 秒，结果比手工筛的还全。那天我明白了一件事：编程对安全工程师来说不是“加分项”，是“放大器”——你懂的安全知识越多，编程能放大的就越多。但也别反过来：只会写代码、不懂攻击原理，写出来的工具也抓不住重点。所以这门课的顺序是先讲原理（模块一到三），再讲编程（模块四），这个顺序别颠倒。</div>
+      <h2>动手做</h2>
+      <p>1. 不用电脑，先在纸上写：把“早上起床到出门”这件事写成 8 到 10 步指令，要求每一步都是一个动作、没有歧义（比如“穿衣服”太粗，要写成“穿上衣、穿裤子、穿袜子、穿鞋”）。写完读给自己听，看有没有哪一步其实藏了两个动作——这就是编程里“拆步骤”的基本功。<br>2. 给你家里的东西贴“变量标签”：在纸上画三个盒子，分别写上标签“书名”“页数”“读完了吗”，再给每个盒子填一个值；然后把“页数”加 10，写出新值。体会“标签不变、值会变”。<br>3. 用“如果……那么……否则……”写三条家规式的判断，比如“如果密码长度小于 8，那么提示太短；否则提示通过”，再想一想：防火墙“如果端口是 22 并且来源不可信，那么拦截”这条规则，和你写的句子结构是不是一模一样。<br>4. 设计一个循环：假设你要检查 5 个网站的首页能不能打开（只在脑子里想，不真去连），写出循环的三个部分——“从哪开始、每次做什么、什么时候停”。这三部分想清楚了，<a href="m4c2-python-intro.html">下一章</a>写真正的循环时就不会晕。</p>
+      <h2>避坑</h2>
+      <p>别一上来就背语法：先把“要做的事”用大白话拆成步骤，步骤清楚了，语法只是翻译问题；别把变量当成数学里的未知数：程序里的等号是“装进去”，不是“等于”，<code>次数 = 次数 + 1</code> 完全合法；别写没有出口的循环：动手写循环之前，先写下“什么时候停”；别把所有代码堆在一个地方：同一组步骤第二次出现，就该想想是不是要打包成函数；别在真机器、真网络上练手：从<a href="m4c2-python-intro.html">下一章</a>起，所有代码都在虚拟机里跑，只处理自己造的假数据。</p>
+      <p>四个概念——变量、判断、循环、函数——是所有编程语言的共同底座，换一门语言也一样。掌握了它们，<a href="m4c2-python-intro.html">下一章：Python 入门</a>就是把这些想法翻译成 Python 的写法，顺手写出你的第一个安全小工具。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>程序就是一步步的指令清单；编程是把想做的事拆成计算机能执行的步骤，再用编程语言写下来。</li>
+          <li>变量是贴了标签的盒子：标签是名字，盒子里是值；值可以换，标签不变；程序里的等号是“装进去”。</li>
+          <li>判断（if/else）让程序在岔路口选路；安全里的登录验证、防火墙规则，本质上都是一连串判断。</li>
+          <li>循环（for/while）让计算机替你重复；写循环前先想清楚“什么时候停”，避免死循环。</li>
+          <li>函数是把一组步骤打包起个名字，写一次、处处能用，是把大问题拆成小问题的关键。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="summary-module3.html">← 上一章：模块三小结</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c2-python-intro.html">下一章：第 2 章：Python 入门 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 6 章：函数、模块与面向对象 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 6 章：函数、模块与面向对象</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p>前面几章我们学会了写小程序：<a href="m4c2-python-intro.html">第 2 章</a>的密码检查、<a href="m4c3-data-structures.html">第 3 章</a>的登录失败计数、<a href="m4c4-algorithms.html">第 4 章</a>的搜索和递归。程序一短，几十行全挤在一个文件里没问题；程序一长到几百行，问题就来了：找一段逻辑要翻半天，改一个地方怕牵连别处，两个人没法分工。这一章讲代码的组织术，分三层：函数怎么拆才干净、多个文件怎么用模块拼起来、什么时候该用类与对象把数据和操作绑在一起。目标不是让你写出“企业级架构”，而是让你的工具从“能跑”变成“好改、好测、能长大”。</p>
+      <h2>函数拆分：一个函数只做一件事</h2>
+      <p><a href="m4c1-what-is-programming.html">第 1 章</a>说过，函数是打包好的步骤。现在要加一条拆分原则：一个函数只做一件事，并且把这件事做到能用一句话说清楚。如果一个函数的名字要写成“检查密码并记录日志还要发邮件”，它其实是三个函数拼在一起——拆开，分别叫“检查密码”“记录日志”“发送提醒”，主流程只负责把它们按顺序叫一遍。</p>
+      <p>拿<a href="m4c2-python-intro.html">第 2 章</a>的密码检查工具做例子。它当时是平铺直叙的一段代码，现在拆成函数：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">def check_length(password):
+    """长度够 8 位吗？"""
+    return len(password) &gt;= 8
+
+def has_mixed_chars(password):
+    """同时有大写字母和数字吗？"""
+    has_upper = any(ch.isupper() for ch in password)
+    has_digit = any(ch.isdigit() for ch in password)
+    return has_upper and has_digit
+
+def check_password(password):
+    """汇总检查，返回一句结论。"""
+    if not check_length(password):
+        return "太短了！长度不到 8 位。"
+    if not has_mixed_chars(password):
+        return "建议加上大写字母和数字。"
+    return "这个测试密码看起来不错。"</pre>
+      <p>拆开之后的好处立刻显现：每个函数都能单独测试——给 <code>check_length("abc")</code> 传个短密码，看它是不是返回 False，不用跑完整程序；<code>check_password</code> 只负责“按顺序问三个小问题、汇总答案”，逻辑一目了然；以后想加一条新规则（比如“不能是常见弱密码”），只要再写一个小函数、在汇总处多问一句，主流程不用动。函数之间通过参数传数据、通过返回值给结果，不互相偷看对方的变量——这叫“低耦合”，是代码好改的根本。</p>
+      <p>还有两个实用习惯：第一，函数名用动词开头，一看就知道它干什么：<code>check_password</code>（检查密码）、<code>read_log</code>（读日志）、<code>save_report</code>（保存报告）。第二，写一句文档字符串（函数下面那行三引号的说明），说明这个函数是干什么的——三个月后回来，文档字符串就是你和这段代码之间的备忘录。</p>
+      <h2>模块：把代码分文件装</h2>
+      <p>函数是把步骤打包，模块是把函数打包：一个 <code>.py</code> 文件就是一个模块，别的程序可以用 <code>import</code> 把它引进来，直接用里面的函数，不用复制粘贴。假设你把密码检查的函数放进 <code>password_tools.py</code>，另一个程序想用它，只需要一行：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">import password_tools
+
+result = password_tools.check_password("Abc12345")
+print(result)</pre>
+      <p>模块的好处是复用和分工：写一次，到处用；一个人写密码检查模块，另一个人写日志读取模块，最后拼起来就是一个完整的工具。Python 自带了大量标准模块，都是前人写好的现成零件：<code>os</code> 管文件和目录，<code>re</code> 是<a href="m4c8-regex.html">第 8 章</a>要讲的正则表达式，<code>time</code> 管时间，<code>random</code> 能生成随机数，<code>hashlib</code> 能算哈希值——<a href="m4c5-data-structures-advanced.html">上一章</a>讲哈希表时提过的密码哈希，用的就是它。<code>import</code> 的就是这些零件的入口。</p>
+      <p>模块还有一条重要规矩：一个模块应该只管一类事。密码相关的函数放 <code>password_tools.py</code>，日志相关的放 <code>log_tools.py</code>，别把什么都塞进一个文件。文件一多，找东西靠的是文件名——文件名起得清楚，就是最好的目录。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="模块化组织结构图">
+          <rect x="180" y="10" width="200" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="15" fill="#1a1a2e">主程序 main.py</text>
+          <line x1="230" y1="50" x2="120" y2="80" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="50" x2="280" y2="80" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="330" y1="50" x2="440" y2="80" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="20" y="80" width="200" height="60" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="120" y="105" text-anchor="middle" font-size="14" fill="#1a1a2e">password_tools.py</text>
+          <text x="120" y="126" text-anchor="middle" font-size="13" fill="#666">密码检查函数</text>
+          <rect x="180" y="80" width="200" height="60" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="105" text-anchor="middle" font-size="14" fill="#1a1a2e">log_tools.py</text>
+          <text x="280" y="126" text-anchor="middle" font-size="13" fill="#666">日志读取函数</text>
+          <rect x="340" y="80" width="200" height="60" rx="8" fill="#fdf2f8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="440" y="105" text-anchor="middle" font-size="14" fill="#1a1a2e">report_tools.py</text>
+          <text x="440" y="126" text-anchor="middle" font-size="13" fill="#666">报告生成函数</text>
+          <text x="280" y="175" text-anchor="middle" font-size="13" fill="#666">主程序只负责编排：读日志 → 检查 → 出报告</text>
+          <text x="280" y="200" text-anchor="middle" font-size="13" fill="#666">每个模块只管一类事，改一处不牵连别处</text>
+        </svg>
+        <figcaption>图：模块化——主程序编排流程，三个模块各管一类事</figcaption>
+      </figure>
+      <h2>类与对象：把数据和操作绑在一起</h2>
+      <p>函数加模块能解决大部分组织问题，但有一种情况它们不够用：当一堆数据和一堆操作天生属于同一个东西时。比如一次端口扫描的结果：它有 IP、端口、状态、扫描时间这些数据，还有“是不是开放”“写成一行报告”这些操作。用字典存数据、用一堆散落的函数做操作，数据和操作是分开的，传来传去容易对不上。类（class）就是把它们绑在一起的办法：类是“设计图”，对象是按设计图造出来的“实物”。</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">class ScanResult:
+    """一次端口扫描的结果。"""
+    def __init__(self, ip, port, status):
+        self.ip = ip            # 数据：目标 IP
+        self.port = port        # 数据：端口号
+        self.status = status    # 数据：open / closed
+
+    def is_open(self):
+        """操作：这个端口开着吗？"""
+        return self.status == "open"
+
+    def summary(self):
+        """操作：写成一行报告。"""
+        return f"{self.ip}:{self.port} 是 {self.status} 的"</pre>
+      <p>用的时候这样：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">result = ScanResult("10.0.0.5", 22, "open")
+print(result.is_open())   # True
+print(result.summary())   # 10.0.0.5:22 是 open 的</pre>
+      <p><code>__init__</code> 是“出生时执行的函数”，负责把数据装进对象；<code>self</code> 就是对象自己，函数里写 <code>self.ip</code> 意思是“这个对象自己的 IP”。对象的好处是数据和操作长在一起：拿到一个 <code>ScanResult</code>，你就知道它能 <code>is_open()</code>、能 <code>summary()</code>，不用去别的文件里找对应的函数。扫描结果一多，就得到一个 <code>ScanResult</code> 的列表，每个都能自己回答问题——这就是<a href="m4c3-data-structures.html">第 3 章</a>“列表里装字典”的升级版：列表里装对象。</p>
+      <h2>继承与组合：够用就好</h2>
+      <p>面向对象有两个常被提起的概念，这里只讲够用的部分。继承是“在现成类的基础上加东西”：比如有了一个通用的 <code>ScanResult</code>，想加一种“带服务名的扫描结果”，不用重写一遍，写一个继承它的新类，只加“服务名”这个字段和查服务名的方法。组合是“一个对象里装着另一个对象”：比如一次完整的扫描任务里装着多个 <code>ScanResult</code>，任务对象负责编排，结果对象负责每一条记录。</p>
+      <p>初学阶段的建议是：优先用组合，谨慎用继承。继承用多了，类和类之间的关系会像毛线团一样缠住，改一个父类、所有子类都受影响；组合是“拼积木”，换一块积木不影响别的。等你写的工具真的长到需要继承的时候，再回头学也不迟。现阶段记住：函数拆分 + 模块分文件 + 必要的类，能解决 90% 的组织问题。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我接手过一个同事留下的日志分析脚本：六百行全挤在一个文件里，没有函数、没有模块，变量名是 a、b、c——要加一个“按小时统计”的功能，我花了两天才敢动手，因为不知道改一行会炸掉哪里。后来我把它拆成三个模块（读日志、分析、写报告），每个分析步骤一个函数，一次扫描结果一个对象，重写只花了一天，之后加新功能都是半小时的事。现场的经验是：代码不是写给计算机看的，是写给三个月后的自己和接手的同事看的。函数名要像人话、模块名要像目录、类要像它描述的东西。还有一条：别为了用类而用类——三个函数能解决的事，就别造一个类；类是用来管“数据 + 操作长在一起”的东西的，不是用来显得高级的。</div>
+      <h2>动手做</h2>
+      <p>1. 把<a href="m4c2-python-intro.html">第 2 章</a>的 password_check.py 拆成函数版：写 <code>check_length</code>、<code>has_mixed_chars</code>、<code>check_password</code> 三个函数，主流程只负责 <code>input</code> 和 <code>print</code> 结果。跑一遍验证功能和原来一样。<br>2. 把拆好的函数存成 <code>password_tools.py</code>，再新建一个 <code>main.py</code>，用 <code>import password_tools</code> 调用它。注意两个文件要放在同一个文件夹里才能互相找到。<br>3. 写一个 <code>ScanResult</code> 类（照着本章的代码），创建三个对象（自己编三个假 IP 和端口），放进一个列表，循环打印每个对象的 <code>summary()</code>，再数一数其中有几个是开放的（用 <code>is_open()</code> 判断）。<br>4. 给 <code>ScanResult</code> 加一个方法 <code>service_name()</code>：用<a href="m4c3-data-structures.html">第 3 章</a>的端口服务字典，返回这个端口对应的服务名，查不到返回“未知服务”。体会“数据（端口）和操作（查服务名）长在同一个对象里”是什么感觉。</p>
+      <h2>避坑</h2>
+      <p>别写“什么都干”的大函数：一个函数超过一屏还说不清自己是干什么的，就该拆了；别在函数里偷偷改函数外的变量：数据靠参数进、靠返回值出，否则出了错根本找不到是谁改的；别把所有代码塞进一个文件：按“管什么事”分模块，文件名就是目录；别忘了 <code>self</code>：类的方法里第一个参数永远是 <code>self</code>，少了它 Python 会报错；别为了用类而用类：没有“数据 + 操作长在一起”的需求时，函数加模块就够了；别在 <code>import</code> 时写错文件名：模块名就是文件名去掉 <code>.py</code>，大小写也要一致。</p>
+      <p>代码会组织了，下一步是让它和真实世界打交道：读文件、写文件、遇到错误时别直接崩溃。<a href="m4c7-files-exceptions.html">下一章：文件操作与异常处理</a>，我们拿自己虚拟机里的日志文件练手。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>一个函数只做一件事，名字用动词开头；数据靠参数进、靠返回值出，函数之间不互相偷看变量。</li>
+          <li>一个 <code>.py</code> 文件就是一个模块，<code>import</code> 可以复用别人的函数；模块按“管什么事”分文件，文件名就是目录。</li>
+          <li>类是设计图，对象是按图造出来的实物；类把数据和操作绑在一起，一次扫描结果就该是一个对象。</li>
+          <li><code>__init__</code> 在对象出生时执行，<code>self</code> 就是对象自己；方法里第一个参数永远是 <code>self</code>。</li>
+          <li>优先用组合（拼积木），谨慎用继承；没有“数据 + 操作长在一起”的需求时，函数加模块就够了。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c5-data-structures-advanced.html">← 上一章：第 5 章：数据结构进阶</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c7-files-exceptions.html">下一章：第 7 章：文件操作与异常处理 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

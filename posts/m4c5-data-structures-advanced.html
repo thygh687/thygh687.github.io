@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 5 章：数据结构进阶 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 5 章：数据结构进阶</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p><a href="m4c3-data-structures.html">第 3 章</a>的列表、字典、集合、元组能应付大部分日常需求，但有些场景它们并不顺手：函数调用一层套一层，返回时要按相反的顺序回去；扫描任务排着队，一个做完再做下一个；文件目录一层套一层；查一个 IP 在不在几百万条的黑名单里，要快到毫秒级；网络里几十台设备互相连通，要算出攻击能从哪走到哪。这些场景各有一种专门的数据结构：栈、队列、链表、树、哈希表、图。这一章每种结构给一个生活比喻、一个 Python 写法、一个安全里的真用处。目标不是让你立刻全背下来，而是以后遇到这些场景时，能认出来“哦，这里该用那个结构”。</p>
+      <h2>栈：后进先出的一摞盘子</h2>
+      <p>栈（stack）像食堂里摞起来的一摞盘子：只能从最上面拿，也只能往最上面放。最后放上去的盘子，最先被拿走——这叫“后进先出”（LIFO，Last In First Out）。Python 里用列表就能模拟栈：<code>append</code> 是放上去（压栈），<code>pop</code> 是拿走最上面那个（出栈）。</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">stack = []
+stack.append("A")   # 放 A
+stack.append("B")   # 放 B
+stack.append("C")   # 放 C
+print(stack.pop())  # C：最后放的，最先拿走
+print(stack.pop())  # B</pre>
+      <p>栈最经典的用处是函数调用。<a href="m4c4-algorithms.html">上一章</a>讲递归时提过“调用栈”：函数 A 调用函数 B，B 又调用 C——A、B、C 依次压进调用栈；C 执行完先返回，B 再返回，A 最后返回，顺序正好反过来。这就是为什么递归太深会“栈溢出”：盘子摞得太高，桌子放不下了。浏览器里的“后退”按钮也是栈：每访问一个新页面就压进去，点后退就弹出上一个。安全里分析恶意代码、解析嵌套的括号和标签，都离不开栈。</p>
+      <h2>队列：先来先到的排队</h2>
+      <p>队列（queue）和栈正好反过来：像排队买票，先来的人先办完走人——“先进先出”（FIFO，First In First Out）。新任务从队尾进来，老任务从队头出去。Python 里用 <code>collections</code> 模块的 <code>deque</code>（双端队列）最合适，列表的 <code>pop(0)</code> 也能做，但数据量大时会很慢（因为要把后面所有元素往前挪一位，是 O(n) 的操作）。</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">from collections import deque
+tasks = deque()
+tasks.append("扫描 10.0.0.5")   # 队尾进
+tasks.append("扫描 10.0.0.6")
+tasks.append("扫描 10.0.0.7")
+print(tasks.popleft())  # 扫描 10.0.0.5：队头先出</pre>
+      <p>队列在安全里是任务调度的标配：端口扫描器要扫一千个目标，不会同时全扫，而是把任务排进队列，一个个按顺序处理；日志收集器收到海量日志，先排队再慢慢处理，流量高峰时队列就是缓冲垫，避免程序被冲垮；打印任务、消息通知，背后也都是队列。记住这条对应关系：凡是“先来先处理、要排队、要缓冲”，就想到队列。</p>
+      <h2>链表：用绳子串起来的珠子</h2>
+      <p>链表（linked list）像一串用绳子穿起来的珠子：每颗珠子除了自己，还攥着一根指向下一颗珠子的绳子。想找到第 100 颗珠子，要从第 1 颗开始顺着绳子一颗一颗摸过去——查找慢；但想在中间插一颗新珠子，只要解开两根绳子重新系上就行——插入快。列表正好反过来：查找快（直接按下标定位），中间插入慢（后面的元素要全体挪位）。</p>
+      <p>Python 里日常很少亲手写链表，因为列表已经够用了；但理解链表很重要，因为它解释了“为什么有些操作快、有些操作慢”，而且它是理解树和图的基础——树和图，本质上就是“每颗珠子可以攥好几根绳子”的链表。操作系统里的进程队列、浏览器的历史记录，底层常常是链表的思想。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="栈队列链表对比图">
+          <defs>
+            <marker id="c5ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <text x="140" y="25" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">栈：后进先出</text>
+          <rect x="90" y="40" width="100" height="28" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="59" text-anchor="middle" font-size="13" fill="#1a1a2e">C（最后进）</text>
+          <rect x="90" y="72" width="100" height="28" rx="6" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="91" text-anchor="middle" font-size="13" fill="#1a1a2e">B</text>
+          <rect x="90" y="104" width="100" height="28" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="123" text-anchor="middle" font-size="13" fill="#1a1a2e">A（最先进）</text>
+          <text x="140" y="152" text-anchor="middle" font-size="13" fill="#666">先出 C，再出 B，最后出 A</text>
+          <text x="420" y="25" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">队列：先进先出</text>
+          <rect x="320" y="40" width="70" height="28" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="355" y="59" text-anchor="middle" font-size="13" fill="#1a1a2e">任务 1</text>
+          <rect x="395" y="40" width="70" height="28" rx="6" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="430" y="59" text-anchor="middle" font-size="13" fill="#1a1a2e">任务 2</text>
+          <rect x="470" y="40" width="70" height="28" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="505" y="59" text-anchor="middle" font-size="13" fill="#1a1a2e">任务 3</text>
+          <text x="420" y="95" text-anchor="middle" font-size="13" fill="#666">队头出：任务 1 先走</text>
+          <text x="420" y="115" text-anchor="middle" font-size="13" fill="#666">新任务从队尾进</text>
+          <text x="280" y="185" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">链表：珠子 + 绳子</text>
+          <circle cx="150" cy="215" r="20" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="150" y="220" text-anchor="middle" font-size="13" fill="#1a1a2e">A</text>
+          <line x1="170" y1="215" x2="250" y2="215" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c5ar)"/>
+          <circle cx="270" cy="215" r="20" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="270" y="220" text-anchor="middle" font-size="13" fill="#1a1a2e">B</text>
+          <line x1="290" y1="215" x2="370" y2="215" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c5ar)"/>
+          <circle cx="390" cy="215" r="20" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="390" y="220" text-anchor="middle" font-size="13" fill="#1a1a2e">C</text>
+          <text x="430" y="220" font-size="13" fill="#666">→ 下一个</text>
+        </svg>
+        <figcaption>图：栈是摞盘子（后进先出），队列是排队（先进先出），链表是珠子加绳子</figcaption>
+      </figure>
+      <h2>树：从一个根长出来的分叉</h2>
+      <p>树（tree）是最贴近生活的结构之一：一个根，下面分出几个枝，每根枝再分出更细的枝。文件目录就是一棵树：根目录下面是几个文件夹，每个文件夹下面又是文件和子文件夹。<a href="m2c18-filesystem-internals.html">模块二第 18 章</a>讲文件系统时，你已经见过这棵树的样子。</p>
+      <p>树的关键是“父子关系”：每个节点除了根，都有且只有一个父节点；每个节点可以有多个子节点。处理树最自然的办法就是<a href="m4c4-algorithms.html">上一章</a>的递归：处理一个文件夹 = 处理里面的文件 + 对每个子文件夹重复同样的事。安全里树的用处很多：目录遍历找可疑文件、决策树做分类判断（比如“这个登录行为可疑吗”）、域名系统（DNS）的层级结构本身就是一棵树——<a href="m3c7-dns-http-tls.html">模块三第 7 章</a>的 DNS 层级，根、顶级域、二级域，就是一棵倒着长的树。</p>
+      <h2>哈希表：给每个东西算一个抽屉号</h2>
+      <p>哈希表（hash table）是字典和集合背后的真正功臣，也是本章最值得花时间理解的结构。问题是这样的：字典按键取值为什么能做到 O(1)，不管里面有一百条还是一百万条？答案是哈希函数：它把键（比如一个 IP 字符串）算成一个数字，这个数字直接对应存放位置。找东西的时候不用翻，直接算一下就知道在哪个抽屉——所以快到和数据量无关。</p>
+      <p>哈希函数有两个要求：同一个输入永远算出同一个结果（否则东西就找不回来了），不同的输入尽量算出不同的结果。偶尔两个不同的键算出同一个抽屉号，叫“哈希冲突”，哈希表会用链表等方式在同一个抽屉里再挂一串，慢慢找——冲突多了速度会下降，但正常情况下很少发生。</p>
+      <p>安全里哈希表无处不在：查一个 IP 在不在几百万条的黑名单里（把黑名单放进集合，底层就是哈希表，一次定位）；存密码时不存明文、只存哈希值——<a href="lesson-11-passwords.html">第 11 课</a>和<a href="lesson-14-encryption.html">第 14 课</a>讲过，登录时把输入的密码再算一次哈希，比对哈希值是否一致；文件完整性校验也是同理：下载的文件算个哈希，和官方公布的哈希一比，就知道文件有没有被篡改。Python 的字典和集合就是哈希表的现成实现，你每天都在用它，只是现在知道了它为什么快。</p>
+      <h2>图：点与线织成的网</h2>
+      <p>图（graph）是结构里最自由的一种：一堆点（节点），点和点之间用线（边）连起来。没有“根”，没有“父子”，谁连谁都可以。网络拓扑就是图：每台设备是一个点，网线和无线连接是线；社交关系是图；攻击路径也是图。</p>
+      <p>安全里图的用武之地是“攻击路径分析”：攻击者攻陷了一台边缘电脑，能顺着网络连接走到哪些服务器？把网络画成图，从被攻陷的点出发，沿着边一步步扩散，能到达的点就是风险范围。画图的办法很简单：字典的键是每个点，值是它连着哪些点的列表——<code>{"电脑A": ["服务器B", "电脑C"], "服务器B": ["数据库D"]}</code>，这就是一张图的 Python 表示。图的算法（比如最短路径、连通性）是更深的内容，留到以后；现阶段记住“网络拓扑、攻击路径、依赖关系，都是图”就够了。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>有一次做内网安全评估，我画了一张网络拓扑图：几十台设备、几百条连接。图一画出来，问题立刻显眼了——有台测试服务器同时连着外网和核心数据库，等于给攻击者留了一条直通核心的捷径。文字版的资产清单看了三天没发现的问题，图上十秒就看出来了。这就是图结构的价值：它把“谁能走到谁”变成了看得见的东西。现场还有个教训：查黑名单千万别用列表循环，几百万条黑名单、每小时查几万次，列表写法能把服务器拖死，集合（哈希表）写法一秒搞定。数据结构选错，性能差的不是几倍，是几千倍——这也是<a href="m4c4-algorithms.html">上一章</a> Big-O 那一课在现场的真实版本。</div>
+      <h2>动手做</h2>
+      <p>1. 用列表模拟栈：写一个小程序，模拟浏览器的“后退”——每访问一个新页面（自己编三个假网址），就 <code>append</code> 进栈；点一次“后退”就 <code>pop</code> 一个并打印。连续后退四次会发生什么？体会栈空了再 <code>pop</code> 会报错。<br>2. 用 <code>deque</code> 写一个扫描任务队列：把 5 个假 IP 排进队列，循环 <code>popleft</code>，每次打印“正在扫描 X”。再试试把队列换成列表加 <code>pop(0)</code>，功能一样，但想一想数据量到一万时会有什么差别。<br>3. 在虚拟机里建一个三层假目录，用<a href="m4c4-algorithms.html">上一章</a>的递归思路写一个函数，打印出这棵目录树的结构（每深入一层前面多两个空格）。对照着看：目录树和“树”这个结构是不是一模一样。<br>4. 做一个迷你黑名单查询：把 1000 个假 IP 放进一个集合，再准备 10 个要查的 IP，用 <code>in</code> 判断在不在黑名单里并计时；再把同样 1000 个 IP 放进列表，同样查 10 次并计时。对比两次耗时，写下你的结论。</p>
+      <h2>避坑</h2>
+      <p>别用列表当队列：<code>pop(0)</code> 在大数据量下很慢，要排队就用 <code>deque</code>；别让递归无限深：递归每深入一层就压一次栈，目录套得太深会栈溢出，写递归前先确认层数可控；别把哈希当成加密：哈希是单向的、算出来就回不去，但它不是加密——同样的输入永远得到同样的哈希，所以弱密码的哈希值一查常用表就露馅，这也是<a href="lesson-11-passwords.html">第 11 课</a>要求密码加盐的原因；别在图里迷路：画攻击路径图时，先定好“点是什么、线是什么”，否则图越画越乱；别追求一次记住所有结构：先记住“栈后进先出、队列先进先出、树是分叉、图是网”这四句话，遇到具体场景再回来翻这一章。</p>
+      <p>六种结构讲完了，数据层面的工具箱基本齐了。但代码不只是数据，还有“代码本身怎么组织”：函数写多了放哪、多个文件怎么互相调用、什么时候该用类——这些是<a href="m4c6-functions-oop.html">下一章：函数、模块与面向对象</a>的事。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>栈是后进先出（摞盘子），函数调用栈、浏览器后退都靠它；Python 里用列表的 <code>append/pop</code> 就能模拟。</li>
+          <li>队列是先进先出（排队），扫描任务调度、日志缓冲都靠它；大数据量下用 <code>deque</code>，别用列表的 <code>pop(0)</code>。</li>
+          <li>链表是珠子加绳子：插入快、查找慢，是理解树和图的基础；Python 日常多用列表，但要懂它的取舍。</li>
+          <li>树是带父子关系的分叉结构，文件目录、DNS 层级都是树，处理树最自然的办法是递归。</li>
+          <li>哈希表靠哈希函数把键算成存放位置，所以字典和集合的查找是 O(1)；黑名单查询、密码哈希、文件校验都靠它。</li>
+          <li>图是点与线织成的网，网络拓扑和攻击路径分析都是图；用“字典的值是列表”就能表示一张图。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c4-algorithms.html">← 上一章：第 4 章：算法与复杂度</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c6-functions-oop.html">下一章：第 6 章：函数、模块与面向对象 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块五第 13 章：常见密码学错误 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块五第 13 章：常见密码学错误</h1>
+      <div class="meta"><span class="tag">数据库与密码学</span>2026-11-25 · 模块五</div>
+      <p>密码学里有一句行话：<strong>不要自己发明加密算法</strong>。这句话不是吓唬人，是用几十年的翻车案例换来的。加密算法看着简单——把明文搅乱、再搅回来——但“搅得够乱、乱得没有规律、还没法从结果反推回去”，这三件事同时做到极难。业界标准的算法（AES、RSA、ChaCha20）都是全世界密码学家啃了十几年、经过无数人尝试攻击才活下来的。一个程序员自己发明的算法，通常活不过一个下午。这一章把最常见的六个密码学错误一个个讲清楚，每个都配一个真实翻车案例，帮你建立“看到这种写法就警觉”的直觉。</p>
+      <p>这一章是前面几章的“错题本”：<a href="m5c9-password-storage.html">第 9 章</a>讲了密码该怎么存，<a href="m5c10-pki-deep.html">第 10 章</a>讲了密钥该怎么管，<a href="m5c12-openssl-lab.html">第 12 章</a>练了 OpenSSL 的正确用法——这一章讲的是反面：那些错误每一条都对应着前面讲过的某一条正确做法。如果你发现自己手里的某个项目正好踩中了其中一条，别慌，先把影响范围弄清楚，再按前面章节的正确做法改。</p>
+      <h2>错误一：自创加密算法——“我发明的，没人能破”</h2>
+      <p>这是密码学里最经典、也最致命的错误。开发者觉得标准算法太慢、太复杂，或者想“加点自己的创意”，于是自己设计一套加密：比如把每个字节加 7、再异或一个固定数、再倒序。写的人觉得“别人不知道我的算法，就破不了”，这叫<strong>依赖隐蔽的安全（security by obscurity）</strong>，是密码学的大忌：算法一旦泄露（代码泄露、反编译、内鬼），整个系统立刻裸奔；即使不泄露，自创算法也几乎一定有数学上的弱点，只是写的人自己看不出来。</p>
+      <p><strong>真实案例：</strong>索尼 PlayStation 3 的 ECDSA 签名事故。索尼在签名时没有用随机数，而是每次用了同一个固定值。ECDSA 的数学决定了：两次签名用了同一个随机数，攻击者就能反推出私钥。2010 年，黑客组织 fail0verflow 公布了这个漏洞，PS3 的私钥就此泄露，任何人都能给 PS3 签名自制软件。索尼用的不是自创算法，但犯的是同一个根上的错：没有按算法要求的规范使用随机数。教训是：<strong>用标准算法，还要按标准用法用</strong>，参数、随机数、模式，一个都不能自作主张。</p>
+      <h2>错误二：ECB 模式——相同的明文，相同的密文</h2>
+      <p>分组加密（比如 AES）一次只能加密固定大小的一块数据（16 字节），长数据要一块一块加密，怎么处理这些块，就是<strong>分组模式</strong>。最简单的模式叫 <strong>ECB（电子密码本）</strong>：每一块独立加密，互不影响。它的致命问题是：<strong>相同的明文块，加密出来永远是相同的密文块</strong>。明文里的重复模式，会原样暴露在密文里。</p>
+      <p>最出名的演示就是“ECB 企鹅图”：把一张企鹅图片用 ECB 加密，加密后的图片虽然看不清细节，但企鹅的轮廓还清清楚楚——因为图片里大片相同的颜色块，加密后还是相同的密文块，轮廓就这么漏出来了。换成 CBC 或 GCM 模式，加密后的图片就是一团均匀的噪点，什么轮廓都没有。结论很简单：<strong>ECB 模式不要用</strong>，现代推荐用 <strong>GCM 模式</strong>（自带认证，能同时防偷看和防篡改），或者 CBC 加单独的完整性校验。<a href="m5c12-openssl-lab.html">第 12 章</a>练 <code>enc -aes-256-cbc</code> 时用的就是 CBC，比 ECB 强，但生产环境的正确选择是 GCM 这类带认证的模式。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 620 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ECB 与 CBC 模式对比示意图">
+          <text x="160" y="30" text-anchor="middle" font-size="15" fill="#1a1a2e">ECB：相同的块 → 相同的密文</text>
+          <rect x="40" y="45" width="70" height="50" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="75" y="75" text-anchor="middle" font-size="13" fill="#1a1a2e">明文 A</text>
+          <rect x="40" y="115" width="70" height="50" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="75" y="145" text-anchor="middle" font-size="13" fill="#1a1a2e">明文 A</text>
+          <rect x="40" y="185" width="70" height="50" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="75" y="215" text-anchor="middle" font-size="13" fill="#1a1a2e">明文 B</text>
+          <rect x="200" y="45" width="70" height="50" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+          <text x="235" y="75" text-anchor="middle" font-size="13" fill="#dc2626">密文 X</text>
+          <rect x="200" y="115" width="70" height="50" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+          <text x="235" y="145" text-anchor="middle" font-size="13" fill="#dc2626">密文 X</text>
+          <rect x="200" y="185" width="70" height="50" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+          <text x="235" y="215" text-anchor="middle" font-size="13" fill="#dc2626">密文 Y</text>
+          <text x="155" y="270" text-anchor="middle" font-size="13" fill="#dc2626">重复模式原样暴露 ✗</text>
+          <text x="470" y="30" text-anchor="middle" font-size="15" fill="#1a1a2e">CBC / GCM：每块结果都不同</text>
+          <rect x="350" y="45" width="70" height="50" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="385" y="75" text-anchor="middle" font-size="13" fill="#1a1a2e">明文 A</text>
+          <rect x="350" y="115" width="70" height="50" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="385" y="145" text-anchor="middle" font-size="13" fill="#1a1a2e">明文 A</text>
+          <rect x="350" y="185" width="70" height="50" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="385" y="215" text-anchor="middle" font-size="13" fill="#1a1a2e">明文 B</text>
+          <rect x="510" y="45" width="70" height="50" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+          <text x="545" y="75" text-anchor="middle" font-size="13" fill="#16a34a">密文 P</text>
+          <rect x="510" y="115" width="70" height="50" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+          <text x="545" y="145" text-anchor="middle" font-size="13" fill="#16a34a">密文 Q</text>
+          <rect x="510" y="185" width="70" height="50" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+          <text x="545" y="215" text-anchor="middle" font-size="13" fill="#16a34a">密文 R</text>
+          <text x="465" y="270" text-anchor="middle" font-size="13" fill="#16a34a">重复模式被打散 ✓</text>
+          <text x="310" y="310" text-anchor="middle" font-size="12" fill="#666">ECB 企鹅图：用 ECB 加密图片，轮廓依然可见；CBC/GCM 则是一团噪点</text>
+        </svg>
+        <figcaption>图：ECB 让重复的明文块产生重复的密文块，模式信息直接泄露；CBC/GCM 不会</figcaption>
+      </figure>
+      <h2>错误三：硬编码密钥——密钥写进代码，就等于公开</h2>
+      <p>把密钥、API 密钥、数据库密码直接写在源代码里，是最常见的密钥泄露方式。代码会被提交进 Git、会被打包发给别人、会被反编译——密钥一旦进了代码，就等于公开了。更糟的是，密钥写死之后，轮换也变得极难：改一次密钥要改代码、重新发布，团队往往就“先凑合用着”，一凑合就是好几年。</p>
+      <p><strong>真实案例：</strong>这类事故多到数不过来：Uber 2016 年泄露 5700 万用户数据，起因之一就是 AWS 密钥被硬编码在代码里、又被提交到了私有的 GitHub 仓库，攻击者拿到仓库访问权就拿到了密钥；无数小公司的数据库密码、云存储密钥，都是在公开的 GitHub 代码库里被扫描工具批量找到的。正确做法是：密钥放专门的密钥管理服务（KMS、Vault）或环境变量里，代码里只读配置、不写密钥；代码仓库要开密钥扫描，提交时自动拦截；一旦发现密钥进过代码，立刻当作泄露处理——吊销、轮换（<a href="m5c10-pki-deep.html">第 10 章</a>的密钥轮换流程在这里同样适用）。</p>
+      <h2>错误四：弱随机数——随机得不够随机</h2>
+      <p>密码学里几乎所有东西都依赖随机数：密钥、盐、初始化向量（IV）、TLS 握手里的随机数、会话令牌。随机数必须<strong>不可预测</strong>：攻击者即使知道你之前生成的所有随机数，也猜不出下一个。很多编程语言自带的 <code>random</code> / <code>Math.random()</code> 是伪随机数，种子可预测、序列可推算，是给游戏和抽奖用的，不是给密码学用的。密码学要用操作系统提供的密码学安全随机数：Linux 的 <code>/dev/urandom</code>、Python 的 <code>secrets</code> 模块、Java 的 <code>SecureRandom</code>。</p>
+      <p><strong>真实案例：</strong>2008 年 Debian OpenSSL 漏洞：有人为了消除一个静态分析警告，删掉了 OpenSSL 生成随机数时用的一行关键代码，结果随机数的熵只剩 15 位——所有用这版 OpenSSL 生成的密钥，只有 32768 种可能，攻击者几天就能全部枚举出来。两年里生成的 SSH、TLS 密钥全部要作废重生成。另一个案例是索尼 PS3（错误一里讲过）：签名随机数固定不变，直接泄露私钥。记住：<strong>随机数是密码学的地基，地基一垮，整栋楼都塌</strong>。写代码时，凡是和密钥、令牌、盐有关的地方，先问一句“这是密码学安全的随机数吗”。</p>
+      <h2>错误五：明文存密码与证书不验证</h2>
+      <p>这两个错误前面都讲过，这里放在一起是因为它们犯错的心理一模一样：图省事。<strong>明文存密码</strong>（<a href="m5c9-password-storage.html">第 9 章</a>）：数据库泄露就等于密码泄露，正确做法是加盐慢哈希（bcrypt/Argon2id），按 NIST SP 800-63B Rev.4 的标准来。<strong>证书不验证</strong>：客户端代码里为了省事，写上“忽略证书错误”“信任所有证书”，常见于测试代码被原样带进生产环境——这等于亲手把 <a href="m5c8-tls-handshake.html">第 8 章</a>讲的 TLS 握手里最关键的身份验证关掉了，中间人可以拿任何一张证书冒充服务器，而你的程序会照单全收。</p>
+      <p><strong>真实案例：</strong>证书不验证的翻车，最典型的是移动 App：不少 App 为了开发方便关闭了证书验证就忘了打开，用户在公共 Wi-Fi 下被中间人攻击，登录凭证、聊天记录全被偷走。安全审计里，证书验证被关闭是高危项里的常客。规则很简单：<strong>测试代码里的“跳过验证”绝不能进生产</strong>；测试环境要用自己搭的 CA 和测试证书来验（<a href="m5c12-openssl-lab.html">第 12 章</a>的自签名证书就是干这个的），而不是关掉验证。</p>
+      <h2>错误六：只加密不认证——能防偷看，防不了篡改</h2>
+      <p>很多人以为“加密了就安全了”，其实加密只解决“防偷看”，不解决“防篡改”。攻击者改不了明文的意思，但可以改密文：CBC 模式下，改密文里的某几个字节，解密出来的明文对应位置就会按可预测的方式变化——攻击者不需要知道密钥，也能把密文里的“金额 100”改成“金额 900”。正确做法是<strong>加密 + 认证一起上</strong>：用带认证的加密模式（AEAD，比如 AES-GCM），或者加密后再对密文做一次消息认证码（Encrypt-then-MAC）。TLS 1.3 里用的就是带认证的加密，这也是它删掉老模式的原因之一。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>审计代码时，我看密码学部分只看六个地方：算法是不是标准的（AES、RSA、ChaCha20）、模式是不是 GCM 这类带认证的、密钥从哪来（是不是硬编码）、随机数是不是密码学安全的、密码存的是不是慢哈希、证书验不验证。六个地方十分钟就能看完，却能发现九成的问题。有一次，我在一个项目里发现密钥就写在配置文件里，文件名还叫 config-prod.json，提交记录里躺了两年——我的处理办法是：先别声张，立刻轮换密钥、吊销旧的，再去修代码、加扫描，最后写复盘。顺序很重要：先止血（轮换），再治病（修代码），最后写病历（复盘）。还有一条：看到“自己写的加密函数”先别急着嘲笑，先问一句“它为什么要自己写”——有时候是因为标准库满足不了特殊需求，那就要请密码学家评审，而不是直接上线。</div>
+      <h2>动手做</h2>
+      <p>只在虚拟机里做，用自己生成的文件。1. 复现 ECB 的问题：在虚拟机里用 Python 的 <code>cryptography</code> 库，分别用 ECB 和 CBC 加密一段有重复内容的明文（比如 <code>AAAAAAAAAAAAAAAA</code> 重复多次），对比密文里有没有重复的块；再找一张纯色小图片，用两种模式加密，对比结果——只在自己的文件上做。2. 检查弱随机数：写两段代码，一段用 <code>random</code> 生成“令牌”，一段用 <code>secrets</code> 生成，对比文档说明，写下为什么前者不能用在安全场景。3. 扫一扫你自己的实验目录：用 <code>grep -r</code> 搜一搜有没有把密码或密钥写进代码或配置文件里（实验用的也不行），练习“发现即轮换”的流程。4. 找一段开源项目的示例代码（只读不改），按本章的六个检查点过一遍，列出它做得对的地方和可能的问题。5. 把本章六个错误写成你自己的检查清单，存进笔记，下次看代码时照着查。</p>
+      <h2>避坑</h2>
+      <p>别自己发明加密算法——用 AES、RSA、ChaCha20 这类标准算法，并且按标准用法用；别用 ECB 模式——用 GCM 这类带认证的模式；别把密钥、密码、API 密钥写进代码和配置文件——放密钥管理服务或环境变量，进了代码就当泄露处理；别用 <code>random</code> / <code>Math.random()</code> 生成密钥、令牌、盐——用密码学安全随机数（Python 的 <code>secrets</code>）；别存明文密码——用 bcrypt/Argon2id 加盐慢哈希；别在生产代码里关掉证书验证——测试用自签名证书和自建 CA，不要跳过验证；别只加密不认证——加密要和认证一起上，用 AEAD 模式。</p>
+      <p>密码学的坑认全了，回到数据库本身：表到底该怎么设计才合理？一张大宽表拆成几张小表，什么时候该拆、什么时候不该拆？<a href="m5c14-normalization.html">下一章</a>讲范式 1NF 到 BCNF，每一级都配一个例子，再讲反范式什么时候反而合理。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>不要自创加密算法：标准算法是全世界密码学家十几年审查的结果，自创算法几乎一定有你看不出来的弱点；用标准算法也要按标准用法用，随机数不能固定。</li>
+          <li>别用 ECB 模式：相同的明文块会产生相同的密文块，重复模式直接泄露；用 GCM 这类带认证的加密模式。</li>
+          <li>别硬编码密钥：密钥进了代码就等于公开，要放密钥管理服务或环境变量，发现泄露立刻轮换。</li>
+          <li>别用弱随机数：密钥、盐、令牌、IV 必须用密码学安全随机数（Python 的 <code>secrets</code>），不要用 <code>random</code>。</li>
+          <li>别存明文密码、别关掉证书验证、别只加密不认证：密码用 bcrypt/Argon2id，证书验证不能跳过，加密要和认证一起上。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m5c12-openssl-lab.html">← 上一章：第 12 章：动手：用 OpenSSL 玩一遍</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m5c14-normalization.html">下一章：第 14 章：数据库设计深入：范式 1NF–BCNF →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块六第 10 章：访问控制与特权管理：RBAC、ABAC 与 PAM · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块六第 10 章：访问控制与特权管理：RBAC、ABAC 与 PAM</h1>
+      <div class="meta"><span class="tag">网络安全基础</span>2026-11-25 · 模块六</div>
+      <p><a href="m6c9-identity-sso-mfa.html">上一章</a>讲了“你是谁”怎么证明，这一章讲证明之后的问题：“你能干什么”。公司里，财务能看工资表，普通员工不能；运维能重启服务器，实习生不能；你自己的电脑上，管理员账号能装软件，普通账号不能。这些“谁能干什么”的规则，就是访问控制。而其中最危险的一小撮账号——能管所有人、能删数据库、能关防火墙的特权账号——要单独用一套更严的办法管起来，这就是特权访问管理（PAM）。</p>
+      <h2>访问控制的三要素：主体、客体、权限</h2>
+      <p>所有访问控制模型，说的都是同一组关系：<strong>主体</strong>（想干事的人或程序，比如用户小李、一个备份服务）、<strong>客体</strong>（被访问的东西，比如一份工资表、一台服务器）、<strong>权限</strong>（允许干什么，比如读、写、删、执行）。系统每次收到请求，都在心里查一张表：“这个主体，对这个客体，有没有这个权限？”有就放行，没有就拒绝并记一笔日志。这张“表”在现实中有很多种形态：文件系统的权限位、数据库的授权表、云平台的策略文件，本质上都是这张表。</p>
+      <p>访问控制还有三个执行位置要分清：<strong>认证时</strong>决定你是谁，<strong>授权时</strong>决定你能干什么，<strong>审计时</strong>记录你实际干了什么。只管放行、不记日志的访问控制等于没装监控——出事之后没人知道是谁干的。所以“控制”和“记录”必须成对出现。</p>
+      <h2>自主访问控制 DAC 与强制访问控制 MAC</h2>
+      <p>最古老的两种模型，先看对比。<strong>自主访问控制（DAC）</strong>的意思是：资源的“主人”自己决定谁能访问。你在 Windows 上右键一个文件夹 → 属性 → 安全，给同事加上“读取”权限，就是 DAC——文件的主人是你，你说了算。优点是灵活、直观，缺点是主人可能犯错：你随手把工资表共享成“所有人可读”，系统不会拦你。<a href="lesson-09-linux-permissions.html">第 9 课</a>讲过的 Linux 文件权限（rwx、属主、属组）就是典型的 DAC。</p>
+      <p><strong>强制访问控制（MAC）</strong>正好相反：权限不是主人说了算，而是系统按一套全局的、强制的安全策略说了算。军方和政府系统常用：文件标着“机密”，用户标着“可接触机密”，系统只按标签匹配放行——哪怕文件的主人想分享给没标签的人，系统也不允许。优点是规则统一、不怕个人犯错，缺点是死板、管理成本高。现实中大部分公司和个人电脑用 DAC，涉密系统用 MAC，两者也可以叠加：先过 MAC 的全局关卡，再过 DAC 的主人授权。</p>
+      <h2>RBAC：按角色给权限</h2>
+      <p>公司人一多，DAC 就管不过来了：每来一个新人，管理员要一个个文件去加权限；每换一个岗位，又要一个个收回。这时用的就是 <strong>RBAC（基于角色的访问控制）</strong>：中间加一层“角色”，人先归到角色，角色再挂权限。人事变动时，只改“人属于哪个角色”，权限自动跟着走。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="RBAC 模型示意图">
+          <defs>
+            <marker id="c10a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="30" width="100" height="36" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="70" y="53" text-anchor="middle" font-size="14" fill="#1a1a2e">小李</text>
+          <rect x="20" y="90" width="100" height="36" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="70" y="113" text-anchor="middle" font-size="14" fill="#1a1a2e">小王</text>
+          <rect x="20" y="150" width="100" height="36" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="70" y="173" text-anchor="middle" font-size="14" fill="#1a1a2e">小张</text>
+          <rect x="250" y="60" width="110" height="40" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="305" y="85" text-anchor="middle" font-size="14" fill="#1a1a2e">财务角色</text>
+          <rect x="250" y="140" width="110" height="40" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="305" y="165" text-anchor="middle" font-size="14" fill="#1a1a2e">运维角色</text>
+          <rect x="470" y="30" width="110" height="36" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="525" y="53" text-anchor="middle" font-size="14" fill="#1a1a2e">读工资表</text>
+          <rect x="470" y="90" width="110" height="36" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="525" y="113" text-anchor="middle" font-size="14" fill="#1a1a2e">改报销单</text>
+          <rect x="470" y="150" width="110" height="36" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="525" y="173" text-anchor="middle" font-size="14" fill="#1a1a2e">重启服务器</text>
+          <line x1="120" y1="48" x2="248" y2="76" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c10a)"/>
+          <line x1="120" y1="108" x2="248" y2="155" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c10a)"/>
+          <line x1="120" y1="168" x2="248" y2="160" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c10a)"/>
+          <line x1="360" y1="72" x2="468" y2="50" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c10a)"/>
+          <line x1="360" y1="85" x2="468" y2="105" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c10a)"/>
+          <line x1="360" y1="160" x2="468" y2="165" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c10a)"/>
+          <text x="300" y="225" text-anchor="middle" font-size="12" fill="#666">人 → 角色 → 权限：换岗只改左边的归属，不用动右边的权限</text>
+        </svg>
+        <figcaption>图：RBAC——小李属于财务角色，于是自动拥有读工资表、改报销单的权限</figcaption>
+      </figure>
+      <p>RBAC 有两个配套原则必须记住。<strong>最小权限原则</strong>：只给完成工作所必需的、最少的权限，多一个都不要。财务能读工资表，但没必要能删数据库；运维能重启服务器，但没必要能看工资表。<strong>职责分离</strong>：关键操作不能由一个人从头干到尾——比如“申请报销”和“审批报销”不能是同一个人，“写代码”和“把代码发布到生产环境”最好也不是同一个人。一个人能独自完成整条作恶链条，风险就失控了。</p>
+      <p>RBAC 的毛病是“角色膨胀”：公司业务一复杂，角色越加越多，最后出现“财务-华北-高级-临时”这种数不清的角色，管起来又乱了。这时人们会引入更细的模型，也就是下一节的 ABAC。</p>
+      <h2>ABAC：按属性算权限</h2>
+      <p><strong>ABAC（基于属性的访问控制）</strong>不查“你属于哪个角色”，而是现场算一道题：把<strong>你的属性</strong>（部门、职级、是否在试用期）、<strong>资源的属性</strong>（密级、所属项目）、<strong>环境的属性</strong>（现在几点、你在哪台设备上、在不在公司网络里）都放进规则里算，算通过了才放行。举个例子，规则可以写成：“只有财务部、职级 P6 以上的人，在工作时间、用公司电脑，才能下载标为‘机密’的报表”。</p>
+      <p>ABAC 比 RBAC 细得多，也灵活得多：同一份文件，同一个员工，上班时间在公司能看，半夜在家里用私人电脑就看不了——规则里加了时间和设备两个属性。但代价是规则写起来复杂、排错也难：一个人被拒绝访问时，管理员要一条条属性去对，才能找到是哪条规则拦住了他。现实中常见的做法是 RBAC 打底、ABAC 补细：先用角色划出大框，再用属性在关键资源上加条件。初学者记住这个分工就够了。</p>
+      <h2>PAM：特权账号要单独管</h2>
+      <p>再好的 RBAC 也挡不住一个问题：总有一小撮账号，权限大到可以绕过所有规则——域管理员、数据库管理员、云平台的 root 账号、网络设备的 admin。这些叫<strong>特权账号</strong>，它们一旦被盗，攻击者就不是“偷一份文件”，而是“接管整个系统”。针对它们的管理办法叫 <strong>PAM（特权访问管理）</strong>，核心是四件事：</p>
+      <p><strong>第一，管起来，别散着放。</strong>特权账号的密码统一收进一个保险库（Vault），人要用的时候去“借”，用完归还，密码由系统定期自动轮换。谁都不应该知道特权密码的明文、把它写在便签上、存在聊天记录里。<strong>第二，用的时候才给，用完就收回。</strong>这叫即时特权提升：平时大家都是普通账号，需要装软件、改配置时，临时申请几十分钟的管理员权限，到期自动收回。攻击者就算盗了一个普通账号，也拿不到常驻的特权。<strong>第三，中间隔一层跳板机。</strong>管理员不直接连服务器，先连一台专门的跳板机（Jump Server / 堡垒机），再由跳板机连目标服务器。所有操作都经过这一台机器，于是可以统一做身份验证、录屏、记日志——谁在几点对哪台服务器敲了什么命令，全有记录。<strong>第四，定期复核。</strong>每季度问一次：这些特权账号还有必要存在吗？这个人还做这份工作吗？离职员工的特权账号关掉了吗？很多真实事故的根子就在这里：人走了三年，账号还活着。</p>
+      <p>个人电脑上也有缩小版的 PAM：日常上网、看文档用普通账号，只在装软件、改系统设置时才提权输入管理员密码；Windows 的 UAC 弹窗问你“是否允许此应用对设备进行更改”，就是在执行这件事。别嫌它烦——它烦你的那一下，正是恶意软件最怕的那一下。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我见过代价最大的事故，起因都小得可笑。有一次，一台服务器的管理员密码三年没换过，还贴在机房的显示器边框上——外包人员拍了张照，等于拿走了整台服务器。另一次更典型：一位运维离职，账号没及时禁用，三个月后有人用那个账号登录，把备份删了——查日志才发现账号早就该关了。从那以后，我养成了一个习惯：每个季度做一次“特权账号点名”，像老师点名一样，一个一个问“这个账号是谁的、还在用吗、密码上次轮换是什么时候”，答不上来的就先禁用再问。还有一条现场铁律：特权操作必须能追溯到具体的人——共用一个 admin 账号登录，出事之后查日志只能看到“admin 干的”，查不到是谁，这等于没有审计。一个人一个账号，宁可多建几个，也别共用。</div>
+      <h2>动手做</h2>
+      <p>全部在你自己的电脑或虚拟机里做，只读检查为主，不要改别人的系统。<br>1. 在虚拟机里新建一个普通用户（不要给管理员权限），用它登录一次，试着装一个软件、改一次系统时间、打开 C 盘里别人的用户文件夹——把每一步“被拒绝”的提示记下来，这就是最小权限在你眼前工作的样子。<br>2. 打开你自己电脑的账号列表（Windows：设置 → 账户 → 其他用户；或在管理员终端跑 <code>net user</code>），数一数有几个管理员账号：有没有你不认识的？有没有某个软件装出来的、你从来没用过的管理员账号？只记下来，不要删。<br>3. 在虚拟机里打开本地安全策略或组策略编辑器（<code>secpol.msc</code> / <code>gpedit.msc</code>），找到“用户权限分配”，看一看“作为服务登录”“关闭系统”这些权限都给了谁——第一次看可能觉得眼花，只需要认出“ Administrators”和“Users”这两个组分别能干什么。<br>4. 给自己画一张迷你 RBAC 图：把你家里的三类人（你、家人、客人）当作角色，把三类东西（你的学习资料、家庭照片、路由器管理页面）当作资源，写出谁能读、谁能改、谁完全不能碰——写完对照最小权限原则检查一遍，有没有给多了的。</p>
+      <h2>避坑</h2>
+      <p>别让所有人都当管理员：日常账号就是普通权限，需要时再提权，这是成本最低的安全措施；别共用特权账号：一个 admin 账号五个人用，出事之后谁都查不出来，审计等于零；别把特权密码写在纸上、存在聊天记录或共享文档里：密码进保险库、定期轮换才是正经做法；别忘了收回权限：岗位调了、项目结了、人员离职了，权限要跟着收回——权限只增不减，最后人人都是“超级用户”，这叫权限蠕变；别只管放行不管记录：没有日志的访问控制，出事之后只能靠猜；别把跳板机本身变成软柿子：跳板机是所有特权操作的必经之路，它自己必须配最强的认证和最严的补丁。</p>
+      <p>权限管的是“能干什么”，但“有多大风险、值不值得管”，要靠<a href="m6c11-risk-management.html">下一章：风险管理</a>来算账。回头看<a href="m6c9-identity-sso-mfa.html">上一章</a>的认证：认证解决“你是谁”，这一章解决“你能干什么”，两件事合起来才是完整的身份与访问管理。更早的伏笔在<a href="lesson-09-linux-permissions.html">第 9 课</a>的 Linux 权限和<a href="lesson-15-firewall.html">第 15 课</a>的防火墙：文件权限是 DAC 在你电脑上的样子，防火墙规则是“谁能连谁”的网络版访问控制，道理是同一套。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>访问控制回答“谁对什么有什么权限”：主体、客体、权限三要素，控制和审计必须成对出现。</li>
+          <li>DAC 由资源主人说了算，灵活但怕主人犯错；MAC 由系统按全局策略说了算，严格但死板。</li>
+          <li>RBAC 用“角色”做中间层，人事变动只改归属；最小权限和职责分离是两条配套原则。</li>
+          <li>ABAC 现场按属性算权限（人、资源、环境），比 RBAC 更细，现实中常和 RBAC 叠加使用。</li>
+          <li>PAM 单独管特权账号：密码进保险库、定期轮换、用时才给、用完收回、走跳板机、定期复核。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m6c9-identity-sso-mfa.html">← 上一章：第 9 章：身份认证体系：SSO、联合身份与 MFA</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m6c11-risk-management.html">下一章：第 11 章：风险管理：从评估到处置 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

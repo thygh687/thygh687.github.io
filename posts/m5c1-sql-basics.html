@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块五第 1 章：SQL 基础 —— 增删改查 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块五第 1 章：SQL 基础 —— 增删改查</h1>
+      <div class="meta"><span class="tag">数据库与密码学</span>2026-11-25 · 模块五</div>
+      <p>学安全的人迟早要跟数据库打交道：网站的用户账号存在数据库里，日志存在数据库里，漏洞清单也存在数据库里。攻击者想偷数据，瞄准的常常就是数据库；防御者想查“谁在半夜三点登录了”，也要去数据库里问。问数据库用的语言叫 SQL（Structured Query Language，结构化查询语言）。这一章只讲最核心的四件事——增、删、改、查。会了这四件，你就能跟任何一个数据库对话了。</p>
+      <p>先建立一个直觉：数据库不是什么神秘的东西。你在<a href="lesson-02-files-processes.html">第 2 课</a>里见过文件和文件夹——数据散在一个个文件里，找起来要自己翻。而数据库是把数据放进一张张整齐的表里，再给一个“管理员”（数据库软件）帮你找、帮你改、帮你保证不出错。SQL 就是你跟这位管理员说话的方式。</p>
+      <h2>表、行、列：数据的样子</h2>
+      <p>一张表（table）就像一张电子表格。每一列（column）是一种属性，有固定的名字和类型；每一行（row）是一条记录，代表一个真实的东西。举个例子，一张“漏洞清单”表可以长这样：</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 600 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="一张表的结构：列是属性，行是记录">
+          <rect x="30" y="15" width="540" height="36" rx="6" fill="#1a1a2e"/>
+          <text x="90" y="39" text-anchor="middle" font-size="14" fill="#fff">id</text>
+          <text x="210" y="39" text-anchor="middle" font-size="14" fill="#fff">名称</text>
+          <text x="350" y="39" text-anchor="middle" font-size="14" fill="#fff">严重程度</text>
+          <text x="480" y="39" text-anchor="middle" font-size="14" fill="#fff">状态</text>
+          <rect x="30" y="51" width="540" height="36" fill="#eff6ff" stroke="#dbeafe"/>
+          <text x="90" y="75" text-anchor="middle" font-size="14" fill="#1a1a2e">1</text>
+          <text x="210" y="75" text-anchor="middle" font-size="14" fill="#1a1a2e">弱口令</text>
+          <text x="350" y="75" text-anchor="middle" font-size="14" fill="#1a1a2e">高</text>
+          <text x="480" y="75" text-anchor="middle" font-size="14" fill="#1a1a2e">待修复</text>
+          <rect x="30" y="87" width="540" height="36" fill="#ffffff" stroke="#dbeafe"/>
+          <text x="90" y="111" text-anchor="middle" font-size="14" fill="#1a1a2e">2</text>
+          <text x="210" y="111" text-anchor="middle" font-size="14" fill="#1a1a2e">未打补丁</text>
+          <text x="350" y="111" text-anchor="middle" font-size="14" fill="#1a1a2e">中</text>
+          <text x="480" y="111" text-anchor="middle" font-size="14" fill="#1a1a2e">修复中</text>
+          <rect x="30" y="123" width="540" height="36" fill="#eff6ff" stroke="#dbeafe"/>
+          <text x="90" y="147" text-anchor="middle" font-size="14" fill="#1a1a2e">3</text>
+          <text x="210" y="147" text-anchor="middle" font-size="14" fill="#1a1a2e">开放端口</text>
+          <text x="350" y="147" text-anchor="middle" font-size="14" fill="#1a1a2e">低</text>
+          <text x="480" y="147" text-anchor="middle" font-size="14" fill="#1a1a2e">已修复</text>
+          <text x="300" y="185" text-anchor="middle" font-size="13" fill="#666">深色行是列名（属性）→ 下面每一行是一条记录</text>
+          <text x="300" y="205" text-anchor="middle" font-size="13" fill="#666">一列 = 一种属性，一行 = 一个东西</text>
+        </svg>
+        <figcaption>图：一张表——列定规矩，行装数据；SQL 的所有操作都是在这张表上做文章</figcaption>
+      </figure>
+      <p>记住三个词就够了：<strong>数据库</strong>里装着多张<strong>表</strong>，表由<strong>列</strong>（属性）和<strong>行</strong>（记录）组成。一个数据库可以有很多张表，比如一张存用户、一张存漏洞、一张存日志，表和表之间还能互相引用——那是<a href="m5c3-db-design.html">第 3 章</a>的事。</p>
+      <h2>查：SELECT，最常用的语句</h2>
+      <p>查数据用 SELECT，意思是“把符合条件的行给我看”。最简单的查法是把整张表都拿出来：</p>
+      <p><code>SELECT * FROM vulns;</code></p>
+      <p>逐词拆开：<code>SELECT</code> 是“查”，<code>*</code> 是“所有列”，<code>FROM vulns</code> 是“从 vulns 这张表里”，分号表示一句话说完了。结果就是上面那张表的全部三行。</p>
+      <p>但整张表全拿出来很少是你真正想要的。通常你只关心某几列、某几行。只看名称和严重程度两列：</p>
+      <p><code>SELECT name, severity FROM vulns;</code></p>
+      <p>只看“高”严重程度的行，就要加 WHERE（条件）：</p>
+      <p><code>SELECT * FROM vulns WHERE severity = '高';</code></p>
+      <p>WHERE 后面是条件，<code>=</code> 是“等于”。注意：文字要用单引号包起来，数字不用——<code>WHERE id = 1</code> 就不用引号。这个单引号，后面<a href="m5c4-sql-injection.html">第 4 章</a>会讲到它怎么变成安全漏洞的，先留个印象：单引号在 SQL 里有特殊含义。</p>
+      <p>条件还可以组合：<code>WHERE severity = '高' AND status = '待修复'</code>（两个都满足），<code>WHERE severity = '高' OR severity = '中'</code>（满足一个就行）。想按顺序看结果，用 ORDER BY：</p>
+      <p><code>SELECT * FROM vulns ORDER BY severity DESC;</code></p>
+      <p><code>ORDER BY severity</code> 是按严重程度排序，<code>DESC</code> 是从大到小（降序），不写就是从小到大（<code>ASC</code>）。不过要注意：按文字“高/中/低”排序排出来的是字典顺序，不是你心里那个“高比中严重”的顺序——想按严重程度排，得用数字等级列，或者在设计表的时候就想好，这是<a href="m5c3-db-design.html">第 3 章</a>数据库设计要解决的问题。</p>
+      <h2>增：INSERT，往表里加一行</h2>
+      <p><code>INSERT INTO vulns (name, severity, status) VALUES ('过期证书', '中', '待修复');</code></p>
+      <p><code>INSERT INTO</code> 是“插进”，括号里写列名，<code>VALUES</code> 后面写对应的值，一一对应。id 这一列没写——因为建表时会让它自动编号（自增），<a href="m5c2-build-database.html">下一章</a>建表时你会亲手设置它。</p>
+      <h2>改：UPDATE，改掉已有的数据</h2>
+      <p><code>UPDATE vulns SET status = '已修复' WHERE id = 1;</code></p>
+      <p><code>SET</code> 后面写改成什么，<code>WHERE</code> 写改哪一行。这条语句只改 id 是 1 的那一行。UPDATE 的 WHERE 是整本章最重要的一行字——且看下一节。</p>
+      <h2>删：DELETE，删掉一行</h2>
+      <p><code>DELETE FROM vulns WHERE id = 3;</code></p>
+      <p>删掉 id 是 3 的那一行。同样，WHERE 决定删谁。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>刚入行的工程师最容易在 UPDATE 和 DELETE 上栽跟头，而且栽得一模一样：忘了写 WHERE。没有 WHERE 的 <code>UPDATE vulns SET status = '已修复';</code> 会把全表每一行的状态都改成已修复；没有 WHERE 的 <code>DELETE FROM vulns;</code> 会清空整张表。真实生产环境里我见过有人一条语句清空了几十万行用户数据，恢复靠的是前一天的备份——那次之后，我们团队立了一条铁规矩：凡是在生产库上执行 UPDATE 或 DELETE，必须先用同样的 WHERE 跑一遍 SELECT，看返回的行数对不对，确认无误再执行；而且生产库的操作一律先备份。这一条规矩，值多少钱都换不来。</div>
+      <h2>动手做</h2>
+      <p>只在虚拟机里做（参考<a href="lesson-07-linux-vm.html">第 7 课</a>搭好的虚拟机）。虚拟机里一般自带 SQLite，或者用 <code>sqlite3 --version</code> 确认一下；没有就装一个，方法在<a href="m5c2-build-database.html">第 2 章</a>。然后：<br>1. 在虚拟机里跑 <code>sqlite3 practice.db</code>，建一张练习表：<code>CREATE TABLE vulns (id INTEGER PRIMARY KEY, name TEXT, severity TEXT, status TEXT);</code><br>2. 用 INSERT 插 5 条你自己编的漏洞记录（弱口令、未打补丁、开放端口、过期证书、默认账号，随便编）；<br>3. 用 SELECT + WHERE 查出所有“高”严重程度的记录，再用 ORDER BY 按 id 倒序看一遍；<br>4. 用 UPDATE 把其中一条的状态改成“已修复”，再用 SELECT 验证；<br>5. 故意不用 WHERE 做一次 SELECT（先看全表），体会 WHERE 是“圈范围”的意思——但 UPDATE/DELETE 绝不在没有 WHERE 的情况下练手，先 SELECT 确认行数是铁规矩。<br>做完这五步，增删改查就上手了。<a href="m5c2-build-database.html">下一章</a>会把这张练习表正式建成一个“漏洞清单”练习库。</p>
+      <h2>避坑</h2>
+      <p>UPDATE 和 DELETE 忘写 WHERE，等于对全表开火——执行前先用 SELECT 验证 WHERE 圈住的行；字符串用单引号，数字不用，引号错了语句会直接报错；SQL 关键字不区分大小写，但表名、列名在 Linux 的 MySQL 里区分大小写，养成统一小写的习惯；别在真实网站、真实公司的数据库上练手，SQL 语句一执行就生效，没有“撤销”按钮；备份不是可选项，删改之前先确认有备份——备份方法在<a href="m5c2-build-database.html">第 2 章</a>。</p>
+      <p>会了增删改查，你已经能跟数据库对话了。但“对话”之前得先有数据库、有表、有数据——<a href="m5c2-build-database.html">第 2 章：动手：建一个数据库</a>就干这件事。而“表该怎么设计才合理”，是<a href="m5c3-db-design.html">第 3 章</a>的主题；“SQL 怎么被人利用”，是<a href="m5c4-sql-injection.html">第 4 章</a>的主题。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>数据库里是表，表由列（属性）和行（记录）组成；SQL 是跟数据库对话的语言。</li>
+          <li>查用 SELECT：SELECT 列名 FROM 表名 WHERE 条件 ORDER BY 列名，* 代表所有列。</li>
+          <li>增用 INSERT INTO … VALUES …，改用 UPDATE … SET … WHERE …，删用 DELETE FROM … WHERE …。</li>
+          <li>UPDATE 和 DELETE 的 WHERE 是生死线：没有 WHERE 就是对全表操作，执行前先用 SELECT 验证行数。</li>
+          <li>字符串用单引号、数字不用；这个单引号后面会在第 4 章变成安全漏洞的主角。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="../course.html#maths">← 上一章：数学专项（课程页）</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m5c2-build-database.html">下一章：第 2 章：动手：建一个数据库 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

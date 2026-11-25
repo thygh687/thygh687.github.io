@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块六第 14 章：动手：给电脑做一次安全检查 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块六第 14 章：动手：给电脑做一次安全检查</h1>
+      <div class="meta"><span class="tag">网络安全基础</span>2026-11-25 · 模块六</div>
+      <p>前面三章讲了“应该是什么样”：<a href="m6c13-hardening-baseline.html">第 13 章</a>的基线清单、<a href="m6c11-risk-management.html">第 11 章</a>的风险排序、<a href="m6c12-physical-asset-privacy.html">第 12 章</a>的资产盘点。这一章把清单变成动作：亲手给电脑做一次从头到尾的安全检查。规则只有一条：<strong>只读检查，不改配置</strong>——我们是来“体检”的，不是来“动手术”的。看到问题先记下来，修不修、怎么修，是检查报告写完之后再决定的事。检查对象是你自己的电脑或虚拟机，绝不要拿别人的电脑练手。</p>
+      <h2>检查前准备：先定范围，再动手</h2>
+      <p>专业的安全检查开始之前，先写三行字：<strong>查什么</strong>（这台虚拟机，还是主力电脑）、<strong>查哪几项</strong>（本章的七项：账号、启动项、服务、补丁、防火墙、Defender、日志）、<strong>结果记在哪</strong>（准备一个文档，每查一项就记一项）。这三行字就是一份迷你检查计划。没有计划的检查，查到一半就会漏项，查完也说不清“到底查了什么”。另外提醒一句：检查时保持网络连接正常，但不要在检查过程中顺手下载“修复工具”——来路不明的“修复工具”本身就是最常见的病毒载体。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="安全检查七步流程图">
+          <rect x="40" y="20" width="140" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="110" y="45" text-anchor="middle" font-size="14" fill="#1a1a2e">1. 账号</text>
+          <rect x="230" y="20" width="140" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="300" y="45" text-anchor="middle" font-size="14" fill="#1a1a2e">2. 启动项</text>
+          <rect x="420" y="20" width="140" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="490" y="45" text-anchor="middle" font-size="14" fill="#1a1a2e">3. 服务</text>
+          <rect x="40" y="100" width="140" height="40" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="110" y="125" text-anchor="middle" font-size="14" fill="#1a1a2e">4. 补丁</text>
+          <rect x="230" y="100" width="140" height="40" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="300" y="125" text-anchor="middle" font-size="14" fill="#1a1a2e">5. 防火墙</text>
+          <rect x="420" y="100" width="140" height="40" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="490" y="125" text-anchor="middle" font-size="14" fill="#1a1a2e">6. Defender</text>
+          <rect x="230" y="180" width="140" height="40" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="300" y="205" text-anchor="middle" font-size="14" fill="#1a1a2e">7. 日志 → 写报告</text>
+          <text x="300" y="245" text-anchor="middle" font-size="12" fill="#666">按顺序查，查一项记一项，最后汇总成报告</text>
+        </svg>
+        <figcaption>图：七步检查流程——账号、启动项、服务、补丁、防火墙、Defender、日志，最后写报告</figcaption>
+      </figure>
+      <h2>第一步：账号——谁能进这台电脑</h2>
+      <p>打开设置 → 账户 → 其他用户，看一眼有几个账号、哪个是管理员。再打开管理员终端（右键“开始”→“终端（管理员）”），跑 <code>net user</code>，列出所有本地账号；对可疑的账号再跑 <code>net user 账号名</code>，看它上次登录是什么时候、是不是管理员组的成员。重点找三类异常：你不认识的账号、很久没用却还活着的账号、名字像系统账号却被改过的账号。Linux 虚拟机上对应的是 <code>cat /etc/passwd</code> 和 <code>sudo cat /etc/shadow</code>（看一眼有登录权限的账号有哪些），以及 <code>last</code>（最近谁登录过）。只看、不删，记下来。</p>
+      <h2>第二步：启动项——开机时谁跟着跑起来</h2>
+      <p>很多恶意软件靠“开机自启动”长期赖在电脑上，所以启动项是必查项。Windows 上打开任务管理器（Ctrl + Shift + Esc）→“启动应用”，逐行看：发布者是谁、启动影响多大；名字含糊、没有发布者、指向临时文件夹的启动项，要重点记下来。更彻底的办法是用微软官方的 Autoruns 工具（微软 Sysinternals 出品），它能列出全部自启动位置——但记住，只看列表、不取消勾选，检查阶段不动任何东西。Linux 上看 <code>systemctl list-unit-files --type=service | grep enabled</code>，列出开机自启的服务。</p>
+      <h2>第三步：服务与端口——谁在监听</h2>
+      <p>在管理员终端跑 <code>netstat -ano</code>（或 PowerShell 里跑 <code>Get-NetTCPConnection -State Listen</code>），列出正在监听的端口和对应的进程号，再用任务管理器按进程号找到是哪个程序。逐个问一句：这个端口是干什么的？我认不认识这个程序？不认识的记下来，回去再查。Linux 上用 <code>ss -tlnp</code>。这一步和<a href="m3c5-tcp-udp.html">模块三第 5 章</a>的 TCP/UDP 知识直接接上：LISTEN 状态就是“有人在等连接”，TIME_WAIT 是刚断开的正常等待，别把正常的连接状态当成中毒的证据。</p>
+      <h2>第四步：补丁——系统新不新</h2>
+      <p>打开设置 → Windows 更新，看上次检查更新是什么时候、有没有待安装的更新；再按 Win + R 跑 <code>winver</code>，记下系统版本和内部版本号。补丁拖得越久，<a href="m6c8-cve-cvss.html">第 8 章</a>里那些已被公开的 CVE 漏洞就越多能直接用在你身上——攻击者最喜欢的，就是“补丁早就出了、用户还没打”的窗口期。Linux 上跑 <code>sudo apt update &amp;&amp; apt list --upgradable</code>（Ubuntu/Debian）看一眼有多少包等着更新。只记录“有多少更新没打、最新的一个是什么时候的”，不要在这一步顺手点“全部安装”——检查和修复分开做。</p>
+      <h2>第五步：防火墙与 Defender——两道门开着吗</h2>
+      <p>打开设置 → 隐私和安全性 → Windows 安全中心 → 防火墙和网络保护，确认三个网络位置（域、专用、公用）的防火墙都是开启状态；再看“病毒和威胁防护”，确认实时保护开启、病毒库是最新的、上次快速扫描是什么时候。如果装了第三方杀毒软件，确认它也在正常运行——两套杀毒软件同时开反而会打架，留一套就好。Linux 上看防火墙状态（<code>sudo ufw status</code>），以及有没有在跑的防护软件。</p>
+      <h2>第六步：日志——最近发生过什么怪事</h2>
+      <p>打开事件查看器（Win + R 跑 <code>eventvwr.msc</code>）→ Windows 日志 → 安全，看最近一周有没有大量登录失败（事件 ID 4625）、有没有在深更半夜的成功登录（事件 ID 4624）、有没有账号被锁定（事件 ID 4740）。再看“系统”日志里有没有反复出现的错误和意外关机。Linux 上看 <code>sudo grep "Failed password" /var/log/auth.log</code>（或 journalctl）。日志不用全看懂，目标只有一个：发现“不正常的时间、不正常的次数、不正常的账号”。看不懂的条目抄下事件 ID 去查，不要猜。</p>
+      <h2>写一份检查报告</h2>
+      <p>七步查完，把记录整理成一份一页纸的报告，格式固定：<strong>检查对象</strong>（哪台机器、什么时候查的）、<strong>检查范围</strong>（七项都查了，还是只查了几项）、<strong>发现的问题</strong>（每条写清：在哪发现的、是什么、严重程度按<a href="m6c11-risk-management.html">第 11 章</a>的矩阵打个高/中/低）、<strong>建议的修复</strong>（每条对应一个修复动作和优先级）、<strong>下次复查日期</strong>。报告的价值不在文采，在“可追踪”：下个月再查一次，对照这份报告看问题是修好了、还是老样子。专业的安全工作，靠的就是这种“查一次、记一次、比一次”的循环。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我第一次给人做安全检查，犯了一个新手最容易犯的错：边查边修。看到一个可疑启动项，顺手就删了；看到一个旧账号，顺手就禁了。结果客户第二天打电话来：某个业务软件打不开了——那个“可疑启动项”正是它开机要用的组件。从那以后，我立了一条规矩：检查日只检查、不动任何东西，所有发现先写进报告，修复另外约时间、一条一条过、每条留好回滚办法。还有一条现场经验：检查报告里的“严重程度”不要只写高/中/低，要写一句话的理由——“高，因为这是管理员账号且密码三年没换”，这样一个月后回看，你还记得当时为什么这么判。没有理由的等级，下个月就没人信了。</div>
+      <h2>动手做</h2>
+      <p>本章本身就是一次动手：按上面的七步，给你自己的虚拟机（优先）或主力电脑做一次完整检查，全程只读、不改配置。<br>1. 按“检查前准备”写三行检查计划，存在文档开头。<br>2. 七步逐项查，每项把结果（正常或异常、异常的具体内容）记进文档；遇到看不懂的条目，先抄下来，不要猜、不要删、不要关。<br>3. 查完写一份一页纸的检查报告：对象、范围、发现的问题（带高/中/低和一句话理由）、建议修复（带优先级）、下次复查日期。<br>4. 把报告和<a href="m6c13-hardening-baseline.html">第 13 章</a>你写的个人电脑基线对照一遍：基线里要求做到的，这次查下来做到了几条？没做到的，就是下一轮要修的。</p>
+      <h2>避坑</h2>
+      <p>别边查边修：检查日只记录，修复另外安排时间，每条修复留好回滚办法；别拿别人的电脑练手：只查自己的电脑或虚拟机，别人的电脑要经过明确授权才可以碰；别看到 TIME_WAIT、看到几个监听端口就断定中毒：先对照<a href="m3c5-tcp-udp.html">第 5 章</a>的正常状态，正常的连接状态不是异常；别下载来路不明的“修复工具”“一键体检”：它们本身常常就是恶意软件，只用系统自带工具和微软官方工具；别把看不懂的条目直接删掉：抄下来去查，删错一个启动项可能让某个软件再也打不开；别只查一次就以为完事：检查要定期做，下次对照这份报告，看问题是修好了还是老样子。</p>
+      <p>检查报告里如果出现“某个补丁没打、某个漏洞还开着”，下一步就是看懂漏洞报告在说什么：<a href="m6c15-read-cve-report.html">下一章：动手：读一份漏洞报告</a>会教你读 CVE 和 CVSS。回头看<a href="m6c13-hardening-baseline.html">上一章</a>的基线：这一章的七步，就是基线清单的“执行版”——基线告诉你应该是什么样，检查告诉你现在是什么样，两者一对照，差距就是工作清单。更早的工具底子在<a href="lesson-17-windows-tools.html">第 17 课</a>：任务管理器、事件查看器、终端，这些都是本章的主力工具。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>安全检查的铁律是只读不改：检查日只记录，修复另外安排时间，每条修复留好回滚办法。</li>
+          <li>七步检查：账号、启动项、服务与端口、补丁、防火墙、Defender、日志，按顺序查、查一项记一项。</li>
+          <li>账号查“谁能进”、启动项查“开机跟谁跑”、端口查“谁在监听”，三处是不认识的东西最容易藏身的地方。</li>
+          <li>日志只看异常：大量登录失败、深夜成功登录、账号被锁定，事件 ID 抄下来去查，不要猜。</li>
+          <li>检查报告要可追踪：对象、范围、问题（带等级和理由）、修复建议、下次复查日期，下次对照着复查。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m6c13-hardening-baseline.html">← 上一章：第 13 章：安全基线与加固</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m6c15-read-cve-report.html">下一章：第 15 章：动手：读一份漏洞报告 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

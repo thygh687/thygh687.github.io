@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 19 章：用代码调 HTTP 与 API · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 19 章：用代码调 HTTP 与 API</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p>浏览器打开网页，背后是 HTTP：浏览器发请求，服务器回响应。你已经在<a href="m3c7-dns-http-tls.html">模块三第 7 章</a>里学过 HTTP 的样子，这一章换一个身份——不再是浏览器替你发请求，而是你写的程序自己发请求。安全工程师天天干这个：查一个 IP 是不是恶意、拉一份漏洞情报、把告警推到聊天工具里、让两个系统互相说话，靠的都是程序调 API。本章只调自己虚拟机上跑的本地服务或 127.0.0.1，绝不调真实网站——规矩先立好，再学本事。</p>
+      <h2>HTTP 请求长什么样：先看一眼再动手</h2>
+      <p>一个 HTTP 请求就是一段按格式写的文本，分三部分：请求行（方法 + 路径 + 版本，比如 <code>GET /users HTTP/1.1</code>）、请求头（键值对，告诉服务器“我是谁、我想要什么格式、我带了什么凭证”）、请求体（POST 时真正要发的数据）。服务器回的响应也是三部分：状态行（比如 <code>200 OK</code>、<code>404 Not Found</code>）、响应头、响应体（你要的数据，常是 JSON）。</p>
+      <p>方法是请求的“动词”：GET 是“拿东西”，POST 是“交东西”，PUT 是“换掉一个东西”，DELETE 是“删掉一个东西”。新手最容易混的是 GET 和 POST 的分工：GET 只读、不改服务器上的东西，参数放在网址里；POST 会改变服务器的状态（新建、提交、登录），数据放在请求体里。记住一条铁律：<strong>查数据用 GET，改数据用 POST（或 PUT/DELETE）</strong>，写反了就是 bug——比如用 GET 去删东西，浏览器一刷新、爬虫一爬，就把数据删光了。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="HTTP 请求与响应结构图">
+          <rect x="20" y="20" width="240" height="120" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="48" text-anchor="middle" font-size="15" fill="#1a1a2e">请求（你的程序发出）</text>
+          <text x="40" y="78" font-size="13" fill="#1a1a2e">请求行：GET /users HTTP/1.1</text>
+          <text x="40" y="102" font-size="13" fill="#1a1a2e">请求头：User-Agent、Accept…</text>
+          <text x="40" y="126" font-size="13" fill="#1a1a2e">请求体：POST 时才有数据</text>
+          <rect x="300" y="20" width="240" height="120" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="48" text-anchor="middle" font-size="15" fill="#1a1a2e">响应（服务器返回）</text>
+          <text x="320" y="78" font-size="13" fill="#1a1a2e">状态行：200 OK</text>
+          <text x="320" y="102" font-size="13" fill="#1a1a2e">响应头：Content-Type…</text>
+          <text x="320" y="126" font-size="13" fill="#1a1a2e">响应体：你要的数据（JSON）</text>
+          <line x1="262" y1="60" x2="298" y2="60" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c19a)"/>
+          <line x1="298" y1="100" x2="262" y2="100" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c19a)"/>
+          <defs>
+            <marker id="c19a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="170" width="520" height="100" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="198" text-anchor="middle" font-size="14" fill="#1a1a2e">状态码是服务器的第一句话，先看它再看数据</text>
+          <text x="280" y="224" font-size="13" fill="#1a1a2e">2xx 成功（200 OK） · 3xx 去别处找（301/302 跳转） · 4xx 你错了（404 找不到、401 没登录）</text>
+          <text x="280" y="248" font-size="13" fill="#1a1a2e">5xx 服务器错了（500 内部错误、503 暂时不可用）——先分清是谁的错，再决定怎么办</text>
+        </svg>
+        <figcaption>图：一次 HTTP 往返——请求三件套，响应三件套，状态码先报喜忧</figcaption>
+      </figure>
+      <p>状态码值得单独记一下，因为它是程序判断“这一步成没成”的唯一可靠依据：2xx 是成功，3xx 是“去别处找”，4xx 是“你的请求有问题”（404 找不到、401 没登录、403 没权限），5xx 是“服务器自己出问题了”。写程序调接口，第一件事就是检查状态码，再去看数据——不检查状态码就直接解析响应体，是新手最常见的 bug：服务器明明回了 500 错误页，你的程序却把它当成正常数据解析，错得莫名其妙。</p>
+      <h2>requests 库：Python 调 HTTP 的标准姿势</h2>
+      <p>Python 调 HTTP 不用自己拼文本，requests 库是事实上的标准：<code>requests.get(url)</code> 发 GET，<code>requests.post(url, json={...})</code> 发 POST。几个要点一次讲清：</p>
+      <p><strong>超时必须写。</strong><code>requests.get(url, timeout=5)</code>——没有 timeout，服务器一直不回，你的程序就一直卡着。安全工具最怕的就是卡死：扫描一千个目标，一个目标卡住，整个任务就停了。timeout 是每一行调 HTTP 的代码都该有的习惯。</p>
+      <p><strong>请求头要会设。</strong><code>headers={"User-Agent": "my-tool/1.0"}</code> 告诉服务器你是谁。User-Agent 不是摆设：很多服务靠它识别客户端，安全审计也靠它认出“这是谁在调我”。写自己的工具时，把 User-Agent 写成工具的名字和版本，别冒充浏览器——冒充浏览器去调接口，是爬虫和攻击者的常见手法，正经工具不这么干。</p>
+      <p><strong>响应先看状态码，再解析 JSON。</strong><code>resp.status_code</code> 先判断，确认是 200 再用 <code>resp.json()</code> 解析。解析可能失败（服务器回的不是 JSON），所以 <code>resp.json()</code> 要包在 try/except 里。<a href="m4c7-files-exceptions.html">第 7 章</a>的异常处理在这里就是用来兜底的。</p>
+      <p><strong>会话要复用。</strong>同一个服务要调很多次时，用 <code>requests.Session()</code>：它会复用 TCP 连接，还能统一带请求头、统一管登录状态。配合<a href="m4c18-concurrency.html">第 18 章</a>的线程池，就是一个像样的批量查询工具的骨架。</p>
+      <h2>API 是什么：别人家的功能，借来用</h2>
+      <p>API（应用程序接口）就是一个服务对外开放的“窗口”：它规定了你能问什么、怎么问、会得到什么格式的回答。比如一个威胁情报服务的 API 规定：GET /ip/1.2.3.4，带上你的 API 密钥，就返回这个 IP 的恶意评分。你的程序不用知道它内部怎么算的，只要按规矩问，就能拿到答案。REST API 是最常见的风格：网址就是资源（/users、/alerts），方法就是动作（GET 查、POST 建、DELETE 删），返回 JSON。</p>
+      <p>调 API 有三条规矩：第一，密钥不要写死在代码里——密钥是凭证，写进代码就等于把家门钥匙贴在门上，<a href="m4c21-secure-coding-deep.html">第 21 章</a>会专门讲密钥怎么管，这里先记住：放环境变量或配置文件里，代码只去读；第二，遵守限速：API 都有调用次数限制，一秒调一百次会被封号，批量查询要排队、要等、要重试；第三，永远处理失败：网络会断、服务会挂、密钥会过期，调 API 的代码里，错误处理不是点缀，是主干。</p>
+      <h2>JSON：程序之间说话的通用语言</h2>
+      <p>API 返回的数据几乎都是 JSON：花括号是对象、方括号是数组、键值对是字段，看着像 Python 的字典，几乎就是。Python 里 <code>json.loads(字符串)</code> 把 JSON 文本变成字典，<code>json.dumps(字典)</code> 把字典变成 JSON 文本。两个坑要注意：JSON 的键必须是字符串，数字、布尔值、null（对应 Python 的 None）都有固定写法；解析失败时 <code>json.loads</code> 会抛异常，要捕获。写程序时，先把返回的 JSON 打印出来看一眼，确认字段名和结构，再写解析代码——对着猜字段名写代码，是白白浪费时间的典型做法。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我见过最多的 API 调用事故，不是写错了网址，而是“成功了一千次，第一千零一次把系统搞挂了”。一个同事写的告警推送脚本，没有设 timeout：某天接收方服务卡住了，脚本跟着卡住，卡住的脚本越积越多，最后把整台服务器的连接池占满了——告警没推过去，监控自己先挂了。修的方法很简单：timeout=5，重试最多 3 次，每次间隔翻倍（1 秒、2 秒、4 秒），再加一个总开关：连续失败 10 次就停下来发告警，而不是无限重试。安全工具调 API 有个原则：你的工具出问题时，不能比它要监控的问题更吵、更占资源。还有一条：调外部 API 之前，先在本地搭一个假服务练手——返回固定 JSON 的本地服务，能把解析、重试、超时全练一遍，又不用花真实额度、不用怕把真实服务调坏。动手做里就是这么练的。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里起一个本地服务：写一个只有十几行的 Python 程序，用标准库 <code>http.server</code> 在 127.0.0.1:8000 上跑起来，访问 /status 返回一段 JSON（比如 <code>{"status": "ok", "version": "1.0"}</code>），再用 requests 去 GET 它，打印状态码和解析后的字典——只连本地，绝不碰真实网站。<br>2. 给本地服务加一个 POST 接口 /echo：收到什么 JSON 就原样返回什么，用 requests 发 POST（<code>json={"name": "test"}</code>），确认收到的是不是原样；再故意发一段不是 JSON 的数据，看服务器回什么状态码，你的程序又该怎么处理。<br>3. 写一个带“超时 + 重试”的小客户端：调本地服务时，先让服务故意延迟 10 秒返回，确认你的 timeout=3 会按时报错而不是一直等；再让服务随机返回 500，练习“重试 3 次、间隔翻倍”的逻辑，并把每一次的结果写进日志。<br>4. 把第 1–3 步拼成一个小工具：循环读取一个本地文件里的“任务清单”（每行一个本地接口地址），用线程池同时调它们，把结果（状态码 + 关键字段）汇总成一张表打印出来——这是第 24 章工具集里“批量查询”模块的雏形。</p>
+      <h2>避坑</h2>
+      <p>别忘了写 timeout：没有超时的 HTTP 调用，迟早会在某个深夜卡住你的整个程序；别不看状态码就解析响应体：500 错误页不是 JSON，硬解析只会抛异常；别把 API 密钥写进代码：密钥放环境变量，代码里只读不存；别在循环里无间隔地调同一个接口：遵守限速，失败要退避重试，别把自己调成拒绝服务攻击；别用 GET 去做会改变服务器状态的事：查数据用 GET，改数据用 POST；别在真实网站上练手：所有实验只调自己虚拟机上的本地服务或 127.0.0.1，真实网站的接口留到你真正需要、并且拿到授权之后再碰。</p>
+      <p>会调 HTTP，你的工具就能和别的系统说话了。下一章 <a href="m4c20-db-programming.html">第 20 章：数据库编程：Python 连数据库</a>，把调回来的数据存下来：查到的结果、扫到的端口、分析出的日志，都要有个地方放。回头看<a href="m4c16-log-analyzer.html">第 16 章</a>的日志分析器：它现在是读完就扔，有了数据库，结果就能留下来、查得出来、越攒越有用。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>HTTP 请求是请求行 + 请求头 + 请求体，响应是状态行 + 响应头 + 响应体；先看状态码（2xx 成功、4xx 你的错、5xx 服务器的错），再解析数据。</li>
+          <li>GET 只读不改、参数在网址里；POST 会改变服务器状态、数据在请求体里；查数据用 GET，改数据用 POST，写反了就是 bug。</li>
+          <li>requests 库是 Python 调 HTTP 的标准姿势：每次调用都要写 timeout，复用连接用 Session，解析 JSON 之前先确认状态码、并用 try/except 兜底。</li>
+          <li>API 是服务对外开放的窗口：按规矩问、按格式答；密钥绝不写死在代码里，调用要遵守限速，失败要重试退避。</li>
+          <li>JSON 是程序之间说话的通用语言：json.loads 把文本变字典，写解析代码之前先打印出来看一眼字段名和结构。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c18-concurrency.html">← 上一章：第 18 章：并发编程：线程与锁</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c20-db-programming.html">下一章：第 20 章：数据库编程：Python 连数据库 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

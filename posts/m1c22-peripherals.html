@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 22 章：外设原理：键盘、显示、磁盘、打印机 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 22 章：外设原理：键盘、显示、磁盘、打印机</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-25 · 模块一</div>
+      <p>前面 21 章讲的都是主机内部：CPU、内存、缓存、总线。但电脑如果没有键盘、显示器、磁盘、打印机，就是一台谁也用不上的铁盒子。这一章讲外设——所有长在主机外面的设备——是怎么和主机说话的。规律其实只有一个：每种外设都有三样东西，<strong>控制器、驱动、接口</strong>，弄懂这三样，所有外设都一个道理。</p>
+      <h2>外设三要素：控制器、驱动、接口</h2>
+      <p>先把框架立起来。<strong>控制器</strong>是外设身上的小电路，负责把外设的物理动作翻译成数字信号：键盘控制器把“按下了哪个键”变成扫描码，磁盘控制器把“读第几扇区”变成磁头的动作。<strong>驱动</strong>是操作系统里的一段程序，负责把操作系统的命令翻译成控制器听得懂的语言——<a href="m1c23-buses-drivers.html">下一章</a>会专门讲驱动模型。<strong>接口</strong>是两者之间的连接规范：插什么样的口、走什么样的协议、速度多快。键盘走 USB 接口，显卡走 PCIe 接口，磁盘走 SATA 或 NVMe 接口——接口不同，速度和用法都不同。</p>
+      <p>记住这个分层，排错就有了顺序：外设不好用，先看接口（线插好了吗、口认出来了吗），再看驱动（驱动装好了吗、有没有黄色感叹号），最后怀疑控制器和硬件本身。从外往里查，别一上来就拆机器。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 640 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="外设三要素结构图">
+          <defs>
+            <marker id="arr22" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="30" width="150" height="70" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="58" text-anchor="middle" font-size="14" fill="#1a1a2e">应用程序</text>
+          <text x="95" y="80" text-anchor="middle" font-size="12" fill="#666">“打印这份文件”</text>
+          <rect x="200" y="30" width="150" height="70" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="275" y="58" text-anchor="middle" font-size="14" fill="#1a1a2e">驱动程序</text>
+          <text x="275" y="80" text-anchor="middle" font-size="12" fill="#666">翻译成控制器命令</text>
+          <rect x="380" y="30" width="120" height="70" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="440" y="58" text-anchor="middle" font-size="14" fill="#1a1a2e">接口 / 总线</text>
+          <text x="440" y="80" text-anchor="middle" font-size="12" fill="#666">USB / PCIe / SATA</text>
+          <rect x="530" y="30" width="100" height="70" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="580" y="58" text-anchor="middle" font-size="14" fill="#1a1a2e">控制器</text>
+          <text x="580" y="80" text-anchor="middle" font-size="12" fill="#666">指挥硬件动作</text>
+          <line x1="170" y1="65" x2="198" y2="65" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr22)"/>
+          <line x1="350" y1="65" x2="378" y2="65" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr22)"/>
+          <line x1="500" y1="65" x2="528" y2="65" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr22)"/>
+          <rect x="20" y="150" width="290" height="80" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="165" y="178" text-anchor="middle" font-size="13" fill="#1a1a2e">数据怎么回来：反方向走同一条路</text>
+          <text x="165" y="202" text-anchor="middle" font-size="12" fill="#666">键盘按键 → 扫描码 → 中断 → 驱动 → 应用程序</text>
+          <text x="165" y="220" text-anchor="middle" font-size="12" fill="#666">磁盘读数 → 控制器 → DMA 搬运 → 内存</text>
+          <rect x="340" y="150" width="280" height="80" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="480" y="178" text-anchor="middle" font-size="13" fill="#1a1a2e">排错顺序：接口 → 驱动 → 控制器</text>
+          <text x="480" y="202" text-anchor="middle" font-size="12" fill="#666">先看线和口，再看驱动状态</text>
+          <text x="480" y="220" text-anchor="middle" font-size="12" fill="#666">最后才怀疑硬件坏了</text>
+        </svg>
+        <figcaption>图：外设三要素——应用程序的命令经驱动翻译、过接口、到控制器；数据反方向回来</figcaption>
+      </figure>
+      <h2>键盘：扫描码与中断</h2>
+      <p>按下一个键，发生的事比你想的多。键盘里有一张按键矩阵，控制器扫描这张矩阵，发现“第 3 行第 5 列的键被按下了”，查表得到一个数字，叫<strong>扫描码</strong>——每个键有自己的扫描码，A 键和 B 键的扫描码不一样，按下和松开的扫描码也不一样（松开一般是按下码加一个标志位）。控制器把扫描码发给主机，主机收到后产生一个<a href="m1c9-interrupt.html">第 9 章</a>讲过的<strong>中断</strong>：CPU 停下手头的事，先处理“有人按了个键”，再回去继续。</p>
+      <p>为什么用中断而不是让 CPU 不停地问键盘“有人按了吗”？因为人按键是低频、随机的事，CPU 每秒能执行几十亿条指令，让它不停地轮询键盘等于让一个百米运动员站在门口等快递——纯属浪费。中断的思路是“有事再叫我”，没事 CPU 该干嘛干嘛。键盘、鼠标这类低速、随机发生的设备，都用中断；磁盘这种大批量搬运的设备，则用 <a href="m1c9-interrupt.html">第 9 章</a>的 DMA——搬运开始和结束各中断一次，中间不用 CPU 盯着。</p>
+      <p>安全上顺便提一句：键盘是攻击者很喜欢盯着的地方。硬件键盘记录器就是插在键盘和主机之间的一个小东西，专门偷扫描码；软件键盘记录器则是偷驱动收到的数据。防御的思路也在这里：输入密码时用系统自带的屏幕键盘、警惕来路不明的 USB 设备——一个陌生的 U 盘或“键盘”插进来，可能是伪装成键盘的攻击设备（它会自己“按键”执行命令）。</p>
+      <h2>显示：帧缓冲、分辨率与刷新率</h2>
+      <p>显示器显示的内容，其实是内存里的一块区域，叫<strong>帧缓冲</strong>：屏幕上的每一个像素，在帧缓冲里都有一个对应的值，存着这个像素该显示什么颜色。显卡不停地把帧缓冲里的内容读出来、送到显示器，一秒钟读几十次——每秒读多少次，就是<strong>刷新率</strong>（60Hz 就是每秒 60 次）。你看到的“画面”，其实是显卡每秒把同一张图重画 60 遍。</p>
+      <p><strong>分辨率</strong>是屏幕上像素的个数：1920×1080 就是横 1920 个、竖 1080 个像素，一共约 207 万个。分辨率越高，帧缓冲占的内存越大：1920×1080、每个像素 4 个字节（红绿蓝加透明度），一帧就要约 8MB 内存；4K 分辨率一帧约 33MB。刷新率越高，显卡每秒要搬运的数据也越多：4K、144Hz 的画面，每秒要搬运约 4.7GB 数据——这就是为什么显卡要插在 <a href="m1c23-buses-drivers.html">下一章</a>讲的 PCIe x16 槽上：只有那条“路”够宽，搬得动这么多数据。</p>
+      <p>还有一个常见误会：屏幕“闪”不一定是显示器坏了。刷新率太低、线材带宽不够（比如用老线跑高分辨率高刷新率）、显卡驱动出问题，都会闪。排错还是按三要素的顺序：先换线、换接口，再看驱动，最后怀疑显示器本身。</p>
+      <h2>磁盘：磁道扇区、寻道，与固态的闪存页</h2>
+      <p>机械硬盘（HDD）里面是转动的盘片，数据存在盘片上的同心圆里：每个圆叫一个<strong>磁道</strong>，磁道切成一段一段，每段叫一个<strong>扇区</strong>（传统上 512 字节，现在多为 4KB）。读数据时，磁头要先移动到正确的磁道（叫<strong>寻道</strong>），再等盘片转到正确的扇区（叫旋转等待），然后才能读。寻道是机械动作，以毫秒计——对 CPU 来说，毫秒是几百万个时钟周期的漫长等待。所以机械盘随机读小文件特别慢：读 1000 个小文件，要寻道 1000 次；读一个同样大小的大文件，寻道一两次就够了。<a href="m1c3-memory.html">第 3 章</a>的存储金字塔里，硬盘在最底层、速度最慢，原因就在这里。</p>
+      <p>固态硬盘（SSD）没有盘片、没有磁头，数据存在闪存芯片里：最小的读写单位是<strong>页</strong>（一般 4KB 或 16KB），最小的擦除单位是<strong>块</strong>（由很多页组成，擦除前必须整块擦掉）。没有机械动作，所以随机读也快得多。SSD 内部的更多细节——FTL、磨损均衡、TRIM——是<a href="m1c24-storage-raid.html">第 24 章</a>的内容，这里先记住结论：SSD 快在没有寻道，慢在写之前可能要先擦除，寿命和写入次数有关。</p>
+      <h2>打印机：驱动把文档变成打印机听得懂的语言</h2>
+      <p>打印机是最能说明“驱动是翻译”的例子。你在 Word 里点打印，Word 只知道“这页有个标题、一段文字、一张图”；打印机只知道“在第几行喷几个墨点、激光在硒鼓上画什么”。中间的翻译就是打印机驱动：它把文档变成一串打印机听得懂的命令（比如 PCL 或 PostScript 语言），再经过接口发给打印机。换一台打印机就要换驱动，因为每台打印机听得懂的“语言”不一样。</p>
+      <p>打印机出问题，十有八九是驱动和队列的事：打印任务卡在队列里、驱动版本不对、打印机脱机了。排错还是那个顺序：先看打印机开没开、线连没连（接口），再看打印队列和驱动状态，最后怀疑打印机硬件。还有一个安全提醒：打印机也有内存，打印过的东西可能留在打印机里；处理掉旧打印机之前，先清空它的存储——公司里淘汰的打印机，是出了名的信息泄露口子。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>远程修电脑，键盘鼠标失灵是我最常遇到的“假故障”之一。有一次客户说键盘完全没反应，我让他换个 USB 口——好了。原因是那个口供电不足，键盘控制器拿不到足够的电，扫描码发不出来。还有一次更典型：客户的电脑开机就蓝屏，最后发现是他插了一个来路不明的“USB 小风扇”，里面伪装了一个键盘设备，一通电就开始“自动按键”执行命令——拔掉就好了。从那以后我多了一条规矩：修电脑先问“最近插过什么新设备”，再看别的。外设是电脑的门，门上多一个不认识的东西，比系统里多一个可疑进程更值得警惕。</div>
+      <h2>动手做</h2>
+      <p>1. 在自己的电脑上打开设备管理器（只看不改），找到键盘、显示适配器、磁盘驱动器、打印机四类设备，记下每类下面各有几个设备、叫什么名字。<br>2. 在虚拟机里按一个键的同时想一想：扫描码从键盘控制器出来，经过哪几层才变成屏幕上的一个字母？把这条链写下来。<br>3. 算一笔账：你的显示器分辨率是多少？按每个像素 4 个字节算，一帧占多少内存？刷新率是多少？每秒显卡要搬运多少数据？<br>4. 在虚拟机里跑 <code>wmic diskdrive get model,size,mediatype</code>（Windows）或 <code>lsblk -d -o NAME,SIZE,ROTA</code>（Linux），看自己的盘是 SSD 还是 HDD，容量多大——只读命令，不改任何东西。</p>
+      <h2>避坑</h2>
+      <p>别在设备管理器里乱卸驱动：只读、只看，不装不卸，动手改驱动只在虚拟机里练；别把“显示器闪”直接当成显示器坏了：先换线、再看驱动，接口和驱动的毛病比屏幕本身多得多；别插来路不明的 USB 设备：一个伪装成键盘的设备能自己“按键”执行命令，插之前先问一句“这是什么”；别以为打印机打完就没事了：旧打印机淘汰前要清空它的存储，打印过的文件可能还留在里面；别把中断和轮询搞反：键盘鼠标用中断（有事再叫），磁盘大搬运用 DMA，CPU 不会傻等着。</p>
+      <p>外设讲完了，接下来看它们走的那条“路”和路上的“翻译”：<a href="m1c23-buses-drivers.html">下一章：总线标准与设备驱动模型</a>，PCIe、USB 和驱动是怎么把设备接进系统的。回头看<a href="m1c5-io.html">第 5 章</a>的总线与输入输出和<a href="m1c9-interrupt.html">第 9 章</a>的中断与 DMA：现在你知道了，总线是路，中断和 DMA 是两种“叫 CPU”的办法，而每种外设都有自己的控制器、驱动和接口。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>每种外设都有三要素：控制器（翻译物理动作为数字信号）、驱动（翻译操作系统命令）、接口（连接规范）。</li>
+          <li>键盘按键变成扫描码，靠中断通知 CPU；低速随机的设备用中断，大批量搬运用 DMA。</li>
+          <li>显示的内容存在帧缓冲里，分辨率决定一帧占多少内存，刷新率决定显卡每秒搬运多少数据。</li>
+          <li>机械盘读数据要寻道加旋转等待，随机读小文件慢；固态盘没有机械动作，按闪存页读写。</li>
+          <li>打印机驱动把文档翻译成打印机听得懂的命令；排错按接口 → 驱动 → 控制器的顺序，别一上来就拆机器。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m1c21-pipelining.html">← 上一章：第 21 章：流水线深入</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m1c23-buses-drivers.html">下一章：第 23 章：总线标准与设备驱动模型 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

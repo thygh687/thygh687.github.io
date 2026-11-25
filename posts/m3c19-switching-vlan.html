@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块三第 19 章：交换、VLAN 与生成树 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块三第 19 章：交换、VLAN 与生成树</h1>
+      <div class="meta"><span class="tag">计算机网络</span>2026-11-25 · 模块三</div>
+      <p>上一章讲完，电脑知道该把帧发给哪个 MAC 了。但帧进了交换机之后，交换机怎么知道该从哪个口把它送出去？它总不能每个口都发一遍——那样局域网就成了大喇叭。这一章讲交换机肚子里的三样东西：转发表、VLAN 和生成树。理解了它们，你就理解了办公室、机房里那台不起眼的铁盒子每天在算什么。</p>
+      <h2>交换机转发表：边收边学的一张表</h2>
+      <p>交换机转发靠的是一张 MAC 地址表（转发表）：每一行记着“某个 MAC 地址在哪个端口上”。表不是管理员手写的，是交换机自己“学”出来的。学习规则很简单：收到一个帧，先看源 MAC——“这个 MAC 是从 3 号口来的”，就记一笔“这个 MAC 在 3 号口”；再看目标 MAC——表里有，就只从那个端口发出去；表里没有，就从除来源口之外的所有口都发一份，这叫泛洪（flooding）。</p>
+      <p>泛洪听起来很浪费，其实是必要的：刚开机时表是空的，不泛洪就谁也找不到谁。泛洪一次之后，目标收到帧会回一个帧，交换机顺手就把目标的 MAC 也学到了——来回一趟，表就建起来了。之后同样的流量就只走正确的端口，不再打扰别人。这就是交换机比集线器（hub）聪明的地方：集线器收到什么都往所有口发，交换机只在不知道的时候才泛洪，知道之后就点对点送。</p>
+      <p>表里的条目也会老化：一个 MAC 很久没出现，条目就被删掉，下次再来重新学。这和<a href="m3c18-arp.html">第 18 章</a>的 ARP 表过期是一个道理——网络是活的，地址和位置都会变，表不能记死。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="交换机 MAC 表学习与转发示意图">
+          <defs>
+            <marker id="sw1" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="200" y="120" width="160" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="146" text-anchor="middle" font-size="14" fill="#1a1a2e">交换机</text>
+          <text x="280" y="168" text-anchor="middle" font-size="12" fill="#666">MAC 表：AA→口1 BB→口2</text>
+          <rect x="30" y="20" width="120" height="40" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="90" y="45" text-anchor="middle" font-size="13" fill="#1a1a2e">电脑 A（口 1）</text>
+          <rect x="410" y="20" width="120" height="40" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="470" y="45" text-anchor="middle" font-size="13" fill="#1a1a2e">电脑 B（口 2）</text>
+          <rect x="30" y="230" width="120" height="40" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="90" y="255" text-anchor="middle" font-size="13" fill="#1a1a2e">电脑 C（口 3）</text>
+          <rect x="410" y="230" width="120" height="40" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="470" y="255" text-anchor="middle" font-size="13" fill="#1a1a2e">电脑 D（口 4）</text>
+          <line x1="90" y1="60" x2="230" y2="130" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#sw1)"/>
+          <line x1="470" y1="60" x2="330" y2="130" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#sw1)"/>
+          <line x1="90" y1="230" x2="230" y2="170" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#sw1)"/>
+          <line x1="470" y1="230" x2="330" y2="170" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#sw1)"/>
+          <text x="280" y="295" text-anchor="middle" font-size="12" fill="#666">学：看源 MAC 记端口；发：查目标 MAC 只走一个口，查不到才泛洪</text>
+        </svg>
+        <figcaption>图：交换机边收边学 MAC 表；查得到点对点送，查不到才泛洪</figcaption>
+      </figure>
+      <p>理解了这张表，很多现象就通了。为什么刚开机的网络头几秒有点慢？因为表是空的，头几个包要靠泛洪找路。为什么交换机能隔离冲突、却隔离不了广播？因为广播帧的目标 MAC 是 FF:FF:FF:FF:FF:FF，表里永远查不到，只能泛洪——广播域的边界在路由器（或 VLAN）那里，不在交换机这里。</p>
+      <h2>VLAN：一个物理局域网，切成几个逻辑局域网</h2>
+      <p>一个公司里，财务部、研发部、访客都插在同一台交换机上。没有 VLAN 时，他们全在同一个广播域里：财务电脑的一次 ARP 广播，全公司都能收到；研发的电脑能直接访问财务的共享文件夹。VLAN（虚拟局域网）就是解决这个问题的：把一台交换机上的端口分成几组，每组是一个 VLAN，不同 VLAN 之间的流量默认不通，就像在逻辑上切成了几个独立的局域网，而不用多买几台交换机。</p>
+      <p>VLAN 的好处有三个。第一是<strong>隔离</strong>：广播只在同一个 VLAN 里传，财务部的广播不会吵到研发部；不同 VLAN 的电脑想互访，必须经过路由器或三层交换机，安全策略就有了落点——这正是<a href="m3c13-hardening.html">第 13 章</a>讲的“分段”在二层的落地。第二是<strong>灵活</strong>：员工换工位、换部门，不用重新布线，改一下端口属于哪个 VLAN 就行。第三是<strong>好管</strong>：按部门、按用途、按安全等级分组，出问题先定位到某个 VLAN，范围一下子就小了。</p>
+      <p>端口分两种。接入端口（access port）只属于一个 VLAN，接电脑、打印机这类终端设备，收到的帧不带 VLAN 标记。干道端口（trunk port）可以同时承载多个 VLAN，接另一台交换机或路由器，帧在上面跑的时候会带一个 802.1Q 标签：标签里写着“这个帧属于 VLAN 20”，对端交换机一看标签就知道该把它送进哪个 VLAN。标签只在 trunk 链路上存在，到了 access 口、交给终端之前，标签会被剥掉——终端电脑完全不知道 VLAN 的存在。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="VLAN 与 Trunk 示意图">
+          <defs>
+            <marker id="vl1" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="20" width="200" height="100" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="120" y="45" text-anchor="middle" font-size="14" fill="#1a1a2e">交换机 1</text>
+          <text x="120" y="70" text-anchor="middle" font-size="12" fill="#1a1a2e">VLAN 10：财务（口 1–2）</text>
+          <text x="120" y="92" text-anchor="middle" font-size="12" fill="#1a1a2e">VLAN 20：研发（口 3–4）</text>
+          <rect x="340" y="20" width="200" height="100" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="440" y="45" text-anchor="middle" font-size="14" fill="#1a1a2e">交换机 2</text>
+          <text x="440" y="70" text-anchor="middle" font-size="12" fill="#1a1a2e">VLAN 10：财务（口 1–2）</text>
+          <text x="440" y="92" text-anchor="middle" font-size="12" fill="#1a1a2e">VLAN 20：研发（口 3–4）</text>
+          <line x1="220" y1="70" x2="340" y2="70" stroke="#b45309" stroke-width="2.5" marker-end="url(#vl1)"/>
+          <text x="280" y="60" text-anchor="middle" font-size="12" fill="#b45309">Trunk：带 802.1Q 标签</text>
+          <rect x="60" y="160" width="120" height="36" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="120" y="183" text-anchor="middle" font-size="12" fill="#1a1a2e">财务电脑（access）</text>
+          <rect x="380" y="160" width="120" height="36" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="440" y="183" text-anchor="middle" font-size="12" fill="#1a1a2e">研发电脑（access）</text>
+          <line x1="120" y1="120" x2="120" y2="158" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#vl1)"/>
+          <line x1="440" y1="120" x2="440" y2="158" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#vl1)"/>
+          <text x="280" y="225" text-anchor="middle" font-size="12" fill="#666">同一 VLAN 跨交换机互通；不同 VLAN 默认不通，要走路由器</text>
+          <text x="280" y="246" text-anchor="middle" font-size="12" fill="#666">标签只在 Trunk 上，到了终端之前被剥掉</text>
+        </svg>
+        <figcaption>图：VLAN 把一台交换机切成几个逻辑局域网，Trunk 用 802.1Q 标签跨交换机承载多个 VLAN</figcaption>
+      </figure>
+      <p>一个常见的误解要纠正：VLAN 隔离不是“绝对安全”。VLAN 之间默认不通，但如果路由器上配了互通规则、或者有人利用 VLAN 跳跃（VLAN hopping）之类的配置漏洞（比如把 trunk 口伪装协商出来），隔离就可能被绕过。所以 VLAN 是分段的第一步，不是全部——真正的隔离还要靠路由器上的访问控制和防火墙策略来补。还有一个安全细节：不要把管理 VLAN 和业务 VLAN 混用，也不要把不用的端口留在默认 VLAN 1 里敞着；不用的端口要么关掉，要么划进一个“黑洞”VLAN。</p>
+      <h2>生成树 STP：防环路的保险丝</h2>
+      <p>交换机之间为了可靠，常常会多接一条线做备份：交换机 A 和 B 之间连两根线，一根断了另一根顶上。好意却会闯祸：广播帧从 A 到 B、再从另一根线回到 A、再发给 B……永远转下去，越转越多，整个局域网几秒钟就被广播帧淹没，这叫广播风暴。环路是交换网络的天敌。</p>
+      <p>生成树协议（STP，IEEE 802.1D；现在常用快速版 RSTP，802.1w）就是防环路的保险丝。它的思路是：交换机们先互相发 BPDU（桥协议数据单元）选出一个“根桥”（根交换机，一般是优先级最小、MAC 最小的那台），然后每台交换机算出一条到根桥的最短路，只留最短的那条路转发，其他的冗余链路逻辑上堵住（blocking 状态，不转发数据，只听 BPDU）。网络平时走最短的路，一旦某条链路断了，被堵住的那条路会重新算、重新放开，备份就顶上来了。平时堵住、断了放开——既防了环路，又保住了冗余。</p>
+      <p>理解 STP 的关键是“逻辑上堵住，不是物理上拔掉”：线还插着，只是不转发数据。收敛需要时间：老 STP 要 30 到 50 秒才能完成重新计算，期间网络是断的；RSTP 把这个时间缩到几秒。排错时如果发现“插了根新网线，网络卡了半分钟才好”，多半是 STP 在重新算树——这是正常的，别急着拔线。反过来，如果网络里出现了广播风暴，先查有没有人私自接了根线造成环路，或者 STP 是不是被关掉了。</p>
+      <h2>链路聚合：把几根线绑成一根用</h2>
+      <p>两台交换机之间流量太大，一根千兆线不够用，怎么办？链路聚合（Link Aggregation，LACP 是它的动态协商协议，IEEE 802.3ad / 802.1AX）把两条或多条物理链路绑成一条逻辑链路：带宽叠加（两条千兆绑起来约等于 2G），一条断了剩下的继续跑，而且不产生环路——因为对 STP 来说，聚合后的链路只是一条逻辑链路，不用堵住任何一条。</p>
+      <p>要注意一个细节：聚合不是把一个数据流拆成两半各走一条线——单个会话的流量还是走其中一条物理链路，聚合的收益体现在多个会话分摊到多条链路上。所以“绑了两条线，单个文件传输还是 1G 速度”是正常的，别以为配错了。聚合的两端要配成一致：一端配了聚合、另一端没配，轻则不通，重则环路——配聚合时两端一起配、一起验证。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>机房里最吓人的一幕是广播风暴：灯全在狂闪，谁也上不了网。我先看是不是有人多接了一根线——保洁阿姨把墙上的两个网口用一根线连起来了，这种事真发生过。拔掉那根线，网立刻就好。还有一次，客户说“财务和研发明明分了 VLAN，怎么还能互相访问”：一查，路由器上有人随手配了一条全通规则，VLAN 的隔离白做了。记住：VLAN 只是把门分开，门上的锁（路由和防火墙策略）要另外配。最后一条：新交换机上架，先确认 STP 开着、再插线，顺序反了，环路可能在你插上第二根线的那一秒就来了。</div>
+      <h2>动手做</h2>
+      <p>1. 在自己的虚拟机实验网络里看交换行为。用两台虚拟机接在同一个虚拟交换机（VirtualBox 的“内部网络”或 VMware 的“LAN 区段”）上，互相 ping 通，然后在 Linux 虚拟机里建一个网桥练手：<code>sudo ip link add name br0 type bridge</code>，把两块虚拟网卡加进去，再用 <code>bridge fdb show br0</code> 看网桥学到的 MAC 表——那就是交换机转发表的活样子。<br>2. 看泛洪。清空网桥的 MAC 表（<code>sudo bridge fdb flush br0</code>），立刻在另一台虚拟机上 ping，抓包看第一个包是不是被泛洪到了所有口，第二个包开始是不是只走正确的口。<br>3. 练 VLAN 的思路（不用真交换机也能想明白）：在 Linux 虚拟机里建两个带 VLAN 标签的子接口（比如 eth0.10 和 eth0.20），分别配不同网段的地址，ping 同 VLAN 的地址通、跨 VLAN 的不通——亲手验证“不同 VLAN 默认不通”。<br>4. 画一张自己实验网络的图：哪台虚拟机在哪个网段、哪个 VLAN，Trunk 在哪里、网关在哪里。图画清楚了，排错时一半的问题不用猜。所有实验只用自己的虚拟机和实验网络，不动真实网络里的交换机配置。</p>
+      <h2>避坑</h2>
+      <p>别把交换机当成“插线板”：它每时每刻都在学表、查表、泛洪，环路一出现它就是风暴的放大器；别以为分了 VLAN 就安全了：VLAN 只是逻辑隔离，互通规则和防火墙策略要另外配，管理 VLAN 和不用的端口要单独处理；别在不知道 STP 状态的情况下往交换机上多插线：冗余链路要配好 STP 再插，顺序错了就是广播风暴；别指望链路聚合让单个会话翻倍：聚合分摊的是多个会话，单条流还是走一条物理链路；别把广播域和冲突域混为一谈：交换机隔离冲突域，但隔离不了广播域，广播域的边界在路由器和 VLAN 那里。</p>
+      <p>交换机这一层讲完，局域网的拼图就基本完整了：<a href="m3c2-physical.html">第 2 章</a>的帧、<a href="m3c18-arp.html">第 18 章</a>的 ARP、这一章的交换与 VLAN——包在局域网里怎么走，已经没有黑盒子了。下一章把镜头拉到包本身：对着真实报文，把 IPv4、TCP、UDP 的头部一个字段一个字段看清楚：<a href="m3c20-headers.html">第 20 章：报文头部详解：IPv4、TCP、UDP 字段</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>交换机靠 MAC 表转发：看源 MAC 学习，看目标 MAC 点对点送，查不到才泛洪；表会老化、要重新学。</li>
+          <li>VLAN 把一个物理局域网切成几个逻辑局域网：广播只在同 VLAN 内传，不同 VLAN 默认不通，要走路由器。</li>
+          <li>Access 口只属于一个 VLAN、接终端；Trunk 口承载多个 VLAN、接交换机或路由器，帧上带 802.1Q 标签。</li>
+          <li>生成树 STP 防环路：选根桥、算最短路，冗余链路平时逻辑堵住、断了再放开；快速版 RSTP 收敛只要几秒。</li>
+          <li>链路聚合（LACP）把多条物理链路绑成一条逻辑链路：带宽叠加、单链路故障不中断，单个会话仍走一条物理链路。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m3c18-arp.html">← 上一章：第 18 章：ARP 与地址解析</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m3c20-headers.html">下一章：第 20 章：报文头部详解：IPv4、TCP、UDP 字段 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

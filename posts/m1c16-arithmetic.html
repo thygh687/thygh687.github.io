@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 16 章：计算机运算：加法器、乘法、除法与浮点运算实现 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 16 章：计算机运算：加法器、乘法、除法与浮点运算实现</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-25 · 模块一</div>
+      <p>电脑最核心的本事就是算：加减乘除、开方取整、算小数。可是 CPU 里没有计算器，没有算盘，只有一堆逻辑门——<a href="m1c6-logic.html">第 6 章</a>的与、或、非、异或。这一章就把运算器拆开：看看加法器是怎么用门搭出来的，乘法和除法为什么比加法慢，浮点数 0.1+0.2 为什么不等于 0.3。理解了这一层，你就理解了 CPU 里那个叫 ALU（算术逻辑单元）的部件到底在干什么——<a href="m1c2-cpu.html">第 2 章</a>讲过的 ALU，终于要露出真容了。</p>
+
+      <h2>半加器与全加器：从一位加法开始</h2>
+      <p>先从最简单的一位二进制加法开始。一位加一位，只有四种情况：0+0=0（和 0，进位 0）、0+1=1（和 1，进位 0）、1+0=1（和 1，进位 0）、1+1=10（和 0，进位 1）。看“和”这一列：0、1、1、0——这不就是<strong>异或</strong>（XOR）吗？看“进位”这一列：0、0、0、1——这不就是<strong>与</strong>（AND）吗？所以一位加法只需要两个门：一个异或门算和，一个与门算进位。这就是<strong>半加器</strong>：半个加法器，因为它只会算最低位——最低位没有来自低位的进位。</p>
+      <p>从第二位起，每一位的加法都有三个输入：本位的两个数，再加上低位送来的进位。三个一位数相加，和是三者异或，进位是“任意两个同时为 1”。电路上就是两个半加器加一个或门：第一个半加器算 A+B，第二个半加器把结果再加上低位进位，两个半加器产生的进位用或门合起来。这就是<strong>全加器</strong>。第 6 章动手做里你用异或算过 1+1，现在你知道了：那就是半加器在干活。</p>
+
+      <h2>串成加法器：进位链</h2>
+      <p>一个全加器算一位，四个全加器串起来就是 4 位加法器：最低位的进位输出，接到下一位的进位输入，一级一级往上传。这叫<strong>行波进位加法器</strong>——进位像波浪一样一位一位往高位走。</p>
+      <p>拿一个具体例子走一遍：1011（十进制 11）+ 0110（十进制 6）。从最低位（最右边）开始：第 0 位：1+0，无低位进位，和 1，进位 0；第 1 位：1+1，加进位 0，和 0，进位 1；第 2 位：0+1，加进位 1，和 0，进位 1；第 3 位：1+0，加进位 1，和 0，进位 1。最后的进位 1 落在最高位前面，结果是 10001，也就是十进制 17。11+6=17，算对了——代价是进位一级一级传了四次。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="4 位行波进位加法器">
+          <defs>
+            <marker id="arr16" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <text x="280" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">4 位行波进位加法器：1011 + 0110 = 10001</text>
+          <rect x="30" y="90" width="110" height="80" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="85" y="118" text-anchor="middle" font-size="14" fill="#1a1a2e">全加器 FA0</text>
+          <text x="85" y="140" text-anchor="middle" font-size="13" fill="#1a1a2e">A0=1 B0=0</text>
+          <text x="85" y="160" text-anchor="middle" font-size="13" fill="#1a1a2e">和 S0 = 1</text>
+          <rect x="160" y="90" width="110" height="80" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="215" y="118" text-anchor="middle" font-size="14" fill="#1a1a2e">全加器 FA1</text>
+          <text x="215" y="140" text-anchor="middle" font-size="13" fill="#1a1a2e">A1=1 B1=1</text>
+          <text x="215" y="160" text-anchor="middle" font-size="13" fill="#1a1a2e">和 S1 = 0</text>
+          <rect x="290" y="90" width="110" height="80" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="345" y="118" text-anchor="middle" font-size="14" fill="#1a1a2e">全加器 FA2</text>
+          <text x="345" y="140" text-anchor="middle" font-size="13" fill="#1a1a2e">A2=0 B2=1</text>
+          <text x="345" y="160" text-anchor="middle" font-size="13" fill="#1a1a2e">和 S2 = 0</text>
+          <rect x="420" y="90" width="110" height="80" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="475" y="118" text-anchor="middle" font-size="14" fill="#1a1a2e">全加器 FA3</text>
+          <text x="475" y="140" text-anchor="middle" font-size="13" fill="#1a1a2e">A3=1 B3=0</text>
+          <text x="475" y="160" text-anchor="middle" font-size="13" fill="#1a1a2e">和 S3 = 0</text>
+          <line x1="140" y1="130" x2="160" y2="130" stroke="#dc2626" stroke-width="2" marker-end="url(#arr16)"/>
+          <text x="150" y="118" text-anchor="middle" font-size="12" fill="#dc2626">C1=0</text>
+          <line x1="270" y1="130" x2="290" y2="130" stroke="#dc2626" stroke-width="2" marker-end="url(#arr16)"/>
+          <text x="280" y="118" text-anchor="middle" font-size="12" fill="#dc2626">C2=1</text>
+          <line x1="400" y1="130" x2="420" y2="130" stroke="#dc2626" stroke-width="2" marker-end="url(#arr16)"/>
+          <text x="410" y="118" text-anchor="middle" font-size="12" fill="#dc2626">C3=1</text>
+          <text x="30" y="72" text-anchor="middle" font-size="13" fill="#1a1a2e">C0 = 0（最低位无进位）</text>
+          <line x1="30" y1="76" x2="30" y2="120" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr16)"/>
+          <text x="530" y="140" text-anchor="middle" font-size="13" fill="#dc2626">C4 = 1</text>
+          <line x1="530" y1="130" x2="530" y2="110" stroke="#dc2626" stroke-width="2"/>
+          <text x="280" y="210" text-anchor="middle" font-size="13" fill="#1a1a2e">结果：C4 S3 S2 S1 S0 = 1 0 0 0 1 = 十进制 17，11 + 6 = 17 ✓</text>
+          <text x="280" y="236" text-anchor="middle" font-size="12" fill="#666">进位像波浪一样从 FA0 一级一级传到 FA3：每一位都要等低位的进位到了才能算</text>
+          <rect x="40" y="252" width="480" height="36" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="275" text-anchor="middle" font-size="13" fill="#1a1a2e">慢就慢在等进位：64 位加法，进位要走 64 级——这就是超前进位要解决的问题</text>
+        </svg>
+        <figcaption>图：4 位行波进位加法器算 1011 + 0110，进位 C0→C4 一级一级往上传，结果 10001（17）</figcaption>
+      </figure>
+
+      <h2>超前进位：为什么快</h2>
+      <p>行波进位的毛病很明显：高位要等低位的进位，低位要等更低位的进位，64 位加法，进位要走 64 级门延迟。每一级的门延迟很小（纳秒级），但 64 级串起来就很可观了——加法器成了 CPU 里最慢的环节之一。</p>
+      <p><strong>超前进位</strong>（Carry Lookahead）的思路是：别一级一级等，直接算。每一位看两个信号：这一位“产生”进位了吗（A 和 B 都是 1，就一定产生进位），这一位“传递”进位吗（A、B 里有一个是 1，低位来的进位就能传过去）。有了这两个信号，每一位的进位都能直接用“所有低位的 A、B”一次性算出来，不用等前一位算完再传。代价是电路复杂得多——但速度是指数级的提升。现代 CPU 的加法器用的就是超前进位和它的变种。</p>
+      <p>减法也不用另造一套电路：<a href="m1c1-binary.html">第 1 章</a>讲过补码，A - B 就是 A +（B 的补码），补码是“按位取反再加 1”——取反用非门，加 1 用加法器。所以加法器加一个取反和一个进位输入，就能同时干加法和减法，ALU 就是这么省电路的。</p>
+
+      <h2>乘法：移位相加与 Booth 乘法</h2>
+      <p>乘法比加法慢得多，因为它本质上是很多次加法。最直观的办法是<strong>移位相加</strong>：和竖式乘法一模一样。算 1011 × 1101：乘数的每一位是 1，就把被乘数移位后加进来；是 0，就跳过。1011 × 1101 = 1011×1 + 1011×0×2 + 1011×1×4 + 1011×1×8 = 1011 + 101100 + 1011000 = 10001111（十进制 143），11 × 13 = 143，算对了。硬件上就是一个加法器加一个移位寄存器，循环做“看一位、移一位、加一次”，乘数有几位，就要循环几次——32 位乘法要 32 个周期，比加法慢一个数量级。</p>
+      <p><strong>Booth 乘法</strong>的思想是：减少加法的次数。它看的是乘数里连续的 1：比如乘数里有一串 1110，与其加三次，不如一次加、一次减——因为 1110 = 10000 - 10。Booth 算法把“连续的 1”变成“一加一减”，加法的次数就从“有几个 1”降到了“有几段连续的 1”。现代 CPU 的乘法器更进一步，用并行阵列同时算所有部分积，乘法已经快到几个周期就能完成——但代价是电路面积大得多，这就是为什么乘法器比加法器占地方。</p>
+
+      <h2>除法：恢复余数法</h2>
+      <p>除法是最慢的运算。最朴素的思路叫<strong>恢复余数法</strong>：和竖式除法一样，一位一位试。被除数减去除数（移位对齐后）：如果减完不为负（够减），这一位商就是 1，余数就是减完的结果；如果减完为负（不够减），这一位商就是 0，余数要“恢复”成减之前的值——所以叫恢复余数法。然后余数左移一位，继续试下一位。除数有几位，就要试几次，每次都是一次减法加一次判断，所以除法比乘法还慢。现代 CPU 会用更快的算法（比如 SRT 除法、牛顿迭代法算倒数再乘），但思想一样：除法是“试出来的”，不是“算出来的”。</p>
+      <p>还有一个除法的坑：除以 0。硬件层面，除以 0 没有结果——CPU 会触发异常（<a href="m1c9-interrupt.html">第 9 章</a>的异常机制），把控制权交给操作系统处理，程序通常就崩溃了。写程序时永远记得：除法之前先判除数是不是 0。</p>
+
+      <h2>浮点加法四步</h2>
+      <p>整数运算讲完了，轮到小数。<a href="m1c1-binary.html">第 1 章</a>讲过浮点数的表示：一个数 = 尾数 × 2^指数。浮点加法要走四步，缺一不可。</p>
+      <p><strong>第一步：对阶。</strong>两个数的指数要先对齐——小的向大的看齐。就像十进制里 1.23×10² + 4.5×10⁰，先把 4.5 写成 0.045×10²，指数都是 2，才能加尾数。对阶时，指数小的那个数，尾数要右移，右移丢掉的位就按舍入规则处理——精度就是在这里丢掉的。</p>
+      <p><strong>第二步：尾数相加。</strong>指数对齐之后，尾数直接相加（就是前面讲的整数加法器在干活）。</p>
+      <p><strong>第三步：规格化。</strong>相加的结果可能不再是“1.xxx × 2^指数”的规范形式（比如尾数变成了 10.xxx），要左移或右移尾数、相应调整指数，把它变回规范形式。</p>
+      <p><strong>第四步：舍入。</strong>尾数位数有限，多出来的位要按规则舍掉（最常用的是“就近舍入， ties to even”：离谁近舍向谁，正好在中间舍向偶数）。舍入之后，还要再检查一次是否需要重新规格化。</p>
+      <p>四步走完，才是一个浮点加法。所以浮点运算比整数运算慢得多，也复杂得多——浮点单元（FPU）是 CPU 里一块独立的、很大的电路。</p>
+
+      <h2>为什么 0.1 + 0.2 ≠ 0.3</h2>
+      <p>这是每个程序员迟早会撞上的问题。原因很简单：0.1 在二进制里是无限循环小数。十进制的 0.1，换成二进制是 0.0001100110011……永远写不完。浮点数只有有限位（双精度 53 位尾数），存不下无限循环，只能截断、舍入——存进电脑的“0.1”，其实是 0.1000000000000000055511151231257827……；“0.2”也一样，是个近似值。两个近似值相加，结果是 0.30000000000000004，不是 0.3。这不是 bug，是二进制浮点数的固有性质：十进制里有限的小数，在二进制里可能是无限的。</p>
+      <p>怎么办？三条经验：第一，比较浮点数永远不要用 ==，要看“差的绝对值是不是小于一个很小的数”（比如 1e-9）；第二，算钱、算账这种一分都不能差的场景，别用浮点数，用整数（以“分”为单位存）或者专门的十进制类型；第三，记住这不是哪门语言的毛病——所有用 IEEE 754 浮点数的语言都一样。</p>
+
+      <div class="video-note">视频讲解：<a href="https://www.youtube.com/watch?v=1I5ZMmrOfnA">How Computers Calculate - the ALU — Crash Course Computer Science #5</a>（YouTube，英文，可开自动字幕，约 11 分钟——看 ALU 是怎么把加法器、逻辑门拼成一个能算加减乘除的部件的）</div>
+
+      <div class="teacher-note"><strong>老师经验：</strong>浮点数的坑，我在现场踩过两次。一次是客户的账单系统，金额用浮点数累加，月底对账总差几分钱——查了三天，最后发现是 0.1 累加的误差攒出来的，改成整数“分”存储，问题立刻消失。另一次是有人写登录失败次数判断，用浮点数存时间戳做比较，边界条件上时灵时不灵——换成整数时间戳就稳了。我的规矩很简单：钱、次数、时间戳、任何要精确比较的东西，一律不用浮点数。浮点数只留给真正需要小数的科学计算，而且比较时永远用“差值小于 epsilon”，绝不用 ==。这条规矩，写进代码规范里比事后排错便宜一百倍。</div>
+
+      <h2>动手做</h2>
+      <p>1. 笔算一次 4 位加法进位链：算 1011 + 0110，从最低位开始，一位一位写出每位的和与进位，对照本章的图检查——重点是体会“高位要等低位的进位”。<br>2. 在虚拟机里打开 Python，跑 <code>0.1 + 0.2</code>，看结果是不是 0.30000000000000004；再跑 <code>0.1 + 0.2 == 0.3</code>，看结果是不是 False；最后跑 <code>abs((0.1 + 0.2) - 0.3) &lt; 1e-9</code>，看正确的比较方法。<br>3. 用 Python 验证浮点数的近似本质：跑 <code>print(f"{0.1:.55f}")</code>，看存进电脑的“0.1”到底是多少。<br>4. 笔算一次乘法：用移位相加算 1011 × 1101，写出每一步的部分积，再和 Python 的结果对照。</p>
+
+      <h2>避坑</h2>
+      <p>别以为加法是“瞬间”完成的：行波进位要一级一级等，位数越多越慢，超前进位就是为了解决这个；别用浮点数算钱：金额用整数“分”存，或者用十进制类型；别用 == 比较浮点数：用“差值小于 epsilon”；别忘了除法判零：除以 0 会触发异常，程序会崩；别把乘法想得和加法一样快：乘法是多次加法，除法更慢，写性能敏感的代码要心里有数；所有实验都在虚拟机里做。</p>
+      <p>运算器这一章，把 <a href="m1c1-binary.html">第 1 章</a>的补码和浮点表示、<a href="m1c6-logic.html">第 6 章</a>的逻辑门、<a href="m1c2-cpu.html">第 2 章</a>的 ALU 串起来了：门搭成加法器，加法器搭成乘除法器，再加上浮点四步，就是 CPU 算数的全部家当。<a href="m1c17-memory-internals.html">下一章</a>回到存储：看看内存条里面 SRAM 和 DRAM 是怎么存东西的；<a href="m1c19-datapath.html">第 19 章</a>会把本章的运算器和第 15 章的寄存器连起来，组成完整的数据通路。</p>
+
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>半加器是异或门算和、与门算进位；全加器是两个半加器加一个或门，多算一个低位进位。</li>
+          <li>行波进位加法器把全加器串起来，进位一级一级往上传；超前进位直接用所有低位算出每一位的进位，快得多。</li>
+          <li>乘法是移位相加（竖式乘法的硬件版），Booth 乘法把连续的 1 变成一加一减，减少加法次数。</li>
+          <li>除法是恢复余数法一位一位试出来的，是最慢的运算；除以 0 会触发异常。</li>
+          <li>浮点加法四步：对阶、尾数相加、规格化、舍入；0.1 + 0.2 ≠ 0.3 是因为 0.1 在二进制里是无限循环小数，只能近似存储。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m1c15-sequential-logic.html">← 上一章：第 15 章：时序逻辑：触发器、寄存器与状态机</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m1c17-memory-internals.html">下一章：第 17 章：存储器内部：SRAM、DRAM、ROM、主存扩展与地址译码 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

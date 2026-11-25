@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 7 章：文件操作与异常处理 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 7 章：文件操作与异常处理</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p>前面几章的程序都有一个毛病：数据全靠手工输入，程序一关就全没了。真实的安全工作恰恰相反：数据都在文件里——日志文件、扫描结果、黑名单、配置文件。程序的价值，很大一部分就是替你读写这些文件。这一章讲两件事：怎么用 Python 读写文件，以及文件不存在、格式不对、权限不够时，程序怎么优雅地处理而不是直接崩溃。练手只用自己的虚拟机里的日志文件，绝不碰别人的机器、别人的数据。</p>
+      <h2>打开文件：open 与三种模式</h2>
+      <p>Python 里读写文件的入口是 <code>open()</code>：第一个参数是文件路径，第二个是模式。<code>"r"</code> 是读（read），<code>"w"</code> 是写（write，会清空原有内容），<code>"a"</code> 是追加（append，在末尾接着写）。</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">f = open("notes.txt", "r", encoding="utf-8")
+content = f.read()
+print(content)
+f.close()</pre>
+      <p>这里有三个细节值得记住。第一，<code>encoding="utf-8"</code> 要写上：中文文件如果不指定编码，在 Windows 上容易读出乱码——<a href="m1c14-files-encoding.html">模块一第 14 章</a>讲过字符编码的坑，这里就是它在现实里的样子。第二，读完要 <code>close()</code>：打开的文件占着系统资源，不关会越积越多。第三，<code>"w"</code> 模式会毫不留情地清空文件——想往里加东西用 <code>"a"</code>，想写新文件才用 <code>"w"</code>。把 <code>"w"</code> 用在重要文件上，是新手最心痛的一次教训。</p>
+      <p>路径也有讲究：<code>"notes.txt"</code> 这种相对路径，意思是“和程序在同一个文件夹里的 notes.txt”；绝对路径是写全的，比如 Linux 下的 <code>"/home/yufei/logs/app.log"</code>。写程序时优先用相对路径，换台机器也能跑。路径里的反斜杠在 Windows 上要小心：<code>"C:\new\test.txt"</code> 里的 <code>\n</code> 会被当成换行符，正确写法是用正斜杠 <code>"C:/new/test.txt"</code> 或者在字符串前面加 <code>r</code> 写成原始字符串 <code>r"C:\new\test.txt"</code>。</p>
+      <h2>with 语句：让 Python 替你关文件</h2>
+      <p>每次 <code>open</code> 都要记得 <code>close</code>，人总会忘。Python 给了一个更省心的写法：<code>with</code> 语句。它保证不管中间出不出错，退出这段代码块时文件一定会被关掉：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">with open("notes.txt", "r", encoding="utf-8") as f:
+    content = f.read()
+    print(content)
+# 离开 with 块，文件已经自动关掉了，不用写 close()</pre>
+      <p>从现在起，读写文件一律用 <code>with</code>。它不只是一个省事的写法，更是一种安全习惯：资源（文件、网络连接、数据库）用完要释放，靠人工记忆总会漏，靠语言机制才可靠。后面你会看到，<code>with</code> 的思想会反复出现。</p>
+      <h2>逐行读：处理大日志的正确姿势</h2>
+      <p>日志文件动不动就几十万行，一次 <code>read()</code> 全读进内存，机器吃不消。正确姿势是逐行读：一次只读一行，处理完再读下一行，内存里永远只有一行。</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">count = 0
+with open("app.log", "r", encoding="utf-8") as f:
+    for line in f:          # 文件对象本身就是可循环的，一次给一行
+        if "ERROR" in line:
+            count += 1
+print("ERROR 出现了", count, "次")</pre>
+      <p>这几行代码就是一个能用的日志分析器雏形：逐行读，判断某一行里有没有“ERROR”，有就计数。和<a href="m4c3-data-structures.html">第 3 章</a>的字典计数器拼起来，就能统计“每个 IP 失败了几次”；和<a href="m4c6-functions-oop.html">第 6 章</a>的函数拆分拼起来，就能写出“读日志、分析、写报告”三段式的完整工具。写文件也一样简单：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">with open("report.txt", "w", encoding="utf-8") as f:
+    f.write("扫描报告\n")
+    f.write("发现 3 个开放端口\n")</pre>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="文件读写流程图">
+          <defs>
+            <marker id="c7ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="30" width="150" height="50" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="50" text-anchor="middle" font-size="14" fill="#1a1a2e">日志文件 app.log</text>
+          <text x="95" y="70" text-anchor="middle" font-size="13" fill="#666">磁盘上的数据</text>
+          <line x1="170" y1="55" x2="215" y2="55" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c7ar)"/>
+          <rect x="215" y="30" width="150" height="50" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="290" y="50" text-anchor="middle" font-size="14" fill="#1a1a2e">逐行读 + 判断</text>
+          <text x="290" y="70" text-anchor="middle" font-size="13" fill="#666">for 循环 + if</text>
+          <line x1="365" y1="55" x2="410" y2="55" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c7ar)"/>
+          <rect x="410" y="30" width="130" height="50" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="475" y="50" text-anchor="middle" font-size="14" fill="#1a1a2e">字典计数</text>
+          <text x="475" y="70" text-anchor="middle" font-size="13" fill="#666">IP → 次数</text>
+          <line x1="475" y1="80" x2="475" y2="110" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c7ar)"/>
+          <rect x="380" y="110" width="190" height="50" rx="8" fill="#fdf2f8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="475" y="130" text-anchor="middle" font-size="14" fill="#1a1a2e">写报告 report.txt</text>
+          <text x="475" y="150" text-anchor="middle" font-size="13" fill="#666">with open(..., "w")</text>
+          <text x="280" y="200" text-anchor="middle" font-size="13" fill="#666">读 → 分析 → 写：一份日志分析工具的完整流水线</text>
+        </svg>
+        <figcaption>图：读日志、分析、写报告——日志分析工具的完整流水线</figcaption>
+      </figure>
+      <h2>异常处理：出错了怎么办</h2>
+      <p>程序跑起来之后，世界并不总是配合：文件可能不存在、路径可能写错、文件可能被别的程序占着、某一行的格式可能不对。如果不处理，Python 会抛一个异常（exception），程序当场崩溃，之前的结果全丢了。异常处理就是给程序穿上救生衣：可能出问题的地方，用 <code>try/except</code> 包起来，出错时按你写好的办法处理，而不是直接沉底。</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">try:
+    with open("app.log", "r", encoding="utf-8") as f:
+        lines = f.readlines()
+except FileNotFoundError:
+    print("文件不存在，请检查路径是不是写错了。")
+    lines = []
+except PermissionError:
+    print("没有权限读这个文件，换个文件试试。")
+    lines = []</pre>
+      <p><code>try</code> 里放“可能出错的代码”，<code>except</code> 后面跟“出了这种错怎么办”。异常是有名字的：<code>FileNotFoundError</code> 是文件不存在，<code>PermissionError</code> 是权限不够，<code>ValueError</code> 是值不对（比如拿 <code>int()</code> 转一段不是数字的文字）。针对不同的错，写不同的处理——这比笼统地“出了错就跳过”要好得多，因为你能分清“文件不存在”和“权限不够”是两种完全不同的问题。</p>
+      <p>异常处理还有两个常用的搭档：<code>else</code>（没出错时才执行）和 <code>finally</code>（不管出不出错都执行，常用来做收尾清理）。以及一条重要的经验：<code>except</code> 后面别写空的 <code>pass</code>——出错了却假装没看见，是现场最难查的 bug。至少打印一句日志，说明哪一步出了什么错。</p>
+      <h2>读自己的日志练手</h2>
+      <p>最好的练手材料就是你虚拟机里现成的日志。Linux 虚拟机里，<code>/var/log/syslog</code> 或 <code>/var/log/auth.log</code> 是系统日志（读它们可能需要权限，读不了就换自己造的假日志）；Windows 虚拟机里，可以用自己程序的输出造一份假日志。下面是一份可以直接用的假日志，你可以先把它存成 <code>test.log</code>，再用程序分析它：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">2026-11-25 08:01:12 10.0.0.5 登录成功
+2026-11-25 08:02:03 10.0.0.9 登录失败
+2026-11-25 08:02:15 10.0.0.9 登录失败
+2026-11-25 08:03:40 10.0.0.5 登录成功
+2026-11-25 08:04:22 10.0.0.9 登录失败
+2026-11-25 08:05:10 10.0.0.23 登录失败</pre>
+      <p>分析它的程序，就是把本章和前面几章的零件拼起来：逐行读文件，用 <code>split()</code> 把一行按空格切开，取到 IP 那一段，用字典计数“每个 IP 失败了几次”，最后把结果写进报告文件。完整的写法在“动手做”里，你先自己试，再对照思路。注意：这里用的全是自己造的假 IP、假日志，真实的日志文件里可能有敏感信息，分析之前先想清楚“这份日志该不该我看、能不能存下来”。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>现场排错，我有一半时间是在读日志，另一半时间是在写读日志的程序。印象最深的一次，是客户的服务器半夜总被登录失败刷屏，日志文件几百 MB。我写了个小程序：逐行读、只统计“登录失败”的行、按 IP 计数、按次数排序输出，前三名 IP 一眼就能看见，剩下的事就是封禁和加固。两个教训：第一，读大文件永远逐行读，别 <code>read()</code> 一把全读进内存——我见过有人这么干，程序直接把内存吃满、机器卡死；第二，写报告之前先确认输出路径——有一次同事把报告写到了系统盘根目录，权限不够，程序跑了半小时最后一步写文件时崩了，之前的结果全白费。从那以后我的习惯是：程序开头先试写一个空的报告文件，确认能写，再开始分析。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里新建 <code>test.log</code>，把本章那 6 行假日志存进去；写程序逐行读它，数一数“登录失败”出现了几次，再数一数“登录成功”出现了几次。<br>2. 升级这个程序：用字典统计每个 IP 的失败次数，输出像这样的结果：<code>10.0.0.9 失败 3 次</code>。提示：用 <code>line.split()</code> 切开一行，IP 是第 3 段（下标是 2）。<br>3. 把统计结果写进 <code>report.txt</code>（用 <code>"w"</code> 模式），再打开文件确认内容对不对；然后故意把文件名写错一个字母（比如 <code>test2.log</code>），跑一遍，看 <code>try/except FileNotFoundError</code> 是不是接住了错误、程序是不是没有崩溃。<br>4. 试一试 <code>"w"</code> 和 <code>"a"</code> 的区别：先用 <code>"w"</code> 写一行，再用 <code>"a"</code> 追加一行，打开文件看是不是两行都在；再用 <code>"w"</code> 写一行，打开看——之前的内容是不是被清空了。记住这个差别，它能帮你避免一次心痛的数据丢失。</p>
+      <h2>避坑</h2>
+      <p>别用 <code>"w"</code> 打开重要文件：它会先清空再写，想追加用 <code>"a"</code>；别忘了 <code>encoding="utf-8"</code>：中文日志不写编码容易读出乱码；别 <code>read()</code> 一把读进大文件：几十万行的日志要逐行读；别在 <code>except</code> 里写空的 <code>pass</code>：出错了要留一句记录，否则以后查都查不到；别把 Windows 路径里的反斜杠直接写进字符串：用正斜杠或原始字符串；别分析不该看的日志：真实日志可能含敏感信息，先确认权限和范围，只在自己的虚拟机和授权范围内练手。</p>
+      <p>会读写文件、会处理异常，程序就开始像个真正的工具了。但日志里想找的东西往往不是整行匹配的“ERROR”这么简单，而是藏在行里的某个模式：一个 IP、一个日期、一个状态码。怎么把它们精准地抠出来？<a href="m4c8-regex.html">下一章：正则表达式</a>就是干这个的。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li><code>open()</code> 打开文件：<code>"r"</code> 读、<code>"w"</code> 写（会清空）、<code>"a"</code> 追加；记得写 <code>encoding="utf-8"</code>。</li>
+          <li><code>with</code> 语句保证文件用完自动关闭，读写文件一律用它；Windows 路径用正斜杠或原始字符串。</li>
+          <li>大日志要逐行读（<code>for line in f</code>），内存里永远只有一行，别一把 <code>read()</code> 全读进来。</li>
+          <li><code>try/except</code> 让程序出错时按你写好的办法处理而不是崩溃；不同异常（文件不存在、权限不够）要分开处理。</li>
+          <li>读日志、字典计数、写报告拼起来，就是一个真正的日志分析工具；练手只用自己造的假日志和自己虚拟机里的日志。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c6-functions-oop.html">← 上一章：第 6 章：函数、模块与面向对象</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c8-regex.html">下一章：第 8 章：正则表达式 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

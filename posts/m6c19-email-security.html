@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块六第 19 章：邮件安全深入：SPF、DKIM、DMARC 与商务邮件诈骗 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块六第 19 章：邮件安全深入：SPF、DKIM、DMARC 与商务邮件诈骗</h1>
+      <div class="meta"><span class="tag">网络安全基础</span>2026-11-25 · 模块六</div>
+      <p>电子邮件是互联网上最古老的服务之一，也是最不设防的一个：它诞生的时候，根本没想过“发件人会冒充别人”这个问题。任何人都可以发一封“发件人”写着你老板名字的邮件，收件方的服务器在很长一段时间里会照单全收。这就是<a href="m6c4-phishing-deep.html">第 4 章</a>钓鱼和社会工程屡屡得手的技术底子：<a href="lesson-12-phishing.html">预备课第 12 课</a>讲了钓鱼邮件长什么样，这一章讲邮件系统本身是怎么验明正身的——SPF、DKIM、DMARC 三件套——以及攻击者绕过技术防线之后，怎么用一封“老板让你打钱”的邮件骗走真金白银。</p>
+      <p>先记住一个总关系：<strong>SPF 验证“发信的服务器对不对”，DKIM 验证“信的内容有没有被改过”，DMARC 决定“验证失败了怎么办，并把结果告诉域名主人”。</strong>三者缺一不可，少了任何一个，防线都有洞。</p>
+
+      <h2>SPF：这封信是不是从我家寄出的</h2>
+      <p>SPF（Sender Policy Framework，发件人策略框架）是域名主人贴在 DNS 上的一张“授权名单”：我这个域名，只允许这几台服务器替我发邮件。收件方服务器收到邮件后，查发件域名的 SPF 记录，再看这封信实际是从哪台服务器来的——在名单上，放行；不在名单上，就是冒充。</p>
+      <p>SPF 记录长在 DNS 的 TXT 记录里。比如 example.org 的 SPF 记录是 <code>v=spf1 -all</code>，意思是：这个域名不授权任何服务器替它发邮件，所有声称来自 example.org 的邮件都应该被拒绝。写成 <code>-all</code>（硬拒绝）而不是 <code>~all</code>（软拒绝，只标记可疑），态度是最严的——因为 example.org 是保留的示例域名，本来就不该有人用它发信，所以直接写死“一个都不许”。你在动手做里查到的结果就应该是这一行。</p>
+      <p>SPF 的短板也很明显：它只看“信封上的发件服务器”，不看信的内容。邮件转发一次，SPF 就可能失效（转发服务器不在原名单上）；而且 SPF 不验证“发件人名字”那一栏，只验证信封地址。攻击者可以用一个自己能控制的域名通过 SPF 检查，再把显示名写成“你们老板”——收件人看到的还是老板的名字。这就是为什么只靠 SPF 不够。</p>
+
+      <h2>DKIM：信封上的火漆印</h2>
+      <p>DKIM（DomainKeys Identified Mail）给每封邮件盖一个数字签名：发件服务器用域名的私钥对邮件的关键部分（发件人、主题、正文等）签个名，签名放在邮件头里；收件方从 DNS 上取到这个域名的公钥，验签——对上了，说明这封信确实是这个域名发出的，而且路上没被改过；对不上，说明内容被动过手脚。</p>
+      <p>打个比方：SPF 是查“送信的邮递员是不是我家雇的”，DKIM 是检查“信封上的火漆印有没有被撬过”。两者配合，就同时管住了“谁发的”和“改没改”。DKIM 还有一个优点：它跟着邮件走，转发也不怕——只要内容没被改，签名一直有效。</p>
+
+      <h2>DMARC：验证失败了怎么办</h2>
+      <p>SPF 和 DKIM 都会给出“通过 / 失败”的结论，但结论出来之后怎么办？扔掉？放进垃圾箱？还是照常收下？这就是 DMARC（Domain-based Message Authentication, Reporting &amp; Conformance）管的事。域名主人在 DNS 上再贴一条 DMARC 记录，写明三件事：第一，SPF 和 DKIM 要按什么规则对齐（发件域名必须一致，不能拿 A 域名的 SPF 给 B 域名背书）；第二，验证失败的邮件怎么处理——<code>none</code>（只记录，不管）、<code>quarantine</code>（进垃圾箱）、<code>reject</code>（直接拒收）；第三，把验证结果报告发回给域名主人，域名主人就能看到“谁在冒充我发信”。</p>
+      <p>三者的配合是这样的：一封邮件进来，先查 SPF（服务器对不对），再验 DKIM（内容改没改），最后按 DMARC 的策略决定去留，并把结果记下来报告给域名主人。缺了 DMARC，SPF 和 DKIM 的失败可能只是被悄悄记一笔，冒充邮件照样进收件箱；缺了 DKIM，转发过的合法邮件会被 SPF 误伤；缺了 SPF，DKIM 只能保证“没改过”，保证不了“是谁发的”。三件套齐了，冒充域名的钓鱼邮件才会被真正拦在门外。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SPF DKIM DMARC 三件套验证流程图">
+          <defs>
+            <marker id="m19a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="20" width="150" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="47" text-anchor="middle" font-size="14" fill="#1a1a2e">发件服务器</text>
+          <rect x="390" y="20" width="150" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="47" text-anchor="middle" font-size="14" fill="#1a1a2e">收件服务器</text>
+          <line x1="172" y1="42" x2="388" y2="42" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#m19a)"/>
+          <text x="280" y="33" text-anchor="middle" font-size="12" fill="#1a1a2e">发邮件（带 DKIM 签名）</text>
+          <rect x="60" y="100" width="440" height="40" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="125" text-anchor="middle" font-size="14" fill="#1a1a2e">1. SPF：查 DNS，看发信服务器在不在授权名单上</text>
+          <rect x="60" y="155" width="440" height="40" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="180" text-anchor="middle" font-size="14" fill="#1a1a2e">2. DKIM：取公钥验签名，看内容有没有被改过</text>
+          <rect x="60" y="210" width="440" height="40" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="235" text-anchor="middle" font-size="14" fill="#1a1a2e">3. DMARC：按域名主人的策略决定放行 / 隔离 / 拒收</text>
+          <text x="280" y="280" text-anchor="middle" font-size="13" fill="#1a1a2e">三步都查 DNS：SPF、DKIM 公钥、DMARC 策略全贴在 DNS 上</text>
+        </svg>
+        <figcaption>图：SPF、DKIM、DMARC 三步验证——缺哪一步都有洞</figcaption>
+      </figure>
+
+      <h2>商务邮件诈骗（BEC）：技术防线之外的骗局</h2>
+      <p>商务邮件诈骗（Business Email Compromise，BEC）是针对企业的钓鱼升级版：攻击者不群发、不广撒网，而是盯住一家公司，研究它的组织架构、付款流程、老板的说话习惯，然后在付款的关键时刻插进来。常见套路有四种：</p>
+      <p><strong>第一种，冒充老板。</strong>财务收到一封“老板”发来的邮件：“在开会，不方便打电话，马上给这个供应商打一笔款，账号如下。”邮件地址可能是注册的相似域名（比如把 <code>company.com</code> 换成 <code>cornpany.com</code>，rn 看起来像 m），也可能就是老板的邮箱被盗了之后直接发的。</p>
+      <p><strong>第二种，冒充供应商。</strong>攻击者冒充合作多年的供应商发邮件：“我们换银行账号了，以后打款打到这个新账号。”财务按老关系照办，钱就进了骗子的账户。</p>
+      <p><strong>第三种，截胡谈判。</strong>攻击者潜伏在买卖双方的邮件往来里，等到要付款的那一刻，抢先发一封“请把尾款打到这个账号”的邮件，抢在真供应商前面。</p>
+      <p><strong>第四种，冒充律师或高管。</strong>以“并购保密”“紧急法务费用”为由头，要求财务保密、立即付款，利用“保密”和“紧急”两个心理开关压住核实。</p>
+      <p>BEC 的可怕之处在于：它不靠技术漏洞，靠的是流程漏洞。SPF、DKIM、DMARC 能拦住“冒充域名”的邮件，但拦不住“老板邮箱真的被盗了”或者“相似域名注册”这种打法——后者域名本身就是攻击者合法注册的，SPF、DKIM 全是真的。防 BEC 的办法是流程，不是软件：<strong>凡是涉及打款、换账号，第二次确认必须走另一条通道</strong>——打个电话、发个即时消息、当面问一句；大额付款必须两个人审批；财务收到“换账号”通知，先按旧联系方式核实，再更新。</p>
+
+      <h2>怎么看邮件头</h2>
+      <p>邮件头（Header）是每封邮件自带的“行李标签”，记录了它从哪来、经过哪些服务器、验证结果如何。收到可疑邮件，先别看正文，先看邮件头。在常见的邮箱客户端里，打开邮件的“查看原始邮件 / 显示邮件头”就能看到。重点看四行：</p>
+      <p><strong>Received：</strong>有好几行，每行是一个中转站，从下往上读就是邮件走过的路。最底下那一行最接近真正的发件服务器——如果它来自一个你从没见过的陌生服务器，就要警惕。</p>
+      <p><strong>From / Reply-To：</strong>发件人地址和回复地址。如果两者不一样（比如 From 写着老板，Reply-To 却是一个陌生邮箱），几乎可以断定是钓鱼：你一点回复，信就去了骗子手里。</p>
+      <p><strong>Authentication-Results：</strong>收件服务器写下的验证结论，里面会有 <code>spf=pass/fail</code>、<code>dkim=pass/fail</code>、<code>dmarc=pass/fail</code>。三个里只要有一个 fail，就要多留一个心眼。</p>
+      <p><strong>Return-Path：</strong>退信地址。正常邮件的 Return-Path 和 From 域名应该一致；如果 Return-Path 是一个毫不相干的域名，说明信封地址和显示地址对不上，是冒充的典型痕迹。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我帮一家小公司查过一起差点打款成功的 BEC：财务收到“老板”邮件，要求给新供应商打一笔货款，邮件地址乍一看就是老板的，仔细看才发现域名里有个字母被换了，SPF、DKIM、DMARC 全是攻击者自己域名的“真”记录，技术上一点破绽都没有。最后是财务多问了一句——按公司规定打款前必须电话确认——老板说“我没发过”，才拦下来。这件事让我记住两句话：第一，技术验证只能证明“这封信确实来自它声称的域名”，证明不了“这个域名就是你要找的那个人”；第二，防 BEC 的最后一道防线永远是流程，是“换个通道再确认一次”这个动作本身。任何一封要求你“马上、保密、别打电话”的付款邮件，都先当成骗局处理。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只查公开记录：在虚拟机里打开终端，跑 <code>nslookup -type=TXT example.org</code>（Windows）或 <code>dig TXT example.org</code>（Linux），找到它的 SPF 记录——你应该看到 <code>v=spf1 -all</code>，意思是这个域名不授权任何服务器替它发邮件。再查一个你常用的真实大域名（比如你邮箱服务商的域名）的 SPF 记录，对比两者的写法有什么不同。<br>2. 只看自己的邮箱：打开你自己收件箱里的一封正常邮件，找到“查看邮件头 / 显示原始邮件”，在里面找到 <code>Authentication-Results</code> 这一行，读出 spf、dkim、dmarc 各自是 pass 还是 fail；再找到 <code>Received</code> 的最底下一行，看看这封信是从哪台服务器来的。<br>3. 在虚拟机里做一次“找不同”练习：把两封邮件的发件人地址并排写下来，一封是真的（比如你自己的邮箱），另一封是你编出来的相似域名（把其中一个字母换成形近字母），体会一下人眼为什么容易看漏——然后写下三条你以后收到付款类邮件时一定会做的核实动作。<br>4. 给自己定一条规矩并写下来：凡是涉及钱、账号、密码的邮件，绝不只凭邮件本身行动，必须换个通道（电话、即时消息、当面）确认一次。把这条规矩贴在你学<a href="m6c4-phishing-deep.html">第 4 章</a>钓鱼时记的笔记旁边。</p>
+      <h2>避坑</h2>
+      <p>别以为开了 SPF 就万事大吉：SPF 只验证发信服务器，不管内容，转发一次就可能失效；别以为 DKIM 通过就等于发件人可信：DKIM 只证明“没改过”和“确实是这个域名发的”，证明不了这个域名就是你要找的那个人；别把 DMARC 的 <code>p=none</code> 当成“已防护”：none 只是“只记录、不处理”，要起到拦截作用至少得到 quarantine 或 reject；别只看显示名：邮件客户端显示的“老板”只是显示名，真正的发件地址藏在 From 和 Return-Path 里，一定要看地址本身；别在真实邮箱里“试一试”伪造发件人：伪造发件地址发邮件是攻击行为，只能查公开记录、读自己的邮件头，绝不发测试性的伪造邮件。</p>
+      <p>邮箱守住了，无线网络是下一个入口：<a href="m6c20-wireless-enterprise.html">下一章</a>讲公司里的 Wi-Fi 是怎么管的——802.1X、EAP、RADIUS，一台设备连上公司网络之前要经过哪些检查。回头看<a href="m3c24-dns-security.html">模块三第 24 章</a>：SPF、DKIM、DMARC 三条记录全贴在 DNS 上，那一章的 DNS 安全知识，在这里第一次变成了每天都在用的防护。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>SPF 验证发信服务器在不在域名主人的授权名单上，example.org 的 SPF 记录是 v=spf1 -all，表示不授权任何服务器发信。</li>
+          <li>DKIM 用数字签名证明邮件确实是该域名发的、路上没被改过，转发也不怕。</li>
+          <li>DMARC 决定验证失败的邮件是放行、隔离还是拒收，并把结果报告给域名主人。</li>
+          <li>商务邮件诈骗（BEC）不靠技术漏洞，靠流程漏洞：冒充老板、冒充供应商、截胡付款，防法是换个通道二次确认。</li>
+          <li>看邮件头重点看四行：Received、From/Reply-To、Authentication-Results、Return-Path。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m6c18-vuln-types.html">← 上一章：第 18 章：漏洞类型深入：溢出、竞态、注入与供应链</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m6c20-wireless-enterprise.html">下一章：第 20 章：无线企业安全：802.1X、EAP 与 RADIUS →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

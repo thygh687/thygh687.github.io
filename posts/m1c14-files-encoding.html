@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 14 章：文件、编码与压缩 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 14 章：文件、编码与压缩</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-25 · 模块一</div>
+      <p>每天都在用的文件，到底是什么？双击打开一个记事本、看一张图片、解压一个 zip——背后是同一件最简单的事：<strong>文件就是磁盘上的一串字节</strong>。文件名、图标、扩展名，都是给人看的标签；电脑眼里只有 0 和 1。这一章把文件拆开看：文本和二进制的区别、字符是怎么变成字节的、为什么换行在 Windows 和 Linux 上不一样、压缩是怎么把文件变小的。学安全的人更要懂这一层：很多攻击和排错，起点就是“这个文件到底是什么”——扩展名说它是图片，里面的字节却说它是程序。</p>
+
+      <h2>文件就是一串字节</h2>
+      <p>磁盘不认识“文章”“照片”“程序”这些概念，它只存字节：一个字节 8 位，能表示 0 到 255。一个文件，就是从某个地址开始、连续排着的一串字节，外加一个名字和一张记录它存在哪里的“登记表”（文件系统在<a href="m2c9-filesystem.html">模块二第 9 章</a>会细讲）。文件的大小，就是这串字节有多长。记事本里一个字母 A 是 1 个字节，一个汉字“中”是 3 个字节——这不是记事本的毛病，是编码的规则，下一节就讲。</p>
+      <p>既然所有文件都是一串字节，那怎么区分它们？靠<strong>约定</strong>，不是靠内容本身。扩展名 .txt、.jpg、.exe 只是名字的一部分，是给人和软件的提示：双击 .txt 就用记事本打开，双击 .jpg 就用看图软件打开。但扩展名是可以随便改的：把 virus.exe 改名成 photo.jpg，它本质上还是一个可执行程序——只不过双击它的时候，系统会按 .jpg 去找看图软件打不开而已。真正判断文件类型，要看文件开头的几个字节，叫<strong>魔数</strong>（magic number）：JPEG 文件开头是 FF D8 FF，PNG 开头是 89 50 4E 47，ZIP 开头是 50 4B（也就是字母 P、K）。安全检查里，魔数比扩展名可靠得多。</p>
+
+      <h2>文本文件与二进制文件</h2>
+      <p>按内容分，文件就两种：<strong>文本文件</strong>和<strong>二进制文件</strong>。文本文件里的每个字节都对应一个能显示的字符（字母、数字、标点、汉字），用记事本打开能直接读懂；二进制文件里的字节是给程序看的——图片的像素、程序的指令、压缩包的数据——用记事本打开只会看到一堆乱码。</p>
+      <p>这个区分很实用。排错时先问一句：这文件是文本还是二进制？配置文件、日志、日记、代码，都是文本，可以直接打开读；打不开、乱码，先看它是不是根本不是文本文件。反过来，下载了一个号称是 .txt 的东西，打开全是乱码——要么是编码不对（下一节），要么它根本就不是文本文件，可能是个伪装的可执行文件，这时要格外小心。</p>
+
+      <h2>字符编码：ASCII 与 UTF-8</h2>
+      <p>字符怎么变成字节？靠<strong>编码表</strong>：一张“字符 ↔ 数字”的对照表。最早的 ASCII 表只管英文：字母 A 是 65，a 是 97，数字 0 是 48，一共 128 个字符，7 位就够，一个字节装一个字符。英文世界用 ASCII 就够了，但中文、日文、韩文、emoji 加起来有几十万个字符，ASCII 装不下。</p>
+      <p>现在的通用答案是 <strong>UTF-8</strong>：它用 1 到 4 个字节表示一个字符，规则是“常用字符用得少，生僻字符用得多”。英文字符还是 1 个字节，和 ASCII 完全一样——所以纯英文的 UTF-8 文件就是 ASCII 文件；一个中文字符占 3 个字节（“中”是 E4 B8 AD），一个 emoji 占 4 个字节。这就是记事本里一个汉字存下来是 3 字节的原因，也是本章动手做里要亲眼验证的事。</p>
+      <p>UTF-8 有个漂亮的性质：<strong>自同步</strong>。每个字节的开头几位能告诉你“我是一个字符的第几个字节”：0 开头的是单字节字符，110 开头的是两字节字符的第一个字节，1110 开头的是三字节字符的第一个字节，10 开头的是后续字节。所以哪怕中间丢了几个字节，读到下一个字符开头就能重新对齐——这对网络传输和文件损坏后的恢复都很重要。</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UTF-8 编码示意图">
+          <defs>
+            <marker id="arr14" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <text x="280" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">“A中”在 UTF-8 里是怎么存的</text>
+          <rect x="40" y="44" width="90" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="85" y="64" text-anchor="middle" font-size="16" fill="#1a1a2e">A</text>
+          <text x="85" y="84" text-anchor="middle" font-size="12" fill="#666">1 个字节</text>
+          <rect x="150" y="44" width="90" height="48" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="195" y="64" text-anchor="middle" font-size="16" fill="#1a1a2e">中</text>
+          <text x="195" y="84" text-anchor="middle" font-size="12" fill="#666">3 个字节</text>
+          <line x1="85" y1="92" x2="85" y2="118" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr14)"/>
+          <line x1="195" y1="92" x2="195" y2="118" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr14)"/>
+          <rect x="30" y="120" width="110" height="52" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="85" y="142" text-anchor="middle" font-size="14" fill="#1a1a2e">0100 0001</text>
+          <text x="85" y="162" text-anchor="middle" font-size="12" fill="#666">41 = 65</text>
+          <rect x="160" y="120" width="110" height="52" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="215" y="142" text-anchor="middle" font-size="14" fill="#1a1a2e">1110 0100</text>
+          <text x="215" y="162" text-anchor="middle" font-size="12" fill="#666">E4（第 1 字节）</text>
+          <rect x="290" y="120" width="110" height="52" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="345" y="142" text-anchor="middle" font-size="14" fill="#1a1a2e">1011 1000</text>
+          <text x="345" y="162" text-anchor="middle" font-size="12" fill="#666">B8（第 2 字节）</text>
+          <rect x="420" y="120" width="110" height="52" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="475" y="142" text-anchor="middle" font-size="14" fill="#1a1a2e">1010 1101</text>
+          <text x="475" y="162" text-anchor="middle" font-size="12" fill="#666">AD（第 3 字节）</text>
+          <text x="280" y="204" text-anchor="middle" font-size="13" fill="#1a1a2e">“A中”一共 4 个字节：A 占 1 个，“中”占 3 个</text>
+          <text x="280" y="228" text-anchor="middle" font-size="12" fill="#666">认字节的办法：0 开头是单字节字符，110/1110 开头是多字节字符的第 1 个字节，10 开头是后续字节</text>
+          <rect x="40" y="244" width="480" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="269" text-anchor="middle" font-size="13" fill="#1a1a2e">乱码的根源：写文件用 UTF-8，读文件却按别的编码读——字节没变，解读变了</text>
+        </svg>
+        <figcaption>图：UTF-8 里英文 1 个字节、中文 3 个字节；乱码不是文件坏了，是读写两边的编码表对不上</figcaption>
+      </figure>
+
+      <p>乱码就是这么来的：写文件时按 UTF-8 把“中”存成 E4 B8 AD，读文件时却按另一种编码（比如 GBK）去解读这三个字节，GBK 把 E4 B8 认成一个字、AD 又认成半个字，屏幕上就出现一堆看不懂的符号。字节一个没变，变的是解读的表。所以看到乱码先别慌：文件大概率没坏，换个编码打开试试——记事本、浏览器、编辑器都有“换编码打开”的选项。反过来也提醒一件事：<strong>拿到一份乱码文件，先别急着删，可能是编码问题，不是文件损坏。</strong></p>
+
+      <h2>换行符：CRLF 与 LF</h2>
+      <p>文本文件里还有个看不见的坑：换行。Windows 用两个字节表示换行：回车 CR（0D）加换行 LF（0A），合称 <strong>CRLF</strong>；Linux 和 macOS 只用一个 LF。这就是为什么 Windows 记事本写的文件拿到 Linux 上，有时行尾会多出一个 ^M；Linux 上写的脚本拿到 Windows 上，有时又认不出换行。两个系统都没错，只是约定不同。现代编辑器（VS Code、Notepad++）右下角都会显示当前文件是 CRLF 还是 LF，写脚本、写配置之前先看一眼，省掉很多莫名其妙的报错。</p>
+      <p>这个细节在安全里也会出现：日志分析、脚本执行、配置文件解析，行尾多一个看不见的 \r，就能让“完全一样”的两行字被当成不一样的东西。排错时遇到“明明写对了却报错”，先看一眼换行符和文件编码——很多“灵异事件”的答案就在这里。</p>
+
+      <h2>压缩的两种思想</h2>
+      <p>文件太大怎么办？压缩。压缩分两种思想，泾渭分明。</p>
+      <p><strong>无损压缩</strong>：解压后和原来一模一样，一个字节都不能差。文本、程序、文档必须用无损。它的办法就两招。第一招是<strong>字典法</strong>：文件里反复出现的词，只存一次，之后出现的地方只记一个“去前面第几号词那里抄”的编号——就像写文章时第一次写“网络安全手记”，后面都写“见前文”。ZIP、gzip 用的 LZ77 系列算法，核心就是这个思想。第二招是<strong>游程编码</strong>（RLE）：连续重复的东西不一个一个存，改成“存一个，记个数”——比如 100 个连续的 0，存成“0 出现 100 次”，BMP 图片里的大片纯色就是这么压的。字典法擅长对付重复的词，游程法擅长对付连续的重复，两招经常合用。</p>
+      <p><strong>有损压缩</strong>：解压后和原来不一样，但人看不出来（或听不出来）。照片、音乐、视频用有损。它的思想是：<strong>丢掉人感知不到的细节</strong>。JPEG 丢掉人眼不敏感的高频颜色细节，MP3 丢掉人耳听不到的频段和被大声音盖住的小声音，视频更进一步：连续的帧之间只存“变了的部分”。有损压缩能把文件压得非常小，代价是信息真的丢了——一张 JPEG 反复保存、反复压缩，画质会一次比一次差，因为每次都在丢信息，而且丢掉的回不来。所以重要的照片、原始素材，存无损格式（PNG、RAW），别反复转 JPEG。</p>
+      <p>判断压缩有没有用的办法很简单：看文件里有多少“重复”和“可丢的细节”。已经压过的东西（JPEG 图片、MP4 视频、zip 包）再压一次，几乎压不动——因为能去掉的冗余已经被去掉了。反过来，一堆纯文本日志、没压缩过的 BMP 图片，一压就能小一半以上。压缩率本身就是一份情报：一个号称是“文本”的文件压不下去，可能它根本不是文本；一个 zip 包解压后比压缩前大几百倍，可能是<strong>zip 炸弹</strong>——解压前先看一眼压缩包里的文件大小，别让一个几 KB 的小包解出几个 GB 把磁盘撑爆。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>现场排错，我有一半的时间花在“文件到底是什么”上。客户发来一个“图片”打不开，我先不看扩展名，用十六进制看前几个字节：开头是 4D 5A，那是 exe 的魔数——所谓图片根本就是个可执行文件，幸好没双击。还有一次，日志文件在 Windows 上看着好好的，拿到 Linux 服务器上跑脚本，行行报错，原因就是 CRLF：每行行尾多了个 \r，脚本把 \r 当成命令的一部分。改一行配置的事，查了半小时。所以我的习惯是：拿到可疑文件先看魔数和十六进制开头，拿到跨平台的文本先确认编码和换行符——这两个动作，省掉的麻烦比任何高级工具都多。</div>
+
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里建一个文本文件：先只写一个字母 A 保存，看大小是 1 字节；再写一个汉字“中”保存，看大小是 3 字节；然后写“A中”保存，看是不是 4 字节。<br>2. 用十六进制查看器看这个文件（Windows 可用 PowerShell 的 <code>Format-Hex</code>，Linux 可用 <code>xxd</code> 或 <code>hexdump -C</code>），找到字母 A 的 41 和“中”的 E4 B8 AD，亲眼确认 UTF-8 的编码规则。<br>3. 在虚拟机里建一个文件夹，里面放几篇纯文本（可以复制几段本课的文字）和几张图片，分别压缩成 zip，对比压缩前后的大小：文本能压小多少？图片能压小多少？再把 zip 包再压一次，看大小还变不变。<br>4. 拿一张 BMP 或 PNG 图片和一张 JPEG 图片对比：把 JPEG 反复打开保存几次（或用工具反复转码），观察画质变化，理解“有损压缩丢掉的信息回不来”。<br>5. 做一个换行实验：在虚拟机里用记事本写三行字，再拿到 Linux 虚拟机里用 <code>cat -A</code> 看行尾是不是多了 ^M（也就是 \r），再用 <code>dos2unix</code> 或编辑器把它转成 LF，对比效果。</p>
+
+      <h2>避坑</h2>
+      <p>别信扩展名：判断文件类型看魔数（文件开头的字节），.jpg 也可能是改了名的 exe；别把乱码当文件损坏：先换编码打开试试，字节没变只是解读的表不对；别在 Windows 和 Linux 之间直接传脚本不管换行：CRLF 的 \r 会让 Linux 脚本报错；别反复保存 JPEG：有损压缩每次都在丢信息，重要图片存 PNG 或原格式；别直接解压来路不明的压缩包：先看包里文件的大小，警惕 zip 炸弹；所有实验都在虚拟机里做，别拿真实文件、真实网络练手。</p>
+      <p>文件这一层，是后面很多课的地基：<a href="m1c15-sequential-logic.html">下一章</a>回到硬件内部，看电脑怎么“记住”东西；<a href="m2c9-filesystem.html">模块二第 9 章</a>讲文件系统，会把“文件存在磁盘哪里”讲透；模块三讲网络传输时，编码和压缩还会再出现一次——HTTP 传输用的就是文本协议加压缩。回头看<a href="m1c1-binary.html">第 1 章</a>的二进制和补码：文件归根结底就是一串二进制数，编码表和压缩算法，只是在这串数字上约定的解读方式。</p>
+
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>文件就是磁盘上的一串字节，扩展名只是提示，真正判断文件类型要看开头的魔数。</li>
+          <li>文本文件每个字节都对应能显示的字符，二进制文件是给程序看的；打不开先分清是哪一种。</li>
+          <li>UTF-8 里英文 1 个字节、中文 3 个字节、emoji 4 个字节；乱码是读写编码表对不上，不是文件坏了。</li>
+          <li>换行符 Windows 用 CRLF，Linux/macOS 用 LF，跨平台传文本和脚本之前先确认换行符。</li>
+          <li>无损压缩靠字典法和游程编码，一个字节都不能差；有损压缩丢掉人感知不到的细节，丢了就回不来；解压陌生压缩包前先看大小，警惕 zip 炸弹。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m1c13-advanced-cpu.html">← 上一章：第 13 章：高级 CPU：超标量、多核、缓存一致性与虚拟化</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m1c15-sequential-logic.html">下一章：第 15 章：时序逻辑：触发器、寄存器与状态机 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

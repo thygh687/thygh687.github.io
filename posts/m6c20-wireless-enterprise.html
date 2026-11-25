@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块六第 20 章：无线企业安全：802.1X、EAP 与 RADIUS · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块六第 20 章：无线企业安全：802.1X、EAP 与 RADIUS</h1>
+      <div class="meta"><span class="tag">网络安全基础</span>2026-11-25 · 模块六</div>
+      <p>家里的 Wi-Fi 很简单：一个密码，全家人共用，谁拿到密码谁就能上网。公司的 Wi-Fi 不能这么管：几百上千人进进出出，有人离职、有人是访客、有人只能上外网不能进内网——一个共用密码管不住这些。所以企业无线用的是一套完全不同的思路：<strong>每台设备、每个人单独认证，认证通过了才给网，而且给的网还不一样。</strong>这一章讲的就是这套思路的三个主角：802.1X、EAP、RADIUS。先有个总画面：802.1X 是“门口的规矩”（没认证不给网），EAP 是“查证件的方法”（用什么方式证明你是谁），RADIUS 是“后台的户籍处”（真正说了算的认证服务器）。</p>
+      <p>先回看<a href="m3c11-wireless.html">模块三第 11 章</a>：家里 WPA2/WPA3 的个人模式（PSK）是“一个密码管所有人”，企业模式（Enterprise）就是本章讲的 802.1X。那一章讲了无线信号是怎么被加密的，这一章讲信号加密之前的那一步——你是谁，你有没有资格连进来。</p>
+
+      <h2>802.1X：没认证，就不给网</h2>
+      <p>802.1X 是 IEEE 的端口认证标准，核心思想是“先认证，后联网”。它把网络接入点（无线 AP 或有线交换机端口）当成一扇带锁的门：设备刚连上来时，门只开一条缝——只允许认证用的数据通过，其他流量一律不放行；认证通过了，门才完全打开；认证失败或超时，门一直关着。</p>
+      <p>这个模型里有三个角色：<strong>请求者（Supplicant）</strong>——想上网的设备，比如你的笔记本；<strong>认证者（Authenticator）</strong>——门口的守卫，通常是无线 AP 或交换机，它自己不做决定，只负责传话；<strong>认证服务器（Authentication Server）</strong>——真正说了算的后台，一般是 RADIUS 服务器，它查账号、验密码、做决定，再把“放行 / 拒绝”告诉守卫。三个角色分工明确：守卫不存密码，后台不直接见设备，中间传话用标准协议。</p>
+      <p>802.1X 不只管 Wi-Fi，有线网络也一样能用：插上网线、认证通过之前，交换机端口也是只放行认证流量。这就是为什么有的公司工位上插上网线没反应——不是网坏了，是你的设备还没通过认证。</p>
+
+      <h2>EAP：用什么办法证明你是谁</h2>
+      <p>EAP（Extensible Authentication Protocol，可扩展认证协议）是个“框架”，不是一种具体的认证方法：它规定了认证对话怎么进行（请求者、认证者、服务器之间怎么一问一答），具体用什么凭证，由里面装的 EAP 方法决定。常见的几种：</p>
+      <p><strong>EAP-TLS：</strong>双方都用证书认证，设备拿自己的证书、服务器拿自己的证书，互相验明正身。这是最安全的一种：没有密码可偷、可猜，证书丢了可以吊销。但代价是每台设备都要发证书、管证书，管理成本最高。</p>
+      <p><strong>PEAP / EAP-TTLS：</strong>先用服务器的证书建一条加密隧道，再在隧道里用用户名密码认证。好处是客户端不用发证书，只需要服务器有证书，部署简单得多；代价是密码本身仍是弱点，隧道里的密码如果被钓鱼套走，照样能用。所以这两种方法必须配上“验证服务器证书”的检查，否则攻击者可以冒充服务器骗走密码。</p>
+      <p><strong>EAP-FAST、EAP-SIM 等：</strong>其他场景下的方法，比如用手机 SIM 卡认证。记住一点就够了：EAP 是个能装不同方法的“盒子”，选哪种方法，是安全性和管理成本之间的权衡。</p>
+
+      <h2>RADIUS：后台说了算的认证服务器</h2>
+      <p>RADIUS（Remote Authentication Dial-In User Service）是认证服务器最常用的协议。它的工作很简单：收到认证请求（用户名、密码或证书信息），去查账号库（公司的 AD、LDAP 或数据库），查到了、密码对了，就回一个“允许接入”，还可以顺带告诉 AP：“这个人是财务部的，把他放进财务 VLAN；那个人是访客，只能上外网”。</p>
+      <p>这就引出了企业无线最实用的本事：<strong>动态 VLAN 分配</strong>。同样是连上公司 Wi-Fi，员工进员工网段、访客进访客网段、打印机进设备网段——不是靠“连哪个 SSID”，而是靠认证结果自动分。这比“访客一个密码、员工一个密码”的做法强得多：密码会泄露、会共用，认证结果不会。RADIUS 的记账功能还会记录“谁、什么时候、从哪台设备、连了多久”，出了事能追溯到人。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="802.1X 认证流程图">
+          <defs>
+            <marker id="m20a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="20" width="140" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="90" y="47" text-anchor="middle" font-size="14" fill="#1a1a2e">请求者：笔记本</text>
+          <rect x="210" y="20" width="140" height="44" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="47" text-anchor="middle" font-size="14" fill="#1a1a2e">认证者：无线 AP</text>
+          <rect x="400" y="20" width="140" height="44" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="470" y="47" text-anchor="middle" font-size="14" fill="#1a1a2e">RADIUS 服务器</text>
+          <line x1="90" y1="64" x2="90" y2="290" stroke="#1a1a2e" stroke-width="1" stroke-dasharray="4 4"/>
+          <line x1="280" y1="64" x2="280" y2="290" stroke="#1a1a2e" stroke-width="1" stroke-dasharray="4 4"/>
+          <line x1="470" y1="64" x2="470" y2="290" stroke="#1a1a2e" stroke-width="1" stroke-dasharray="4 4"/>
+          <line x1="92" y1="90" x2="278" y2="90" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#m20a)"/>
+          <text x="185" y="82" text-anchor="middle" font-size="12" fill="#1a1a2e">1. 请求接入</text>
+          <line x1="278" y1="130" x2="92" y2="130" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#m20a)"/>
+          <text x="185" y="122" text-anchor="middle" font-size="12" fill="#1a1a2e">2. 请出示身份（EAP）</text>
+          <line x1="92" y1="170" x2="278" y2="170" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#m20a)"/>
+          <text x="185" y="162" text-anchor="middle" font-size="12" fill="#1a1a2e">3. 递交凭证</text>
+          <line x1="282" y1="210" x2="468" y2="210" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#m20a)"/>
+          <text x="375" y="202" text-anchor="middle" font-size="12" fill="#1a1a2e">4. 转交 RADIUS 核验</text>
+          <line x1="468" y1="250" x2="282" y2="250" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#m20a)"/>
+          <text x="375" y="242" text-anchor="middle" font-size="12" fill="#1a1a2e">5. 允许接入 + 分进哪个 VLAN</text>
+          <text x="280" y="288" text-anchor="middle" font-size="12" fill="#666">认证通过前，AP 只放行认证流量，其他一律不通</text>
+        </svg>
+        <figcaption>图：802.1X 认证流程——AP 只传话，RADIUS 说了算</figcaption>
+      </figure>
+
+      <h2>证书认证：为什么企业最爱它</h2>
+      <p>密码有个改不掉的毛病：能被猜、被钓、被共用、被写在便利贴上。证书认证（EAP-TLS）把“你知道什么”换成了“你有什么”：每台设备一张由公司签发的数字证书，私钥存在设备里，连网时自动出示，公司能随时吊销某一张证书——员工离职，吊销他的证书，他手里的设备立刻连不上网，不用改全公司的 Wi-Fi 密码。这就是企业愿意花成本管证书的原因：<strong>离职一个人的成本，从“改所有人的密码”变成“吊销一张证书”。</strong>证书本身要按<a href="m3c7-dns-http-tls.html">模块三第 7 章</a>讲的 TLS 原理来理解：公钥、私钥、证书链那套东西，在这里是每天都在用的认证手段。</p>
+
+      <h2>访客网络隔离：客人只能待在客厅</h2>
+      <p>访客网络是企业无线里最容易被轻视、也最容易出事的一环。正确的做法是：访客 SSID 单独一个，访客之间互相隔离（客户端隔离，访客的设备看不到彼此），访客只能访问互联网，任何通往内网的路都被防火墙堵死，最好再加个上网行为的简单审计。错误的做法是：访客和员工用同一个 SSID、同一个密码，或者访客网络“顺手”就能 ping 通内网服务器。访客网络的本质是<a href="m6c17-security-models.html">第 17 章</a>纵深防御里的网络分段：把不可信的人放在单独的网段里，就算他的设备有问题，也碰不到内网。</p>
+
+      <h2>流氓 AP：假冒的 Wi-Fi</h2>
+      <p>流氓 AP（Rogue AP）分两种。一种是“无心的”：员工图方便，自己带个家用路由器插上公司网线、开个热点，同事们就连上去了——这个热点没人管、没加密、没审计，等于在公司防火墙上开了一个后门。另一种是“有意的”：攻击者在公司附近架一个同名、同 SSID 的假 AP，信号比真的还强，员工的手机自动连上去，之后所有的流量都经过攻击者——账号密码、邮件内容一览无余。防御靠两端：公司一侧用无线入侵检测（WIDS）定期扫描，发现未登记的 AP 就定位、拔掉；用户一侧要做到：不连来路不明的开放 Wi-Fi，公司的 Wi-Fi 只连认准的那个，并且验证服务器证书（PEAP 下最重要的一步）。<a href="m6c4-phishing-deep.html">第 4 章</a>讲的社会工程在这里也有影子：流氓 AP 得手的常常不是技术，而是“这个 Wi-Fi 名字看着就是公司的”这种信任。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>我见过最多的企业无线事故不是被黑，是“自己人图方便”：有人把家用路由器带进办公室插上网线，全公司的人都能搜到一个没密码的热点；还有一次，访客网络和内网之间只隔了一条没人记得的防火墙规则，访客的手机直接扫到了内网的打印机。排查企业无线，我的顺序永远是：先看认证方式——是不是还在用共用密码；再看访客隔离——访客能不能 ping 通内网；最后看有没有流氓 AP——拿手机扫一圈，看有没有不认识的同名热点。还有一句要记牢：PEAP 环境里，客户端弹出的“是否信任这个服务器证书”千万别随手点“是”——那一步就是防假冒服务器的最后一道关，点了“是”，等于亲手把凭证交给了假服务器。</div>
+
+      <h2>动手做</h2>
+      <p>1. 只在自己的实验网络里：在虚拟机里装一个免费的 RADIUS 服务端（比如 FreeRADIUS 的实验环境）和一个无线 AP 的模拟器或一台备用路由器，照着本章的三个角色搭一次最小的 802.1X：笔记本做请求者、AP 做认证者、FreeRADIUS 做服务器，记录每一步是谁在和谁说话。<br>2. 只在自己的实验网络里：查看你家路由器或虚拟机实验网络的 Wi-Fi 设置，确认它现在用的是 WPA2 还是 WPA3、是个人模式（PSK）还是企业模式；再看访客网络开没开、访客之间隔离开了没有，把结果记下来。<br>3. 只在自己的实验网络里：用你自己的手机做一次“流氓 AP 识别”练习——在你家附近搜到的 Wi-Fi 列表里，找出所有和你家 SSID 名字相近的热点，写下来：你怎么判断哪个是真的、哪个可能是假的？（看信号、看加密方式、看是不是要你重新输密码。）<br>4. 在虚拟机里打开你操作系统的 Wi-Fi 设置，找到“验证服务器证书”这一项，确认它是开着的；再想一想：如果关掉它，PEAP 认证会发生什么——把答案写进你的笔记。</p>
+      <h2>避坑</h2>
+      <p>别把企业无线当成“家里 Wi-Fi 加个更复杂的密码”：一个共用密码管不住离职、管不住访客、管不住分段；别在 PEAP 里随手信任服务器证书：那一步是防假冒服务器的，点了“是”就等于把凭证交给对方；别让访客网络通向内网：访客只能上外网，访客之间也要互相隔离；别在公司里私接路由器开热点：一个没人管的 AP 就是防火墙上的一个洞；别攻击别人的 Wi-Fi：破解邻居或公司的无线密码、架设流氓 AP 诱捕他人，是违法行为，所有实验只在自己的实验网络里做。</p>
+      <p>网络接进来了，接下来要管的是“改动”和“家底”：<a href="m6c21-change-asset.html">下一章</a>讲变更管理与资产清单——谁改了什么、改之前有没有人批、公司到底有多少资产。回头看<a href="m6c17-security-models.html">第 17 章</a>：802.1X 的三个角色分工、RADIUS 的集中决策，正是“纵深防御”在网络接入层的一个具体落地。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>802.1X 是“先认证、后联网”：请求者、认证者（AP）、认证服务器（RADIUS）三个角色，AP 只传话，RADIUS 说了算。</li>
+          <li>EAP 是认证方法的框架：EAP-TLS 用双向证书最安全，PEAP/TTLS 先建隧道再用密码，必须验证服务器证书。</li>
+          <li>RADIUS 是后台认证服务器，查账号库做决定，还能按认证结果动态分配 VLAN、记录接入日志。</li>
+          <li>证书认证让离职成本变成“吊销一张证书”，不用改全公司的密码。</li>
+          <li>访客网络要单独隔离、只能上外网；流氓 AP 分无心私接和有意假冒两种，都要靠扫描和证书验证来防。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m6c19-email-security.html">← 上一章：第 19 章：邮件安全深入：SPF、DKIM、DMARC 与商务邮件诈骗</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m6c21-change-asset.html">下一章：第 21 章：变更管理与资产清单 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

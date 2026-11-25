@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块三第 22 章：应用层协议：SMTP、FTP、SNMP、NTP 与 Socket 编程 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块三第 22 章：应用层协议：SMTP、FTP、SNMP、NTP 与 Socket 编程</h1>
+      <div class="meta"><span class="tag">计算机网络</span>2026-11-25 · 模块三</div>
+      <p><a href="m3c7-dns-http-tls.html">第 7 章</a>讲了应用层最出名的三个：DNS、HTTP、TLS。但网络上跑着的应用层协议远不止这三个：邮件怎么送到、文件怎么传、管理员怎么管几百台设备、所有电脑的时间怎么对得上——背后各有一个协议。这一章把它们一个个讲清楚，最后亲手写一个 Socket 程序：只在自己的虚拟机里跑，一个回声服务器，理解“应用层协议”到底是一行行什么样的对话。</p>
+      <h2>SMTP：发邮件的协议，收邮件不是它</h2>
+      <p>SMTP（简单邮件传输协议）只负责“发”和“转”邮件，不负责“收”。你写好一封邮件点发送，你的邮件客户端用 SMTP 把它交给你的邮件服务器（端口 25 或 587）；服务器之间再用 SMTP 一站站转下去，直到对方的邮件服务器；对方收邮件时，用的则是 POP3 或 IMAP——发和收是两个协议，别混了。</p>
+      <p>SMTP 的对话是纯文本的，一行命令、一行回答，像这样：客户端先打招呼 <code>EHLO</code>，服务器回 250（表示“好的”）；客户端说 <code>MAIL FROM:&lt;我&gt;</code>，服务器回 250；客户端说 <code>RCPT TO:&lt;对方&gt;</code>，服务器回 250；客户端发 <code>DATA</code>，服务器回 354（表示“请发正文，以单独一行的点结束”）；客户端发完正文和一个单独的 <code>.</code>，服务器回 250（表示“收到了”）；最后 <code>QUIT</code> 断开。整个过程没有加密——原始的 SMTP 是明文的，用户名、密码、邮件内容在路上都能被看到，所以现代邮件发送要走加密的提交端口 587（STARTTLS）或 465，并且要配合<a href="m3c24-dns-security.html">第 24 章</a>讲的 SPF、DKIM、DMARC 来防伪造。</p>
+      <p>从安全角度看，SMTP 最大的历史教训是“开放中继”：早期的邮件服务器谁的邮件都肯转，垃圾邮件发送者就拿它当免费邮局。现在的服务器只给本域用户或认证过的用户转发，开放中继已经被默认关掉。看到一台服务器还能开放中继，那就是一个待修的漏洞。</p>
+      <h2>FTP：两个连接，一个传命令、一个传数据</h2>
+      <p>FTP（文件传输协议）是互联网上最老的文件传输协议之一，控制连接走 21 端口，数据连接另外开。客户端先在 21 端口上和服务器建立控制连接，发命令（登录、列目录、取文件）；真正传文件时，再开一条数据连接。数据连接有两种模式：主动模式下服务器从 20 端口主动连回客户端，防火墙常常拦住这条回连；被动模式下客户端主动连服务器指定的高位端口，防火墙友好得多——现代 FTP 基本都用被动模式。</p>
+      <p>FTP 最大的问题和 SMTP 一样：用户名、密码、文件内容全是明文。局域网里抓个包，FTP 的登录密码直接就能看到。所以今天传文件要用加密的替代品：SFTP（走 SSH，22 端口）或 FTPS（FTP 加 TLS）。还用明文 FTP 传敏感文件，等于把密码写在明信片上寄出去。</p>
+      <h2>SNMP：管理员怎么管几百台设备</h2>
+      <p>SNMP（简单网络管理协议）是管理员的“遥控器+体检表”：用它可以问一台路由器“你的 CPU 占用多少、哪个端口通着、流量多大”，也可以让设备出问题时主动发通知（trap）回来。SNMP 用 UDP 161 端口问答、162 端口收通知。设备上的信息按一棵树组织，叫 MIB（管理信息库）：每个信息有一个 OID（对象标识符），像 <code>1.3.6.1.2.1.1.1.0</code> 这样一串数字，代表“系统描述”。管理员的软件按 OID 去问，设备按 OID 回答。</p>
+      <p>SNMP 的版本差别就是安全差别：v1 和 v2c 用“团体字”（community string）当密码，而且是明文传的——默认团体字 <code>public</code>（只读）和 <code>private</code>（读写）全世界都知道，等于没设密码；v3 才有真正的认证和加密。排错时记住：能用 SNMP 读到设备信息的人，往往也能顺手改配置——团体字要改掉、读写权限要分开、SNMP 最好只在管理 VLAN 里放行（VLAN 见<a href="m3c19-switching-vlan.html">第 19 章</a>）。<a href="m3c23-sdn-qos.html">第 23 章</a>讲网络管理时，会把 SNMP 再往深讲一层。</p>
+      <h2>NTP：全网的时间从哪来</h2>
+      <p>NTP（网络时间协议）负责让全世界的电脑对上同一个时间，用 UDP 123 端口。它的结构是分层的“层”（stratum）：直接连着原子钟、GPS 的服务器是第 1 层，同步第 1 层的服务器是第 2 层，依次类推，层数越低越准。你的电脑问 NTP 服务器“我现在几点”，服务器回一个带时间戳的包，客户端再算上网络来回的延迟，把本地时钟拨准。</p>
+      <p>时间对安全为什么重要？日志、证书、票据全靠时间：证书有有效期，时间错了证书就“过期”或“还没生效”；登录日志的时间戳错了，事后排错和取证全乱套；Kerberos 这类认证协议要求客户端和服务器的时间差不能超过几分钟，差多了直接拒绝登录。NTP 本身也有安全问题：没有认证的 NTP 会被利用做放大攻击（一个小请求换来一个大回答，拿去打别人），所以 NTP 服务器要配好访问控制、开 NTP 认证，别让它变成别人的放大器。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Socket 客户端服务器模型与 SMTP 对话示意图">
+          <rect x="20" y="10" width="520" height="120" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="32" text-anchor="middle" font-size="14" fill="#1a1a2e">Socket 客户端 / 服务器模型（回声程序）</text>
+          <rect x="40" y="50" width="140" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="110" y="74" text-anchor="middle" font-size="13" fill="#1a1a2e">客户端</text>
+          <text x="110" y="94" text-anchor="middle" font-size="12" fill="#666">connect → 发 → 收</text>
+          <rect x="380" y="50" width="140" height="60" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="450" y="74" text-anchor="middle" font-size="13" fill="#1a1a2e">服务端</text>
+          <text x="450" y="94" text-anchor="middle" font-size="12" fill="#666">bind → 监听 → 收 → 发回</text>
+          <line x1="180" y1="70" x2="380" y2="70" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#sk1)"/>
+          <text x="280" y="61" text-anchor="middle" font-size="12" fill="#1a1a2e">“你好”</text>
+          <line x1="380" y1="96" x2="180" y2="96" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#sk1)"/>
+          <text x="280" y="112" text-anchor="middle" font-size="12" fill="#1a1a2e">原样发回“你好”</text>
+          <defs>
+            <marker id="sk1" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="145" width="520" height="140" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="167" text-anchor="middle" font-size="14" fill="#1a1a2e">SMTP 对话（一行命令，一行回答）</text>
+          <g font-size="12" fill="#1a1a2e">
+            <text x="60" y="192">客户端：EHLO → 服务器：250 好的</text>
+            <text x="60" y="212">客户端：MAIL FROM → 服务器：250 好的</text>
+            <text x="60" y="232">客户端：RCPT TO → 服务器：250 好的</text>
+            <text x="60" y="252">客户端：DATA → 发正文 → . → 服务器：250 收到了</text>
+            <text x="60" y="272">客户端：QUIT → 断开</text>
+          </g>
+        </svg>
+        <figcaption>图：Socket 是客户端连上服务端、发什么回什么；SMTP 是一行命令配一行回答的纯文本对话</figcaption>
+      </figure>
+      <h2>Socket 编程：应用层协议就是一行行对话</h2>
+      <p>Socket（套接字）是程序用网络收发数据的接口：程序先创建一个 socket，服务端把它绑定（bind）到一个地址和端口上、开始监听（listen）、等客户端连上来（accept）；客户端创建一个 socket、连接（connect）到服务端的地址和端口；连上之后，双方就可以收（recv）和发（send）了。所谓“应用层协议”，就是双方约定好的对话格式：SMTP 约定“先 EHLO 再 MAIL FROM”，HTTP 约定“先 GET 再 Host”，你的回声程序约定“发什么、回什么”。协议不是神秘的东西，就是一份对话脚本。</p>
+      <p>下面是一个只在自己虚拟机里跑的回声程序，用 Python 写。服务端只监听 127.0.0.1（本机回环），客户端也只连 127.0.0.1——流量不出本机，谁也连不进来。</p>
+      <p>服务端（保存为 echo_server.py，在虚拟机里跑）：</p>
+      <p><code>import socket<br>s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)<br>s.bind(("127.0.0.1", 9000))<br>s.listen(1)<br>print("等客户端连 127.0.0.1:9000……")<br>conn, addr = s.accept()<br>data = conn.recv(1024)<br>print("收到：", data.decode())<br>conn.sendall(data)  # 原样发回去<br>conn.close()<br>s.close()</code></p>
+      <p>客户端（保存为 echo_client.py，另开一个终端跑）：</p>
+      <p><code>import socket<br>s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)<br>s.connect(("127.0.0.1", 9000))<br>s.sendall("你好，网络".encode())<br>print("服务端回：", s.recv(1024).decode())<br>s.close()</code></p>
+      <p>跑起来你会看到：客户端发“你好，网络”，服务端原样发回来。把 <code>SOCK_STREAM</code>（TCP）换成 <code>SOCK_DGRAM</code>（UDP），再试一次：UDP 没有 connect 之后“一直在连”的概念，收发要用 <code>sendto</code> / <code>recvfrom</code>，而且发出去对方收没收到，发送端是不知道的——这正是<a href="m3c5-tcp-udp.html">第 5 章</a>讲的 TCP 和 UDP 的区别，在代码里亲手摸到了。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>现场排错，应用层协议出问题时，我先问三个问题：连得上吗（TCP 通不通）、对方回什么（协议对话走到哪一步卡住了）、时间对吗（证书和日志都靠时间）。有一次客户的邮件发不出去，SMTP 对话卡在 RCPT TO 那一步回 550——不是网络问题，是对方服务器拒收这个收件人。还有一次，监控读不到交换机数据，SNMP 团体字还是默认的 public，但设备上配的是另一串——先对团体字，再怀疑网络。最后一条：写 Socket 程序只绑 127.0.0.1 是个好习惯，练手的东西别绑 0.0.0.0 敞在局域网里，等你有意让别人连的时候再放开。</div>
+      <h2>动手做</h2>
+      <p>1. 在自己的虚拟机里跑通上面的回声程序：两个终端，一个跑服务端、一个跑客户端，看到“服务端回：你好，网络”就算成功。改一下发的内容，再跑一次。<br>2. 换 UDP 再跑一次：把两端都改成 SOCK_DGRAM，用 sendto / recvfrom 收发，体会“发出去就不管了”和 TCP 的区别。注意：UDP 版服务端要先 bind、再 recvfrom，客户端直接 sendto 到 127.0.0.1:9001。<br>3. 看一次 SMTP 的影子（只看，不发）：在虚拟机里用 Python 的 smtplib 连自己搭的本地测试服务（或只读一遍上面的对话脚本），对照着认一认 EHLO、MAIL FROM、RCPT TO、DATA 各是哪一步。不要连真实的邮件服务器发测试邮件。<br>4. 查自己虚拟机的时间源。Linux 虚拟机跑 <code>timedatectl</code> 或 <code>ntpq -p</code>，看它在和哪台 NTP 服务器对时、时间差是多少；Windows 虚拟机跑 <code>w32tm /query /status</code>。时间差超过几秒就值得注意——证书和日志都靠它。所有实验全在自己的虚拟机里，不连外网服务。</p>
+      <h2>避坑</h2>
+      <p>别把 SMTP 和收邮件混为一谈：SMTP 只管发和转，收邮件是 POP3 / IMAP 的事；别用明文 FTP 传敏感文件：密码和内容都在路上裸奔，改用 SFTP 或 FTPS；别留默认的 SNMP 团体字 public / private：全世界都知道，等于没设密码，v1/v2c 的团体字是明文传的；别忽视时间：NTP 不准，证书验证、日志取证、Kerberos 登录都会跟着出问题；别把练手的 Socket 服务绑到 0.0.0.0：只绑 127.0.0.1，流量不出本机，练手才安全；别拿真实邮件服务器、真实 FTP 服务器练手：所有实验都在自己的虚拟机里做。</p>
+      <p>应用层这一块到这里就齐了：<a href="m3c7-dns-http-tls.html">第 7 章</a>的 DNS、HTTP、TLS，加上这一章的 SMTP、FTP、SNMP、NTP——日常网络服务背后的协议，基本都见过了。下一章把视线从“单个协议”抬到“整张网怎么管”：控制平面和数据平面分开之后，网络会变成什么样：<a href="m3c23-sdn-qos.html">第 23 章：SDN、QoS 与网络管理</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>SMTP 只负责发和转邮件（25/587 端口），收邮件是 POP3/IMAP 的事；原始 SMTP 是明文，要走加密端口并配合 SPF、DKIM、DMARC 防伪造。</li>
+          <li>FTP 用 21 端口传命令、另开数据连接传文件，用户名、密码、内容全是明文；传敏感文件改用 SFTP 或 FTPS。</li>
+          <li>SNMP 用 UDP 161 问、162 收通知，信息按 MIB 树和 OID 组织；v1/v2c 的团体字是明文、默认值等于没设密码，v3 才有认证和加密。</li>
+          <li>NTP 用 UDP 123 对时，分层（stratum）越低越准；时间不准，证书、日志、Kerberos 都会出问题。</li>
+          <li>Socket 编程就是按约定好的对话脚本收发：服务端 bind、监听、接受，客户端 connect、收发；回声程序只绑 127.0.0.1，只在自己的虚拟机里跑。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m3c21-routing-algorithms.html">← 上一章：第 21 章：路由算法深入：链路状态与距离向量</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m3c23-sdn-qos.html">下一章：第 23 章：SDN、QoS 与网络管理 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

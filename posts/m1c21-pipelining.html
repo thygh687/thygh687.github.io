@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 21 章：流水线深入：五段流水线、冒险与分支预测 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 21 章：流水线深入：五段流水线、冒险与分支预测</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-25 · 模块一</div>
+      <p><a href="m1c19-datapath.html">第 19 章</a>的多周期处理器有个浪费：一条指令在执行段算数的时候，取指段是空闲的；在访存的时候，译码段是空闲的。流水线的想法就是：别让任何一段闲着。把五段排成一条线，让五条指令同时各走一段——就像洗衣房：第一件衣服在烘干的时候，第二件已经在洗、第三件正在放进洗衣机。流水线就是 CPU 变快的代价：速度上去了，麻烦也来了。</p>
+      <h2>五段流水线：IF、ID、EX、MEM、WB</h2>
+      <p>经典的五段流水线，每段一个时钟周期：<strong>IF（取指）</strong>——按 PC 从指令存储器取指令；<strong>ID（译码）</strong>——译码并读寄存器堆；<strong>EX（执行）</strong>——ALU 运算或算地址；<strong>MEM（访存）</strong>——读写数据存储器；<strong>WB（写回）</strong>——结果写回寄存器堆。理想情况下，每个时钟都有一条指令完成：第一个时钟只有 I1 在 IF，第二个时钟 I1 在 ID、I2 在 IF，第五个时钟五段全满，此后每个时钟完成一条指令。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="五段流水线时空图">
+          <defs>
+            <marker id="arr21" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <text x="90" y="30" text-anchor="middle" font-size="13" fill="#1a1a2e">指令＼时钟</text>
+          <text x="180" y="30" text-anchor="middle" font-size="13" fill="#1a1a2e">1</text>
+          <text x="250" y="30" text-anchor="middle" font-size="13" fill="#1a1a2e">2</text>
+          <text x="320" y="30" text-anchor="middle" font-size="13" fill="#1a1a2e">3</text>
+          <text x="390" y="30" text-anchor="middle" font-size="13" fill="#1a1a2e">4</text>
+          <text x="460" y="30" text-anchor="middle" font-size="13" fill="#1a1a2e">5</text>
+          <text x="530" y="30" text-anchor="middle" font-size="13" fill="#1a1a2e">6</text>
+          <text x="600" y="30" text-anchor="middle" font-size="13" fill="#1a1a2e">7</text>
+          <text x="90" y="75" text-anchor="middle" font-size="13" fill="#1a1a2e">指令 I1</text>
+          <text x="90" y="125" text-anchor="middle" font-size="13" fill="#1a1a2e">指令 I2</text>
+          <text x="90" y="175" text-anchor="middle" font-size="13" fill="#1a1a2e">指令 I3</text>
+          <text x="90" y="225" text-anchor="middle" font-size="13" fill="#1a1a2e">指令 I4</text>
+          <text x="90" y="275" text-anchor="middle" font-size="13" fill="#1a1a2e">指令 I5</text>
+          <rect x="148" y="52" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="179" y="75" text-anchor="middle" font-size="13" fill="#1a1a2e">IF</text>
+          <rect x="218" y="52" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="249" y="75" text-anchor="middle" font-size="13" fill="#1a1a2e">ID</text>
+          <rect x="288" y="52" width="62" height="36" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.2"/><text x="319" y="75" text-anchor="middle" font-size="13" fill="#1a1a2e">EX</text>
+          <rect x="358" y="52" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="389" y="75" text-anchor="middle" font-size="13" fill="#1a1a2e">MEM</text>
+          <rect x="428" y="52" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="459" y="75" text-anchor="middle" font-size="13" fill="#1a1a2e">WB</text>
+          <rect x="218" y="102" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="249" y="125" text-anchor="middle" font-size="13" fill="#1a1a2e">IF</text>
+          <rect x="288" y="102" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="319" y="125" text-anchor="middle" font-size="13" fill="#1a1a2e">ID</text>
+          <rect x="358" y="102" width="62" height="36" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.2"/><text x="389" y="125" text-anchor="middle" font-size="13" fill="#1a1a2e">EX</text>
+          <rect x="428" y="102" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="459" y="125" text-anchor="middle" font-size="13" fill="#1a1a2e">MEM</text>
+          <rect x="498" y="102" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="529" y="125" text-anchor="middle" font-size="13" fill="#1a1a2e">WB</text>
+          <rect x="288" y="152" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="319" y="175" text-anchor="middle" font-size="13" fill="#1a1a2e">IF</text>
+          <rect x="358" y="152" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="389" y="175" text-anchor="middle" font-size="13" fill="#1a1a2e">ID</text>
+          <rect x="428" y="152" width="62" height="36" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.2"/><text x="459" y="175" text-anchor="middle" font-size="13" fill="#1a1a2e">EX</text>
+          <rect x="498" y="152" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="529" y="175" text-anchor="middle" font-size="13" fill="#1a1a2e">MEM</text>
+          <rect x="568" y="152" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="599" y="175" text-anchor="middle" font-size="13" fill="#1a1a2e">WB</text>
+          <rect x="358" y="202" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="389" y="225" text-anchor="middle" font-size="13" fill="#1a1a2e">IF</text>
+          <rect x="428" y="202" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="459" y="225" text-anchor="middle" font-size="13" fill="#1a1a2e">ID</text>
+          <rect x="498" y="202" width="62" height="36" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.2"/><text x="529" y="225" text-anchor="middle" font-size="13" fill="#1a1a2e">EX</text>
+          <rect x="568" y="202" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="599" y="225" text-anchor="middle" font-size="13" fill="#1a1a2e">MEM</text>
+          <rect x="428" y="252" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="459" y="275" text-anchor="middle" font-size="13" fill="#1a1a2e">IF</text>
+          <rect x="498" y="252" width="62" height="36" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.2"/><text x="529" y="275" text-anchor="middle" font-size="13" fill="#1a1a2e">ID</text>
+          <rect x="568" y="252" width="62" height="36" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.2"/><text x="599" y="275" text-anchor="middle" font-size="13" fill="#1a1a2e">EX</text>
+        </svg>
+        <figcaption>图：理想五段流水线时空图——第 5 个时钟起五段全满，此后每个时钟完成一条指令</figcaption>
+      </figure>
+      <p>这张图要会读：横着看是一条指令的一生（从左到右 IF→ID→EX→MEM→WB），竖着看是同一个时钟里五段各在干哪条指令。理想情况很美：流水线填满之后，每时钟完成一条指令，CPI（每条指令平均时钟数）接近 1。<a href="m1c10-performance.html">第 10 章</a>讲过，CPI 是衡量 CPU 快慢的关键数之一，流水线就是把 CPI 从 4–5 压到接近 1 的办法。但现实总有三种东西打断这张完美的图，它们叫<strong>冒险</strong>。</p>
+      <h2>结构冒险：两个人抢同一台机器</h2>
+      <p><strong>结构冒险</strong>是硬件资源不够分：两条指令在同一个时钟想用同一个部件。比如取指和访存共用一个存储器——I1 在 MEM 段读数据，I4 在 IF 段取指令，同一时钟都要访问存储器，只能一个先、一个等。解决办法很直接：把资源分开。指令存储器和数据存储器各一块（这就是哈佛结构的影子），取指和访存就再也不打架了。现代 CPU 的一级缓存就是指令缓存和数据缓存分开的，根子就在这里。</p>
+      <h2>数据冒险：后一条指令等前一条的结果</h2>
+      <p><strong>数据冒险</strong>最常见：后一条指令要用前一条指令算出来的数，但前一条还没算完。举个例子：I1 是“R1 = R2 + R3”，I2 是“R4 = R1 + R5”。I2 在 ID 段读 R1 的时候，I1 还在 EX 段算，R1 里的还是旧值——I2 读到的就是错的。解决办法有两个。第一是<strong>转发（旁路）</strong>：不等 I1 写回，直接把 ALU 刚算出的结果从 EX 段“抄近路”送给 I2 的 ALU 输入，省掉等待。第二是<strong>停顿</strong>：转发也救不了的情况（比如 I1 是从内存读数，I2 紧接着就要用——数据要到 MEM 段才出来，转发也来不及），就让流水线停一个时钟，等数据出来再继续。停顿的时钟里，后面的指令原地不动，流水线里会插入一个“气泡”——一个什么都不干的空位。</p>
+      <p>数据冒险和安全有个意外的交集：<a href="m1c8-locality.html">第 8 章</a>提到的 Spectre 漏洞，根子就是 CPU 为了不让流水线停顿而做的推测执行——CPU 猜着往下执行，猜错了再回滚，但回滚时缓存里的痕迹没清干净，攻击者就从痕迹里偷到了数据。流水线的优化一旦越过“正确性”的边界，就变成漏洞。这也是为什么学安全的人要懂流水线：很多漏洞不是程序写错了，是硬件为了快而做的取舍留下的口子。</p>
+      <h2>控制冒险：分支预测，猜错了就白干</h2>
+      <p><strong>控制冒险</strong>来自跳转和分支：IF 段取下一条指令的时候，还不知道前面那条分支跳不跳、跳到哪——分支的结果要到 EX 段（算条件）甚至 MEM 段才知道。这段时间里取进来的指令，很可能是错的。最笨的办法是停下来等，等分支结果出来再取，代价是每次分支都停两三个时钟。更好的办法是<strong>分支预测</strong>：先猜一个，猜着往下取，猜对了白赚，猜错了把取错的指令作废、重取。</p>
+      <p>预测有三档。第一档<strong>静态预测</strong>：写死规则，比如“向后跳的分支（循环）预测跳、向前跳的预测不跳”——循环的分支大多会跳回去，这个简单规则猜对率就不低。第二档<strong>动态预测</strong>：硬件记住每条分支上次跳没跳，用一张小表（分支历史表）记下来，上次跳了这次大概率还跳；更高级的用两位计数器，要连续两次反悔才改主意，避免一次偶然翻车就改预测。第三档<strong>分支目标缓冲（BTB）</strong>：直接记住“这条分支上次跳到哪”，下次一看到这条分支，不但猜它跳，还直接把目标地址拿出来取指，连算地址的时间都省了。</p>
+      <p>分支预测猜错的代价叫<strong>分支预测失败惩罚</strong>：取错的指令全部作废，流水线排空重填，白白浪费好几个时钟。流水线越深，猜错一次浪费的时钟越多——这就是 CPU 设计里“流水线不是越深越好”的原因之一。<a href="m1c10-performance.html">第 10 章</a>的 Amdahl 定律在这里也适用：分支预测再准，也只能优化掉“分支带来的停顿”这一部分，流水线的其他开销（比如访存延迟）它动不了，整体加速比是有上限的。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>有一次客户的程序在新电脑上反而变慢了，跑分还不如旧电脑。查了半天，问题出在一段分支特别多的代码上：新 CPU 的流水线更深，分支预测一猜错，惩罚比旧 CPU 更大——深流水线是把双刃剑，猜对了飞快，猜错了摔得更重。解决办法不是换 CPU，而是改代码：把最可能走的分支放在前面、减少不可预测的分支，性能立刻回来了。还有一个安全视角：Spectre 攻击用的正是分支预测——攻击者故意“训练”分支预测器往错误的方向猜，诱使 CPU 推测执行到不该去的地方，再从缓存痕迹里偷数据。所以分支预测器不只是性能部件，它是 CPU 的攻击面之一，现代 CPU 的缓解措施里，冲刷分支预测器状态就是其中一项。</div>
+      <h2>动手做</h2>
+      <p>1. 在纸上画一张 5 条指令的流水线时空图：I1 是加法、I2 紧接着用 I1 的结果、I3 是读内存、I4 用 I3 读到的数。标出哪里需要转发、哪里必须停顿一个时钟（画一个气泡）。<br>2. 在虚拟机里写一段小程序：一个循环跑 100 万次，里面一个 if 判断（比如 i % 2），再写一个对照版：把判断改成可预测的规律（比如 i &lt; 500000），用 time 命令对比两个版本的耗时，体会分支预测猜对和猜错的差别。<br>3. 在虚拟机里跑 <code>lscpu</code>（Linux）或在任务管理器里看 CPU 型号，上网查这颗 CPU 的流水线深度（只查公开资料），想一想：流水线越深，分支猜错一次要浪费多少时钟？<br>4. 算一笔账：理想 CPI 是 1，实际因为冒险平均每 10 条指令多花 3 个时钟，实际 CPI 是多少？再用<a href="m1c10-performance.html">第 10 章</a>的公式算一下，同样主频下，实际速度是理想的几分之几？</p>
+      <h2>避坑</h2>
+      <p>别以为流水线让单条指令变快了：单条指令走完五段还是要 5 个时钟，流水线快的是“单位时间完成的总指令数”，不是单条指令的延迟；别把三种冒险混在一起：结构冒险是抢硬件、数据冒险是等数据、控制冒险是猜分支，解决办法各不相同；别以为分支预测能猜对 100%：再好的预测器也有猜错的时候，写代码时少写不可预测的分支，比指望硬件更靠谱；别在真实网站、真实网络上练手：所有实验都在虚拟机和自己的电脑上做。</p>
+      <p>流水线是 CPU 内部最后的加速手段，CPU 的核心部分到这里就讲完了。接下来视线从 CPU 内部转向外面：<a href="m1c22-peripherals.html">下一章：外设原理</a>，键盘、显示器、磁盘、打印机是怎么和主机说话的。回头看<a href="m1c10-performance.html">第 10 章</a>的 CPI 和 Amdahl 定律：现在你能说出 CPI 是怎么被流水线压下来的、以及它的上限在哪了。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>五段流水线 IF、ID、EX、MEM、WB：填满后每个时钟完成一条指令，CPI 接近 1，但单条指令的延迟还是 5 个时钟。</li>
+          <li>结构冒险是两条指令抢同一个硬件，解决办法是把资源分开，比如指令和数据存储器各一块。</li>
+          <li>数据冒险是后一条指令等前一条的结果，解决办法是转发（抄近路）或停顿（插气泡），转发救不了读内存的情况。</li>
+          <li>控制冒险是分支结果未知时不知道取哪条指令，解决办法是分支预测：静态规则、动态历史表、分支目标缓冲三档。</li>
+          <li>分支猜错要排空流水线重填，流水线越深惩罚越大；推测执行留下的缓存痕迹是 Spectre 漏洞的根子。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m1c20-control-unit.html">← 上一章：第 20 章：控制器设计</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m1c22-peripherals.html">下一章：第 22 章：外设原理 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

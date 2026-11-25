@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块三第 18 章：ARP 与地址解析 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块三第 18 章：ARP 与地址解析</h1>
+      <div class="meta"><span class="tag">计算机网络</span>2026-11-25 · 模块三</div>
+      <p>你已经知道，IP 地址是机器在网络上的“门牌号”，MAC 地址是网卡出厂时带上的“身份证号”。问题来了：一台电脑想给 192.168.1.20 发数据，它只知道对方的 IP，不知道对方的 MAC——没有 MAC，数据帧就没法在局域网里真正递出去。谁来把 IP 翻译成 MAC？答案是 ARP：地址解析协议。这一章讲的就是这场翻译是怎么发生的，以及为什么这场翻译是整个局域网安全里最容易被动手脚的地方。</p>
+      <h2>为什么有了 IP 还要 MAC</h2>
+      <p><a href="m3c2-physical.html">第 2 章</a>讲过，数据在局域网里跑，靠的是链路层的以太网帧，帧头里写的是源 MAC 和目标 MAC；<a href="m3c3-ip.html">第 3 章</a>讲过，IP 负责跨网络选路，IP 头里写的是源 IP 和目标 IP。两个地址分工不同：IP 是“逻辑地址”，可以换——你换个网络，IP 就变了；MAC 是“物理地址”，烧在网卡里，跟着硬件走。打个比方：IP 是你住的小区门牌号，搬家就换；MAC 是你的身份证号，搬到哪都跟着你。寄快递要门牌号（IP）决定送去哪个小区，到了小区门口，快递员要按身份证（MAC）确认收件人是这栋楼里的谁。</p>
+      <p>所以发送数据要过两关：先由 IP 层决定“送去哪个网络、下一跳是谁”，再由链路层决定“下一跳那台设备的 MAC 是什么”，把 IP 包包进以太网帧里发出去。第二关的翻译工作，就是 ARP 干的。没有 ARP，IP 包到了局域网门口就卡住了：知道往哪送，却不知道递给谁。</p>
+      <p>还有一个容易混淆的点：ARP 只在同一个局域网（同一个广播域）里工作。目标在另一个网段时，你的电脑不需要知道目标的 MAC，只需要知道网关（路由器）的 MAC——把帧交给网关，剩下的路网关会接力。每一跳都是这样：每经过一个路由器，帧都会被拆开、重新打包，MAC 换成下一跳的，而 IP 地址从头到尾不变。这就是为什么抓包时你会发现：同一个 IP 包，在不同网段里看到的 MAC 地址完全不一样。</p>
+      <h2>ARP 请求与应答：先喊一嗓子，再悄悄回答</h2>
+      <p>ARP 的工作方式很直白，分两步。假设你的电脑（192.168.1.10，MAC 是 AA:AA:AA:AA:AA:AA）想找 192.168.1.20 的 MAC：</p>
+      <p><strong>第一步：广播问一句。</strong>你的电脑往局域网里发一个 ARP 请求，目标 MAC 写成广播地址 FF:FF:FF:FF:FF:FF，意思是“局域网里的所有人请听着：谁是 192.168.1.20？请把你的 MAC 告诉我，我是 192.168.1.10”。交换机收到广播帧会发给所有端口，所以网里的每台机器都会收到这个问题。</p>
+      <p><strong>第二步：只有目标单播回答。</strong>其他机器一看“问的不是我”，就把这个请求扔掉；只有 192.168.1.20 会回一个 ARP 应答，单播发回给你的电脑：“我是 192.168.1.20，我的 MAC 是 BB:BB:BB:BB:BB:BB”。你的电脑收到后，把“192.168.1.20 → BB:BB:BB:BB:BB:BB”记进自己的 ARP 表里，然后就可以把数据帧发过去了。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ARP 请求与应答时序图">
+          <defs>
+            <marker id="arp1" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="10" width="140" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="90" y="35" text-anchor="middle" font-size="13" fill="#1a1a2e">电脑 A 192.168.1.10</text>
+          <rect x="400" y="10" width="140" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="470" y="35" text-anchor="middle" font-size="13" fill="#1a1a2e">电脑 B 192.168.1.20</text>
+          <line x1="90" y1="50" x2="90" y2="240" stroke="#1a1a2e" stroke-width="1" stroke-dasharray="4 4"/>
+          <line x1="470" y1="50" x2="470" y2="240" stroke="#1a1a2e" stroke-width="1" stroke-dasharray="4 4"/>
+          <line x1="92" y1="78" x2="468" y2="78" stroke="#b45309" stroke-width="1.5" marker-end="url(#arp1)"/>
+          <text x="280" y="69" text-anchor="middle" font-size="13" fill="#1a1a2e">1. ARP 请求（广播）：谁是 192.168.1.20？</text>
+          <line x1="468" y1="125" x2="92" y2="125" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arp1)"/>
+          <text x="280" y="116" text-anchor="middle" font-size="13" fill="#1a1a2e">2. ARP 应答（单播）：我是，MAC 是 BB:…:BB</text>
+          <line x1="92" y1="172" x2="468" y2="172" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arp1)"/>
+          <text x="280" y="163" text-anchor="middle" font-size="13" fill="#1a1a2e">3. 数据帧（单播）：目标 MAC BB:…:BB</text>
+          <text x="280" y="212" text-anchor="middle" font-size="12" fill="#666">请求是广播（人人收到），应答和数据是单播（只发给对方）</text>
+          <text x="280" y="232" text-anchor="middle" font-size="12" fill="#666">A 把“192.168.1.20 → BB:…:BB”记入 ARP 表，下次不用再问</text>
+        </svg>
+        <figcaption>图：ARP 先广播问一句，只有目标单播回答；问到一次就记进 ARP 表，下次直接用</figcaption>
+      </figure>
+      <p>注意两个细节。第一，ARP 请求里其实已经带上了发送方的 IP 和 MAC，所以收到请求的机器也可以顺手把发送方记下来——这叫“顺手学习”，省得它下次反过来再问一遍。第二，ARP 本身不带任何身份验证：谁回了应答，问的人就信谁。这个“谁说都信”的设计，就是后面 ARP 欺骗的根。</p>
+      <h2>ARP 表怎么查：arp -a</h2>
+      <p>每台电脑都有一张 ARP 表（ARP 缓存），记录最近问到过的 IP 和 MAC 的对应关系。表里的条目不是永久的，一般几分钟到几十分钟就会过期——因为网卡可以换、IP 可以重新分配，记太久会记错。过期之后，下次再要发数据，就重新问一遍。</p>
+      <p>查表的方法很简单。在 Windows 上打开命令提示符，输入 <code>arp -a</code>，会看到类似这样的输出：接口 192.168.1.10，下面一行行列着“Internet 地址”和“物理地址”，比如 192.168.1.1 对应网关的 MAC，192.168.1.20 对应另一台电脑的 MAC，旁边还有一列“类型”：动态（dynamic）表示是 ARP 问来的、会过期的，静态（static）表示是管理员手工写死的、不会过期。Linux 虚拟机里用 <code>ip neigh</code> 或 <code>arp -a</code>，看到的是一样的东西，只是格式不同。</p>
+      <p>读表的时候要会看三种状态。Linux 的 <code>ip neigh</code> 会显示 REACHABLE（最近确认还活着）、STALE（有一阵没确认了，下次用的时候会顺便再确认）、FAILED（问了没人答）。一台机器 ping 不通时，先看 ARP 表里有没有它的条目：有条目但状态是 FAILED，说明对方没回 ARP，很可能对方没开机或者不在同一个局域网；连条目都没有，说明 ARP 请求根本没发出去或没回来——问题可能在你自己的网卡或交换机上。排错时，ARP 表是“IP 通不通”之前先看的一站，<a href="m3c16-troubleshooting.html">第 16 章</a>的排错链里，这一步就排在 ping 之前。</p>
+      <h2>免费 ARP：不问问题，先报个到</h2>
+      <p>有一种特殊的 ARP 叫 gratuitous ARP（免费 ARP、免费 ARP 广播）：一台机器主动发一个 ARP 请求，问的 IP 就是它自己的 IP。听起来像自言自语，其实有两个正经用途。</p>
+      <p><strong>用途一：检查 IP 有没有撞车。</strong>一台电脑刚拿到一个 IP（比如 DHCP 分给它 192.168.1.20），上岗之前先喊一嗓子：“谁是 192.168.1.20？”如果有人回答，说明这个 IP 已经被别人占了，自己的地址冲突了，系统会报错、提示 IP 地址冲突，并换一个地址再试。Windows 弹出的“IP 地址冲突”提示，背后就是这个检测在起作用。</p>
+      <p><strong>用途二：通知大家“我换地方了”。</strong>一台服务器换了网卡、或者高可用集群里备机接管了主机的 IP，它会发一个免费 ARP，告诉局域网里的所有人：“192.168.1.20 现在对应的是我的新 MAC，请更新你们的 ARP 表。”交换机和各台电脑收到后刷新缓存，流量立刻改道到新位置，不用等旧条目慢慢过期。这在服务器故障切换时很关键：切换后如果不发免费 ARP，大家还按旧 MAC 发，服务要等缓存过期才能恢复。</p>
+      <p>免费 ARP 的工作原理也解释了为什么 ARP 表会被“顺手更新”：收到 ARP 包的机器，不但会回答自己被问到的问题，也会把包里带上的发送方信息更新进自己的表。这是一个方便的设计，也是一个安全隐患——因为任何人发的 ARP 包都会被别人顺手采信。</p>
+      <h2>ARP 欺骗是怎么回事：只讲原理和防御</h2>
+      <p>ARP 欺骗（ARP spoofing）利用的正是上面说的那个弱点：ARP 没有身份验证，谁发来的应答都会被采信。攻击者的思路是：冒充网关，告诉局域网里的电脑“网关的 MAC 是我”，同时冒充电脑，告诉网关“这台电脑的 MAC 是我”。于是双方的流量都先经过攻击者，再由攻击者转发出去——这就是<a href="m3c12-attacks.html">第 12 章</a>讲过的中间人攻击在局域网里的具体做法。流量经过他，他就能看、能改、能截断；不转发的话，就是一次断网攻击。</p>
+      <p>这里只讲原理和防御，不教实操。防御的思路有三层。第一层是<strong>静态 ARP</strong>：在重要的机器上把“网关 IP → 网关 MAC”手工写死成静态条目，攻击者再怎么发假应答也覆盖不掉。缺点是管理成本高，网关一换 MAC 就要全网改，只适合服务器和网关这类固定设备。第二层是<strong>交换机层面的防护</strong>：动态 ARP 检测（DAI）让交换机只放行和 DHCP 记录对得上的 ARP 包，对不上的直接丢掉；端口安全（port security）限制一个交换机端口能学到的 MAC 数量，陌生 MAC 一冒头就告警或封端口。这两样要配合 DHCP 监听（DHCP snooping）一起用，是企业网里的标准做法。第三层是<strong>看出来</strong>：定期检查 ARP 表，发现网关的 MAC 突然变了、或者同一台机器的 MAC 在短时间内反复变化，就要警惕；抓包工具里出现大量来历不明的 ARP 应答，也是信号。发现异常时，先断开可疑设备的网线或禁用端口，再慢慢查，不要在被欺骗的网络上继续传敏感数据。</p>
+      <p>还要记住一个边界：ARP 欺骗只在同一个局域网里有效。出了网关、到了互联网上，ARP 就不起作用了——跨网段的欺骗要用别的手段（比如 DNS 欺骗，<a href="m3c24-dns-security.html">第 24 章</a>会讲）。所以 ARP 欺骗的威胁模型是“局域网里已经有一台不可信的设备”：公共 Wi-Fi、插满未知设备的办公室网络，都是要当心的场景。自己的虚拟机实验网络里只有自己的机器，天然就是安全的实验场。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>现场最常见的一句话是“网关突然上不了网了”。我先看 ARP 表：网关的 MAC 变成了局域网里另一台电脑的 MAC——这就是 ARP 欺骗的现场。先别急着杀毒，先断网：把可疑机器的网线拔了或把交换机端口关了，网立刻就恢复。还有一次，客户的服务器做了主备切换，备机接管了 IP 却没发免费 ARP，全网的 ARP 缓存还指着旧 MAC，服务“切换成功了但谁也连不上”，等了十几分钟缓存过期才好。从那以后我养成习惯：凡是做切换，先确认免费 ARP 发没发。排错时记住一条：ping 不通先看 ARP 表，ARP 表里没有对方，多半不是对方的问题，是你的 ARP 请求没人理。</div>
+      <h2>动手做</h2>
+      <p>1. 在自己的虚拟机里看 ARP 表。Windows 虚拟机打开命令提示符跑 <code>arp -a</code>，Linux 虚拟机跑 <code>ip neigh</code>。找到网关（192.168.x.1 那一行）的 MAC，记下来。<br>2. 清空一次再重建。Windows 跑 <code>arp -d</code>（需要管理员权限），Linux 跑 <code>sudo ip neigh flush all</code>；然后 ping 一次网关，再跑一次 <code>arp -a</code>，看网关的条目是不是又出现了——这是亲眼看到 ARP 重新问了一遍。<br>3. 看一次免费 ARP。在虚拟机里跑 Wireshark，只抓自己的虚拟机流量（过滤条件写 <code>arp</code>），然后在虚拟机里断开再重连网卡（或重启虚拟机网卡），抓到的包里会有一条源 IP 和目标 IP 相同的 ARP 请求——那就是免费 ARP 在做地址冲突检测。<br>4. 对照抓包认字段。Wireshark 里点开一条 ARP 包，对照本章的图认一认：操作字段是 1（请求）还是 2（应答），发送方 MAC 和目标 MAC 各写了什么。只在自己的虚拟机和实验网络里做，不要对真实网络里的别人的设备做任何 ARP 操作。</p>
+      <h2>避坑</h2>
+      <p>别以为知道 IP 就能发包：没有 MAC，帧发不出去，ARP 是 IP 落地到局域网的最后一道翻译；别把 ARP 当成路由协议：它只在同一个局域网里解析地址，跨网段要找网关，路由是<a href="m3c4-subnetting.html">第 4 章</a>的路由表的事；别看到 ARP 表里有条目就以为对方活着：条目可能是过期前留下的旧记录，对方关机了它还在；别在真实网络里“试试 ARP 欺骗”：那是攻击行为，哪怕是出于好奇也不行，只在自己的虚拟机实验网络里观察正常的 ARP 过程；别忘了 IPv6 不用 ARP：IPv6 用邻居发现协议（NDP），思路和 ARP 很像，但细节不同，见<a href="m3c17-ipv6.html">第 17 章</a>。</p>
+      <p>ARP 讲完，局域网里“包怎么递到具体那台机器”这件事就完整了：<a href="m3c2-physical.html">第 2 章</a>的帧、<a href="m3c3-ip.html">第 3 章</a>的 IP、这一章的 ARP，三层拼起来才是真实的发送过程。下一章往上走一层：数据到了交换机手里，它是怎么决定从哪个口发出去的，VLAN 又是怎么把一个局域网切成几个互不相干的逻辑网络的：<a href="m3c19-switching-vlan.html">第 19 章：交换、VLAN 与生成树</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>IP 是逻辑地址、管跨网选路，MAC 是物理地址、管局域网内递送；发包需要两个地址，ARP 负责把 IP 翻译成 MAC。</li>
+          <li>ARP 先广播请求“谁是这个 IP”，只有目标单播应答；问到一次就记进 ARP 表，下次直接用，条目会过期。</li>
+          <li>arp -a（Windows）或 ip neigh（Linux）能看到 ARP 表；排错时先看表里有没有对方，状态是不是 FAILED。</li>
+          <li>免费 ARP 既做地址冲突检测，也在设备换 MAC 或主备切换时通知全网更新缓存。</li>
+          <li>ARP 没有身份验证，谁的应答都信，这是 ARP 欺骗的根；防御靠静态 ARP、动态 ARP 检测和端口安全，只在自己的实验网络里观察。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m3c17-ipv6.html">← 上一章：第 17 章：IPv6 入门</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m3c19-switching-vlan.html">下一章：第 19 章：交换、VLAN 与生成树 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 25 章：动手：综合实战——从开机到跑程序全链路复盘 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 25 章：动手：综合实战——从开机到跑程序全链路复盘</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-25 · 模块一</div>
+      <p>模块一的 25 章讲完了，但知识还是散的：二进制是一章，CPU 是一章，缓存是一章，硬盘又是一章。这一章是结课实战，只有一个任务：在虚拟机里，从按开机到跑起一个小程序，把全链路走一遍——每一步经过哪个部件、用到哪个知识点，都指出来。走完这一遍，25 章就串成一条线了。</p>
+      <h2>任务：从开机到跑程序</h2>
+      <p>在虚拟机里准备一个小程序：用汇编写一段求 1 到 5 的和（<a href="m1c4-assembly.html">第 4 章</a>做过），或者用 Python 写一个等价的小脚本。任务就是：按下虚拟机的开机键，到这个程序跑出结果 15，全链路复盘。下面是这条链的地图：</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 640 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="从开机到跑程序全链路流程图">
+          <defs>
+            <marker id="arr25" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="170" y="10" width="300" height="38" rx="8" fill="#1a1a2e"/>
+          <text x="320" y="35" text-anchor="middle" font-size="14" fill="#fff">① 按下电源：启动（第 11 章）</text>
+          <rect x="170" y="62" width="300" height="38" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="320" y="87" text-anchor="middle" font-size="13" fill="#1a1a2e">② 固件自检 → 从硬盘读引导程序</text>
+          <rect x="170" y="114" width="300" height="38" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="320" y="139" text-anchor="middle" font-size="13" fill="#1a1a2e">③ 操作系统加载到内存（第 3、17 章）</text>
+          <rect x="170" y="166" width="300" height="38" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="320" y="191" text-anchor="middle" font-size="13" fill="#1a1a2e">④ 程序从硬盘读进内存（第 24 章）</text>
+          <rect x="170" y="218" width="300" height="38" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="320" y="243" text-anchor="middle" font-size="13" fill="#1a1a2e">⑤ CPU 取指执行（第 2、19、20 章）</text>
+          <rect x="170" y="270" width="300" height="38" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="320" y="295" text-anchor="middle" font-size="13" fill="#1a1a2e">⑥ 缓存与流水线加速（第 8、18、21 章）</text>
+          <line x1="320" y1="48" x2="320" y2="60" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr25)"/>
+          <line x1="320" y1="100" x2="320" y2="112" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr25)"/>
+          <line x1="320" y1="152" x2="320" y2="164" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr25)"/>
+          <line x1="320" y1="204" x2="320" y2="216" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr25)"/>
+          <line x1="320" y1="256" x2="320" y2="268" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr25)"/>
+          <text x="320" y="330" text-anchor="middle" font-size="12" fill="#666">结果 15 显示在屏幕上：帧缓冲 → 显示器（第 22 章）</text>
+        </svg>
+        <figcaption>图：从开机到跑程序的全链路——启动、加载、取指执行、缓存加速、结果显示</figcaption>
+      </figure>
+      <h2>一步一步复盘</h2>
+      <p><strong>第一步：启动（<a href="m1c11-boot.html">第 11 章</a>）。</strong>按下电源，CPU 先从固件（BIOS/UEFI）里取第一条指令，固件自检硬件、找到硬盘上的引导程序、把控制权交给它。复盘时问自己：虚拟机的 BIOS 模式是 UEFI 还是传统？启动顺序里硬盘排第几？这两个数在 <a href="m1c12-hardware-lab.html">第 12 章</a>的体检报告里都有。</p>
+      <p><strong>第二步：程序从硬盘进内存（<a href="m1c3-memory.html">第 3 章</a>、<a href="m1c24-storage-raid.html">第 24 章</a>）。</strong>引导程序把操作系统从硬盘读进内存，操作系统再把你的小程序从硬盘读进内存。硬盘到内存的搬运走的是 DMA（<a href="m1c9-interrupt.html">第 9 章</a>），不用 CPU 一字节一字节地搬。复盘时问自己：你的虚拟机硬盘是 SSD 还是 HDD？程序文件在硬盘的哪个位置不重要，重要的是它经过了哪条总线（<a href="m1c23-buses-drivers.html">第 23 章</a>）进的内存。</p>
+      <p><strong>第三步：取指执行（<a href="m1c2-cpu.html">第 2 章</a>、<a href="m1c19-datapath.html">第 19 章</a>、<a href="m1c20-control-unit.html">第 20 章</a>）。</strong>CPU 按 PC 取指令、译码、执行、写回，一条一条走。求 1 到 5 的和，汇编层面是几条加法和一条跳转；数据通路层面，每条加法走取指、译码、执行、写回四段，跳转指令改写 PC。复盘时在纸上单步执行这几条指令，写出每一步之后寄存器的值——<a href="m1c4-assembly.html">第 4 章</a>就是这么练的。</p>
+      <p><strong>第四步：缓存与流水线在干什么（<a href="m1c8-locality.html">第 8 章</a>、<a href="m1c18-cache-deep.html">第 18 章</a>、<a href="m1c21-pipelining.html">第 21 章</a>）。</strong>程序第一次跑，指令和数据从内存进缓存；第二次跑，缓存命中，直接从缓存取，快得多。流水线里五条指令同时各走一段，循环里的分支预测猜“循环会继续”，猜对了不用停顿。复盘时问自己：循环跑 5 次，分支预测猜对几次、猜错几次？最后一次跳出循环的那次，预测一定猜错——因为它按“上次跳了这次还跳”猜的。</p>
+      <p><strong>第五步：结果怎么显示出来（<a href="m1c22-peripherals.html">第 22 章</a>）。</strong>算出的 15 写进帧缓冲，显卡把它送到显示器，你才看到屏幕上的 15。复盘时问自己：结果从寄存器到屏幕，经过了几层？寄存器 → 内存（帧缓冲）→ 显卡 → 显示器，中间哪一步最慢？</p>
+      <h2>检查清单</h2>
+      <p>复盘不是看一遍就算了，按下面这张清单逐项打勾，打不上勾的就回头翻对应的章节：</p>
+      <p>☐ 虚拟机能从关机状态正常开机，说出启动的前三步分别是谁在干活。<br>☐ 能说出小程序的文件在硬盘上、运行时在内存里、正在算的时候在寄存器和缓存里——三个位置各是什么。<br>☐ 能在纸上单步执行求 1 到 5 的和，每步写出寄存器和 PC 的值，最后得到 15。<br>☐ 能说出这段程序里哪条指令走了数据通路的哪几段、哪条指令触发了分支预测、预测猜对还是猜错。<br>☐ 能说出程序第一次跑和第二次跑为什么速度不一样（缓存命中）。<br>☐ 能说出结果 15 从寄存器到屏幕经过了哪些部件。<br>☐ 能说出如果这台虚拟机换成机械硬盘，哪一步会变慢、为什么。</p>
+      <h2>复盘报告怎么写</h2>
+      <p>写一份一页纸的复盘报告，不用长，按这个结构写：第一段写任务——“在虚拟机里从开机到跑出 15”；第二段写链路——按上面的五步，每步一句话，说清经过了哪个部件、用到了哪个知识点；第三段写三个数字——程序跑了几条指令、循环了几次、分支预测猜错几次（猜错次数可以按推理写，不用实测）；第四段写一个发现——复盘过程中最让你意外的一个点，比如“原来显示一个数字也要经过帧缓冲”或者“原来第一次跑和第二次跑速度不一样是因为缓存”；最后一段写一个问题——还有哪个环节没弄懂，留到模块二去解决。写完存下来，模块二学操作系统的时候再翻出来对照着看。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>带新人最有用的练习就是这个全链路复盘。有一次，一个新人跟我查“程序跑起来特别慢”的问题，他一上来就怀疑代码写得不好。我让他按这条链从头走一遍：启动正常、加载正常、取指执行正常，最后发现是虚拟机的磁盘是机械盘、缓存又小，程序每次跑都要从盘上重新读——问题根本不在代码，在存储那一层。从那以后我养成一个习惯：性能问题先画链路图，链路图上哪一段最慢，就查哪一段。链路图是排错的地图，没有地图，查到哪算哪，运气好才查得对。还有，复盘报告一定要写下来——写不出来的地方，就是没真懂的地方，写的过程就是补洞的过程。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里完整走一遍：关机 → 开机 → 打开终端 → 运行求 1 到 5 的和的小程序（汇编版或 Python 版都行），记下每一步你看到的现象。<br>2. 按上面的检查清单逐项打勾，打不上勾的回头翻对应的章节，补上再回来打勾。<br>3. 写一份一页纸的复盘报告，按“任务—链路—三个数字—一个发现—一个问题”的结构写，存在记事本里。<br>4. 做一次对比实验：在虚拟机里把同一个小程序跑两遍，用 time 命令记下两遍的耗时，想一想：第二遍快，是因为缓存吗？还有没有别的可能？把你的判断写进报告里。</p>
+      <h2>避坑</h2>
+      <p>别只复盘“顺利”的链路：特意想一想链路断在哪一步会出什么现象——启动失败、程序读不进内存、分支预测猜错，现象各不相同；别把复盘写成抄书：每一步都要对应你自己虚拟机里的真实操作和真实数字，抄概念不算复盘；别在真实网络、真实网站上练手：所有实验都在虚拟机和自己的电脑上做；别跳过“写报告”这一步：写不出来的地方就是没真懂的地方，写的过程就是补洞的过程；别以为模块一学完了就没用了：模块二的操作系统，就是管这条链路上每一个部件的“大管家”，这条链路图会一直用到。</p>
+      <p>模块一到这里就结束了：25 章，从 0 和 1 开始，到一台能开机、能跑程序的电脑，再到亲手把全链路复盘一遍。<a href="summary-module1.html">看模块一小结 →</a>把 25 章串起来，检查自己是不是真的都懂了。下一站是模块二：操作系统——那个管硬件的大管家是怎么工作的。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>全链路是五步：启动 → 程序从硬盘进内存 → CPU 取指执行 → 缓存与流水线加速 → 结果经帧缓冲显示。</li>
+          <li>启动看第 11 章，硬盘到内存的搬运靠 DMA，取指执行走第 19 章的数据通路、由第 20 章的控制器指挥。</li>
+          <li>缓存让第二次跑比第一次快，流水线让多条指令同时跑，循环末尾的分支预测一定猜错一次。</li>
+          <li>复盘报告按“任务—链路—三个数字—一个发现—一个问题”写，写不出来的地方就是没真懂的地方。</li>
+          <li>性能问题先画链路图：链路上哪一段最慢就查哪一段，没有地图的排错全靠运气。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m1c24-storage-raid.html">← 上一章：第 24 章：存储进阶</a>
+        <a href="../course.html">课程目录</a>
+        <a href="summary-module1.html">下一章：模块一小结 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

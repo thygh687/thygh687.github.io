@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块五第 18 章：密码学模式与密钥交换：分组模式、Diffie-Hellman、ECC 深入 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块五第 18 章：密码学模式与密钥交换：分组模式、Diffie-Hellman、ECC 深入</h1>
+      <div class="meta"><span class="tag">数据库与密码学</span>2026-11-25 · 模块五</div>
+      <p>模块五前面讲过对称加密和非对称加密（第 6 章）、哈希签名证书（第 7 章）、TLS 握手（第 8 章），但有两个关键问题一直没展开：第一，对称加密一次只能加密固定大小的一块数据，那么一整篇长文章是怎么加密的？第二，通信的两个人从来没见过面，密钥是怎么安全地商量出来的——在谁都能偷听的网络上商量一个秘密，听起来像是不可能完成的任务。这一章就讲这两件事：分组模式，和 Diffie-Hellman 密钥交换；最后补上 ECC 为什么密钥可以那么短。</p>
+      <h2>分组密码与分组模式：长文章怎么加密</h2>
+      <p>AES 这样的分组密码，一次只能处理 128 位（16 字节）的数据。一篇文章有几千字节，就要切成一块一块分别加密；怎么切、块与块之间怎么关联，就是“分组模式”。模式选错了，加密等于白做。</p>
+      <p><strong>ECB（电子密码本模式）：</strong>每一块独立加密，相同的明文块永远得到相同的密文块。听起来没问题，实际上是灾难：如果文章里有一大段重复内容（比如图片里的大片纯色背景），密文里会原样透出重复的图案——攻击者不用解密，光看密文的形状就能猜出内容。ECB 的教训是：<strong>相同的明文绝不能产生相同的密文</strong>。结论就一句话：别用 ECB。</p>
+      <p><strong>CBC（密码分组链接模式）：</strong>每一块加密之前，先和前一块的密文异或一下再加密；第一块没有“前一块”，就用一个随机的初始向量（IV）。这样相同的明文块在不同位置会变成不同的密文，ECB 的图案泄露就没了。代价是：加密必须一块一块串行做（后一块要等前一块），不能并行；而且 CBC 只保证保密，不保证完整——密文被改了，解密出来的明文会错，但你发现不了，除非另外再加一个 MAC 做校验。TLS 1.3 已经不再用 CBC，原因就在这里：又慢又要另外做完整性校验。</p>
+      <p><strong>GCM（伽罗瓦计数器模式）：</strong>现在的主流选择，也是 TLS 1.3 里用的模式。它把分组密码变成流式加密（用计数器生成密钥流再异或），可以并行、速度快，而且自带完整性校验（认证加密 AEAD）：密文被改过一个字节，解密时立刻报错。记住这个组合：<strong>现代系统优先用 AES-GCM 这类带认证的加密模式</strong>，保密和防篡改一次解决。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ECB与CBC对比图">
+          <text x="140" y="28" text-anchor="middle" font-size="14" fill="#1a1a2e">ECB：相同明文 → 相同密文</text>
+          <text x="420" y="28" text-anchor="middle" font-size="14" fill="#1a1a2e">CBC：每块先和前块密文混合</text>
+          <rect x="60" y="45" width="60" height="34" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="90" y="67" text-anchor="middle" font-size="13" fill="#1a1a2e">明文 A</text>
+          <rect x="60" y="95" width="60" height="34" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="90" y="117" text-anchor="middle" font-size="13" fill="#1a1a2e">明文 A</text>
+          <rect x="160" y="45" width="60" height="34" rx="6" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="190" y="67" text-anchor="middle" font-size="13" fill="#1a1a2e">密文 X</text>
+          <rect x="160" y="95" width="60" height="34" rx="6" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="190" y="117" text-anchor="middle" font-size="13" fill="#1a1a2e">密文 X</text>
+          <text x="140" y="160" text-anchor="middle" font-size="12" fill="#b91c1c">两块密文一模一样：图案泄露了！</text>
+          <rect x="340" y="45" width="60" height="34" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="370" y="67" text-anchor="middle" font-size="13" fill="#1a1a2e">明文 A</text>
+          <rect x="340" y="95" width="60" height="34" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="370" y="117" text-anchor="middle" font-size="13" fill="#1a1a2e">明文 A</text>
+          <rect x="440" y="45" width="60" height="34" rx="6" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="470" y="67" text-anchor="middle" font-size="13" fill="#1a1a2e">密文 Y</text>
+          <rect x="440" y="95" width="60" height="34" rx="6" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="470" y="117" text-anchor="middle" font-size="13" fill="#1a1a2e">密文 Z</text>
+          <text x="420" y="160" text-anchor="middle" font-size="12" fill="#15803d">第二块混入了第一块的密文，Y ≠ Z</text>
+          <rect x="60" y="190" width="440" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="280" y="214" text-anchor="middle" font-size="13" fill="#1a1a2e">GCM：计数器模式 + 自带完整性校验，TLS 1.3 的选择</text>
+          <text x="280" y="234" text-anchor="middle" font-size="13" fill="#1a1a2e">可并行、速度快，密文被改一个字节都会报错</text>
+          <text x="280" y="278" text-anchor="middle" font-size="12" fill="#666">选模式的原则：相同明文不能产生相同密文；保密之外还要防篡改</text>
+        </svg>
+        <figcaption>图：ECB 的图案泄露 vs CBC 的块间链接 vs GCM 的认证加密</figcaption>
+      </figure>
+      <h2>Diffie-Hellman：当众商量一个秘密</h2>
+      <p>小明和小红想商量一个只有他俩知道的密钥，但所有消息都要经过一个谁都能偷听的频道。Diffie-Hellman 的办法像“调色”：两人先公开商量好一种公开的底色（公开参数），各自往里面掺自己秘密的颜色（私钥），再把掺好的颜色公开交换；对方拿到之后，再掺进自己的秘密颜色——神奇的是，两边最后得到的颜色是一样的，而偷听的人只看到两次“掺了一半的颜色”，却算不出最终颜色，因为“把颜色拆开”是数学上的难题（离散对数问题）。</p>
+      <p>算一个小例子（数字故意取小，真实系统用的数字有几千位）：公开定好素数 p = 23、底数 g = 5。小明选秘密数 a = 6，算出 A = 5<sup>6</sup> mod 23 = 8，公开 A；小红选秘密数 b = 15，算出 B = 5<sup>15</sup> mod 23 = 19，公开 B。小明拿 B 算：19<sup>6</sup> mod 23 = 2；小红拿 A 算：8<sup>15</sup> mod 23 = 2。两边都得到 2——这就是共享密钥。偷听的人知道 p、g、A、B，却要从 8 反推出 6（离散对数），数字一大就难到算不动。</p>
+      <p>这里有两点必须讲透。第一，Diffie-Hellman 交换出来的只是“共享秘密”，它本身不是加密算法——拿到共享秘密之后，双方再用它做 AES-GCM 的密钥去加密真正的消息（这正是第 8 章 TLS 1.3 握手里发生的事：先交换密钥，再用对称加密传数据）。第二，Diffie-Hellman 本身<strong>不认证对方是谁</strong>，这是它最大的短板，见下一节。</p>
+      <h2>中间人问题与认证：密钥交换最危险的一环</h2>
+      <p>如果没有认证，Diffie-Hellman 会被中间人攻击打穿：攻击者站在中间，分别和小明、小红各做一次密钥交换——小明以为自己在和小红商量密钥，其实是在和攻击者商量；小红那边也一样。之后所有消息都经过攻击者解密再加密，双方毫无察觉。这就是为什么“密钥交换”永远要和“身份认证”绑在一起：TLS 里靠证书（第 7 章讲的签名与证书）来认证“对面那个公钥真的是这家网站的”；没有证书的裸 Diffie-Hellman，只能用在双方已经通过别的办法确认过身份的场景。</p>
+      <p>现代做法还多了一层保护叫<strong>前向保密</strong>：每次会话都用一次性的临时密钥做 Diffie-Hellman（ ephemeral DH，TLS 1.3 里是强制的），会话结束就扔掉。好处是：哪怕服务器的长期私钥将来某天泄露了，攻击者也解不开过去已经录下来的会话——因为过去的会话密钥是临时算出来的，和长期私钥无关。检查一个系统时，“有没有前向保密”是必查项，<a href="m5c21-capstone.html">第 21 章</a>的实战体检清单里会再出现它。</p>
+      <h2>ECC 为什么密钥短：椭圆曲线上的难题</h2>
+      <p>第 5 章讲过，ECC 背后的数学是椭圆曲线上的点运算。为什么这件事值得单独讲？因为它决定了密钥长度：同样是“128 位安全强度”，RSA 需要 3072 位的密钥，ECC 只要 256 位。密钥短的好处是实打实的：手机、物联网设备算得更快、耗电更少，证书更小、握手更快。</p>
+      <p>原因在“难题的难度不一样”。RSA 的安全建立在“大数分解难”上——把两个大素数的乘积分解回去；ECC 的安全建立在“椭圆曲线离散对数难”上。同样长度的数字，椭圆曲线上的难题要难得多，所以 ECC 可以用更短的密钥达到同样的安全强度。打个比方：RSA 像一扇很厚的木门，靠厚度取胜；ECC 像一把结构精巧的锁，靠结构取胜。TLS 1.3 里最常用的密钥交换就是 ECDHE（椭圆曲线版的临时 Diffie-Hellman），既短又快又有前向保密。</p>
+      <p>但 ECC 也有自己的坑：实现必须小心——随机数用错了（<a href="m5c19-randomness-cert-validation.html">第 19 章</a>会讲随机数）、曲线参数选错了，都会让“理论上安全”变成“实际上可破”。这也是模块五第 13 章“常见密码学错误”的主题：密码学的失败，十次里有九次不是算法被攻破，而是用错了。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>审系统时，我先看两处：加密模式和密钥交换。见过一个系统用 AES-ECB 存用户身份证号，理由是“ECB 最简单”——我直接拿两条相同的身份证号演示给他们看：密文一模一样，等于明文告诉攻击者“这两个人是同一个人”。还见过一个“自研密钥交换”：开发觉得 Diffie-Hellman 太麻烦，自己发明了一个“双方各发一半密钥拼起来”的办法，结果中间人随便就能拼出来。我的经验就两条：第一，模式只用带认证的（AES-GCM 这类），ECB 永远不要出现在代码里；第二，密钥交换只用标准协议（TLS 1.3 的 ECDHE），不要自己发明。密码学里“自己发明”四个字，出现一次，事故就近一次。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里用 Python 算一遍本章的小例子：验证 5<sup>6</sup> mod 23 = 8、5<sup>15</sup> mod 23 = 19、19<sup>6</sup> mod 23 = 8<sup>15</sup> mod 23 = 2；再把 p 换成一个大一点的素数（比如 353），换两个秘密数重算一次，确认两边还是相等。<br>2. 在虚拟机里用 OpenSSL（模块五第 12 章的工具）做一次 AES 加密对比：分别用 ECB 和 CBC 加密同一段有重复内容的明文（比如 64 个相同的字母 A），用十六进制看输出——ECB 的密文里会看到重复的块，CBC 不会。<br>3. 用 OpenSSL 生成一对 ECDHE 参数并做一次密钥交换演示（openssl genpkey -algorithm EC，再用它派生共享秘密），只在自己的虚拟机里做；然后用 <code>openssl s_client</code> 连一下自己的本地测试服务，看协商出来的是不是 ECDHE 密钥交换 + AES-GCM。<br>4. 中间人思考题（纸上做，不用真搭攻击环境）：画一张图，标出攻击者分别和小明、小红做密钥交换的两条线，再标出如果双方用证书互相认证，攻击者会在哪一步被挡住。</p>
+      <h2>避坑</h2>
+      <p>别用 ECB：相同明文产生相同密文，图案会泄露；别用没有认证的加密模式裸奔：CBC 只管保密不管防篡改，要配 MAC，优先直接用 AES-GCM；别把 Diffie-Hellman 当成加密算法：它只产生共享秘密，加密还得靠对称算法；别用没有认证的密钥交换：没有证书或预共享密钥的 DH，中间人随便插进来；别自己发明密钥交换协议：用 TLS 1.3 里现成的 ECDHE；别在真实网络、真实服务上练手：所有实验只在自己的虚拟机和本地服务上做。</p>
+      <p>密钥交换讲完了，还剩一个地基问题：Diffie-Hellman 和证书都依赖“好随机数”，随机数一坏，全盘皆输。<a href="m5c19-randomness-cert-validation.html">下一章：随机数与证书验证</a>讲随机数从哪来、证书链到底怎么一环一环验。回头看<a href="m5c17-nosql.html">第 17 章</a>的 NoSQL 和<a href="m5c15-transactions.html">第 15 章</a>的事务：数据库保证数据“存得对”，这一章的密码学保证数据“传得密”——两个合起来，才是一个系统最基本的体面。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>分组模式决定长数据怎么加密：ECB 相同明文产生相同密文，会泄露图案，绝不能用；CBC 用前块密文链接，保密但不防篡改；GCM 是带认证的加密，并行又快，是 TLS 1.3 的选择。</li>
+          <li>Diffie-Hellman 让两个人在公开频道上商量出共享秘密：各发一半、各自再算一次，两边结果相同；偷听者卡在离散对数难题上。</li>
+          <li>Diffie-Hellman 本身不认证身份，没有证书配合会被中间人打穿；TLS 靠证书认证对方，再用临时密钥交换实现前向保密。</li>
+          <li>ECC 用 256 位密钥就能达到 RSA 3072 位的安全强度，因为椭圆曲线离散对数更难；TLS 1.3 常用 ECDHE。</li>
+          <li>密码学的失败大多不是算法被攻破，而是用错了：模式选错、缺认证、自己发明协议，是最常见的三种死法。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m5c17-nosql.html">← 上一章：第 17 章：NoSQL：文档、键值与图数据库</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m5c19-randomness-cert-validation.html">下一章：第 19 章：随机数与证书验证 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

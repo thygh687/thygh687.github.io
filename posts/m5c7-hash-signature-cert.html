@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块五第 7 章：哈希、签名与证书 —— 指纹、签名、信任链 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块五第 7 章：哈希、签名与证书 —— 指纹、签名、信任链</h1>
+      <div class="meta"><span class="tag">数据库与密码学</span>2026-11-25 · 模块五</div>
+      <p><a href="m5c6-symmetric-asymmetric.html">上一章</a>解决了“别人看不懂”，但还有三个问题没解决：数据在路上被改了一个字节，怎么发现？怎么证明这句话真是某个人说的？又怎么证明“这个公钥真的是这家网站的”？答案分别是哈希、数字签名和证书。三样东西合在一起，才是现代互联网信任的完整拼图——也是<a href="m5c8-tls-handshake.html">下一章 TLS 握手</a>里每一步都在用的东西。</p>
+      <h2>哈希：数据的指纹</h2>
+      <p>哈希（Hash）是把任意长的数据变成一串固定长度的“指纹”。SHA-256 是今天最常用的哈希算法：不管输入是一个字还是一部电影，输出永远是 256 位（写成 64 个十六进制字符）。它有三个关键性质。第一，<strong>确定性</strong>：同样的输入，哈希值永远一样。第二，<strong>雪崩效应</strong>：输入改一个字节，输出就面目全非——下面动手做里你会亲眼看到，改一个字母，64 个字符里一大半都变了。第三，<strong>单向性</strong>：从哈希值反推不出原文，哈希不是加密，没有“解密”这回事。</p>
+      <p>哈希是用来“验货”的：下载一个软件，对照官网公布的 SHA-256 值算一遍，对得上就说明文件没被动过手脚；存密码时存的是哈希不是明文（具体做法在<a href="../course.html#m5">模块五第 9 章：密码存储：加盐哈希</a>）。注意哈希和加密的区别：加密是为了“看不懂但能还原”，哈希是为了“验明真身且不可还原”——两个目的，两种工具，别混用。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="雪崩效应：改一个字母，哈希值面目全非">
+          <rect x="20" y="20" width="560" height="70" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="40" y="48" font-size="14" fill="#1a1a2e">输入：hello → SHA-256：2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824</text>
+          <text x="40" y="74" font-size="13" fill="#666">hello 的 SHA-256（前 16 位：2cf24dba5fb0a30e）</text>
+          <rect x="20" y="110" width="560" height="70" rx="8" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
+          <text x="40" y="138" font-size="14" fill="#7f1d1d">输入：hellp（只改了一个字母 o → p）→ SHA-256：完全不同</text>
+          <text x="40" y="164" font-size="13" fill="#7f1d1d">动手做里算一算：你会看到它和上面几乎没有相同之处</text>
+        </svg>
+        <figcaption>图：雪崩效应——输入改一个字节，输出就全变了；这就是哈希能“验货”的原因</figcaption>
+      </figure>
+      <p>还有一个安全工作里天天见的东西：<strong>彩虹表</strong>。攻击者事先把常见密码（比如 123456、password）的哈希值都算好存成一张大表，拿到数据库里泄露的哈希值后，直接查表就能反推出原文。这就是为什么密码不能只存哈希，还要“加盐”（每个密码加一段随机的盐再哈希，让同一密码的哈希值各不相同，彩虹表就失效了）——<a href="../course.html#m5">第 9 章</a>会讲透，<a href="lesson-11-passwords.html">第 11 课</a>讲过的好密码习惯也是同一条线。</p>
+      <h2>数字签名：私钥签，公钥验</h2>
+      <p>数字签名是把“哈希 + 非对称加密”组合起来的用法，解决“这话真是他说的、且没被改过”这个问题。步骤是：发送方先对消息算一个哈希（指纹），再用自己的<strong>私钥</strong>把这个哈希“签”上（加密）；接收方收到消息和签名后，用发送方的<strong>公钥</strong>解开签名得到哈希，再自己对消息算一遍哈希，两个哈希一对——对得上，说明消息确实是私钥持有者发的，而且中途没被改过。</p>
+      <p>注意方向别搞反：<a href="m5c6-symmetric-asymmetric.html">第 6 章</a>的加密是“公钥加密、私钥解密”，为的是保密；签名是“私钥签、公钥验”，为的是认证和防篡改。两个方向，一个管“看不懂”，一个管“信得过”。软件更新包、电子合同、代码签名，背后都是数字签名在工作。</p>
+      <h2>证书：公钥的身份证</h2>
+      <p>签名有个前提：你得先拿到对方真正的公钥。但公钥在网上传，攻击者完全可以半路掉包——把自己的公钥冒充成银行的公钥发给你，你用假公钥验签名，当然验出来“没问题”。怎么证明“这个公钥真的是这家网站的”？答案是证书。</p>
+      <p>证书（X.509 是它的标准格式）就是一张“公钥的身份证”：里面写着这把公钥属于谁（比如某家银行的域名）、有效期到什么时候、是谁给它做的担保，担保者用自己的私钥在证书上签了名。发证的担保者叫 CA（证书颁发机构）。你的浏览器和操作系统里预装了一批受信任的根 CA，验证时顺着签名一层一层往上查：网站证书是中级 CA 签的，中级 CA 的证书是根 CA 签的，根 CA 在你的信任列表里——这条链子就叫<strong>信任链</strong>。链子上的每一环都验得过，这把公钥就可信。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 600 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="信任链：网站证书由中级 CA 签发，中级 CA 由根 CA 签发，根 CA 在系统信任列表里">
+          <defs>
+            <marker id="c7ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="180" y="15" width="240" height="44" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="300" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">根 CA（在系统信任列表里）</text>
+          <rect x="180" y="85" width="240" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="300" y="112" text-anchor="middle" font-size="14" fill="#1a1a2e">中级 CA（根 CA 签发）</text>
+          <rect x="180" y="155" width="240" height="44" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="300" y="182" text-anchor="middle" font-size="14" fill="#1a1a2e">网站证书（中级 CA 签发）</text>
+          <line x1="300" y1="59" x2="300" y2="85" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c7ar)"/>
+          <line x1="300" y1="129" x2="300" y2="155" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c7ar)"/>
+          <text x="430" y="80" font-size="13" fill="#666">签名担保</text>
+          <text x="430" y="150" font-size="13" fill="#666">签名担保</text>
+        </svg>
+        <figcaption>图：信任链——每一环都由上一环签名担保，链条最终锚定在系统预装的根 CA 上</figcaption>
+      </figure>
+      <p>信任链也会断：证书过期了、私钥泄露了、CA 本身出了问题，证书就要被<strong>吊销</strong>，浏览器会去查吊销列表或用 OCSP 在线查询。证书的吊销、密钥管理和选型，是<a href="../course.html#m5">模块五第 10 章 PKI 深入</a>的主题；证书验证的每一步细节在<a href="../course.html#m5">第 19 章</a>还会再讲一次。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>工作中我最常处理的一类“故障”，其实是证书过期：网站突然打不开，浏览器报证书错误，用户以为是中毒了，其实是运维忘了续证书——证书有有效期，一般一年，到期必须换。我给团队的规矩是：所有证书到期前 30 天、7 天各告警一次，责任到人。还有一次，客户收到一封“证书异常，请点这里重新验证”的钓鱼邮件，点进去的假网站也有个锁头标志——锁头只表示“连接是加密的”，不表示“对方是真的”，证书是发给骗子的域名、照样合法。教用户看域名、而不是只看锁头，是防钓鱼培训里最重要的一句话。这一点和<a href="lesson-12-phishing.html">第 12 课</a>讲的钓鱼识别是同一个道理。</div>
+      <h2>动手做</h2>
+      <p>只在虚拟机里做：<br>1. 算几个文件的哈希：新建两个文本文件，一个写 hello，一个写 hellp，用 <code>sha256sum 文件名</code>（Linux）或 <code>certutil -hashfile 文件名 SHA256</code>（Windows）算哈希，对比两个值是不是面目全非；<br>2. 改一个字节看哈希全变：复制其中一个文件，用编辑器改一个字母，再算一次哈希，对比前后两个值；<br>3. 验证下载的完整性：去一个提供 SHA-256 校验值的软件官网（比如你熟悉的开源软件），下载后算哈希，和官网公布的值逐字符对比；<br>4. 看一条真实的信任链：在虚拟机浏览器里打开任意一个 https 网站，点地址栏的锁头标志，查看证书详情：发给谁、谁签发的、有效期到哪天，再点进证书路径，看它经过了几级 CA。<br>做完这四步，哈希、签名、证书就不再是概念，而是你亲手验过的东西。</p>
+      <h2>避坑</h2>
+      <p>别用 MD5、SHA-1 存密码或验重要文件——它们已经被证明不安全（能构造出相同哈希的不同文件），用 SHA-256 或更强的算法；别以为地址栏有锁头就等于网站是真的，锁头只代表连接加密了，域名才是身份；别忽略证书过期时间，证书过期和证书被吊销一样会让信任链断掉；哈希值对比要逐字符对，只看前几位是不够的；彩虹表防的是“裸哈希存密码”，存密码要加盐哈希，细节在<a href="../course.html#m5">第 9 章</a>。</p>
+      <p>哈希验真身、签名验身份、证书验公钥——三样齐了，<a href="m5c8-tls-handshake.html">第 8 章：TLS 握手全过程</a>就能把它们串成一次真实的 https 连接：浏览器和服务器第一次见面，是怎么在几百毫秒里完成认证、商量出会话钥匙、开始加密聊天的。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>哈希是数据的指纹：固定长度、确定性、雪崩效应、单向；SHA-256 是今天的标准，MD5/SHA-1 已不安全。</li>
+          <li>数字签名是私钥签、公钥验：验证消息真是某人发的、且中途没被改过；和“公钥加密、私钥解密”的保密方向别搞反。</li>
+          <li>证书（X.509）是公钥的身份证，由 CA 签发；信任链从网站证书一层层验到系统预装的根 CA。</li>
+          <li>彩虹表能反推裸哈希存的常见密码，存密码必须加盐哈希；证书会过期、会被吊销，信任链断了就要告警。</li>
+          <li>锁头只代表连接加密，不代表对方是真的；看域名才是确认身份的办法。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m5c6-symmetric-asymmetric.html">← 上一章：第 6 章：对称与非对称加密</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m5c8-tls-handshake.html">下一章：第 8 章：TLS 握手全过程 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

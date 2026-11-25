@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块五第 5 章：密码学需要的数学：模运算、素数与椭圆曲线 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块五第 5 章：密码学需要的数学：模运算、素数与椭圆曲线</h1>
+      <div class="meta"><span class="tag">数据库与密码学</span>2026-11-25 · 模块五</div>
+      <p>很多人一听到“密码学要数学”就想跑。其实密码学用到的数学并不多，而且每一块都有非常直观的来历：模运算就是时钟的算术，素数就是只能被 1 和自己整除的数，椭圆曲线就是一条形状有点特别的曲线。这一章把 RSA 和 ECC（椭圆曲线密码）背后的数学一次讲明白，每样都配一个能手算的小例子。离散数学和概率的底子在<a href="../course.html#m4">模块四第 11 章：编程需要的数学</a>里打过，这一章是把那些底子用在密码学上。</p>
+      <h2>模运算：时钟上的算术</h2>
+      <p>模运算（mod）就是“除完取余数”。<code>17 mod 5 = 2</code>，因为 17 除以 5 商 3 余 2。写成同余式：<code>17 ≡ 2 (mod 5)</code>，意思是 17 和 2 除以 5 余数相同。最直观的例子是时钟：现在 9 点，再过 5 个小时是几点？9 + 5 = 14，14 mod 12 = 2，是 2 点——时钟就是一个 mod 12 的世界，超过 12 就绕回来。</p>
+      <p>模运算有个好性质：加减乘都可以先取余再算，结果不变。比如算 <code>17 × 23 mod 5</code>，不用先算 391 再除以 5，直接把 17 和 23 各自取余：17 mod 5 = 2，23 mod 5 = 3，2 × 3 = 6，6 mod 5 = 1，答案就是 1。密码学里的大数动不动几百位，全靠这个性质才能算得动。还有一个关键概念：<strong>模逆元</strong>。在 mod 7 的世界里，3 的逆元是 5，因为 3 × 5 = 15，15 mod 7 = 1——逆元就是“乘完等于 1”的那个数，像普通算术里的倒数。RSA 生成密钥时，求的就是这样一个逆元。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="时钟算术：mod 12 的世界，9 点加 5 小时绕回到 2 点">
+          <circle cx="300" cy="115" r="90" fill="#eff6ff" stroke="#1a1a2e" stroke-width="2"/>
+          <text x="300" y="48" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">12</text>
+          <text x="368" y="118" text-anchor="middle" font-size="15" fill="#1a1a2e">3</text>
+          <text x="300" y="192" text-anchor="middle" font-size="15" fill="#1a1a2e">6</text>
+          <text x="232" y="118" text-anchor="middle" font-size="15" fill="#1a1a2e">9</text>
+          <circle cx="232" cy="115" r="10" fill="#dc2626"/>
+          <circle cx="356" cy="155" r="10" fill="#16a34a"/>
+          <text x="180" y="70" font-size="13" fill="#dc2626">起点：9 点</text>
+          <text x="390" y="185" font-size="13" fill="#16a34a">9 + 5 = 14 → 14 mod 12 = 2 点</text>
+          <text x="300" y="228" text-anchor="middle" font-size="13" fill="#666">时钟就是 mod 12：超过 12 就绕回来，这就是模运算的直觉</text>
+        </svg>
+        <figcaption>图：时钟算术——模运算就是“绕圈子的算术”，密码学里的大数运算全靠它</figcaption>
+      </figure>
+      <h2>欧几里得算法：求最大公约数的辗转相除</h2>
+      <p>两个数的最大公约数（gcd）是能同时整除它们的最大整数。欧几里得算法用辗转相除求它，又快又简单：大数除以小数，取余数；再用小数除以余数，取余数；一直做到余数为 0，最后一个非零余数就是最大公约数。算一个例子：gcd(48, 18)。48 ÷ 18 = 2 余 12；18 ÷ 12 = 1 余 6；12 ÷ 6 = 2 余 0。停，答案是 6。</p>
+      <p>这算法在密码学里有两个用处。第一，判断两个数<strong>互素</strong>（最大公约数是 1）：RSA 选加密指数 e 时，就要求 e 和 (p−1)(q−1) 互素。第二，它的扩展版——扩展欧几里得算法——能直接算出上面说的模逆元。RSA 生成私钥的那一步，算的就是 e 的模逆元 d，用的正是这个两千多年前的算法。</p>
+      <h2>素数：密码学的砖头</h2>
+      <p>素数是只能被 1 和自己整除的数：2、3、5、7、11、13……素数有个反直觉的性质：<strong>乘起来容易，拆开来难</strong>。15 = 3 × 5，你一眼能拆开；但给你一个 600 位的数，它是两个 300 位素数的乘积，让你拆，你用全世界的计算机加起来也要算到天荒地老。RSA 的安全性就建立在这个不对称上：公钥里公开的是两个大素数的乘积 n，私钥藏着那两个素数本身——谁能把 n 拆开，谁就能算出私钥，而拆开它在计算上不可行。</p>
+      <p>怎么判断一个数是不是素数？小数字可以试除：看它能不能被 2、3、5、7……整除。大素数靠概率性测试（比如 Miller-Rabin）：测试说“很可能是素数”，错的概率比陨石砸中你的概率还小，工程上就够用了。顺便记住：2 是唯一的偶素数，1 不是素数——1 既不是素数也不是合数，别搞错。</p>
+      <h2>费马小定理：一个漂亮的规律</h2>
+      <p>费马小定理说：如果 p 是素数，a 是任意一个不被 p 整除的数，那么 <code>a^(p−1) ≡ 1 (mod p)</code>。验算一个小例子：p = 7，a = 2。2^6 = 64，64 mod 7 = 1（因为 63 是 7 的倍数）。对了。再换 a = 3：3^6 = 729，729 mod 7 = 1（728 是 7 的倍数）。又对了。这个定理是 RSA 的数学心脏：RSA 加密是算 <code>m^e mod n</code>，解密是算 <code>c^d mod n</code>，而 e 和 d 的关系正是按费马小定理（更准确地说是它的推广，欧拉定理）设计出来的——加密再解密能回到原文，不是巧合，是定理保证的。理解到“定理保证了解密能还原”这一层就够了，严格的证明留给以后。</p>
+      <h2>椭圆曲线：一点就好</h2>
+      <p>椭圆曲线密码（ECC）是另一套公钥密码，特点是钥匙短、速度快，手机和智能卡上用得很多。它的数学起点是一条曲线，形如 <code>y² = x³ + ax + b</code>。这条曲线有个神奇的性质：曲线上的点可以定义一种“加法”——过两点画一条直线，直线和曲线交在第三点，再把第三点关于 x 轴对称一下，就是两点之和。听起来怪，但这个“加法”满足加法该有的规律，于是可以在曲线上做“乘法”：一个点连加自己 k 次，记作 kP。</p>
+      <p>ECC 的安全性就藏在这里：已知 k 和 P，算 kP 很容易；但已知 P 和 kP，反推 k 是极难的——这叫椭圆曲线离散对数问题。类比一下 RSA：RSA 是“乘起来容易、拆开来难”，ECC 是“点乘容易、反推难”。因为反推更难，ECC 用 256 位的钥匙就能达到 RSA 3072 位钥匙差不多的安全性，钥匙短了，手机上算起来就快。ECC 的深入（包括 Diffie-Hellman 密钥交换怎么搬到椭圆曲线上）会在<a href="../course.html#m5">模块五第 18 章</a>讲。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="椭圆曲线示意图：y 平方等于 x 立方减 3x 加 2 的曲线">
+          <path d="M 60 180 C 150 60, 220 40, 300 90 S 480 200, 560 60" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+          <path d="M 60 60 C 150 170, 260 190, 340 150 S 500 40, 560 170" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+          <line x1="40" y1="115" x2="580" y2="115" stroke="#999" stroke-width="1"/>
+          <line x1="300" y1="20" x2="300" y2="210" stroke="#999" stroke-width="1"/>
+          <circle cx="180" cy="95" r="6" fill="#dc2626"/>
+          <circle cx="430" cy="140" r="6" fill="#dc2626"/>
+          <circle cx="310" cy="175" r="6" fill="#16a34a"/>
+          <text x="180" y="80" text-anchor="middle" font-size="13" fill="#dc2626">点 P</text>
+          <text x="430" y="125" text-anchor="middle" font-size="13" fill="#dc2626">点 Q</text>
+          <text x="310" y="200" text-anchor="middle" font-size="13" fill="#16a34a">P + Q（示意）</text>
+          <text x="300" y="18" text-anchor="middle" font-size="12" fill="#666">y² = x³ + ax + b 的曲线大致形状（示意，非精确绘图）</text>
+        </svg>
+        <figcaption>图：椭圆曲线示意——曲线上的点可以“相加”，点乘容易、反推极难，这就是 ECC 的根基</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>工作中我发现，很多人学密码学卡住不是因为数学难，而是因为总想“一次全弄懂”。我的建议是反过来的：先会用，再懂原理。先用 OpenSSL 生成一对 RSA 密钥、加解密一个文件（<a href="../course.html#m5">模块五第 12 章</a>会带你做），看到它真的能工作，脑子里有了画面，再回来看这一章的定理，立刻就通了。还有一句实话：工作中你几乎永远不需要自己实现 RSA 或 ECC——你要做的是选对算法、用对库、别自己发明加密算法（<a href="../course.html#m5">第 13 章</a>会讲那些血淋淋的教训）。数学是用来帮你判断“这个方案靠不靠谱”的，不是用来让你手写加密算法的。</div>
+      <h2>动手做</h2>
+      <p>只在虚拟机里做，用 Python（自带，不用装）：<br>1. 手算 + 机算验证模运算：算 17 mod 5、23 × 19 mod 7，再用 Python 的 <code>pow(2, 6, 7)</code> 验证费马小定理的例子（2^6 mod 7 应该等于 1）；<br>2. 写一个 10 行的辗转相除函数求 gcd(48, 18)，再求 gcd(17, 3120)——验证 17 和 3120 互素（RSA 选 e 时就是这么挑的）；<br>3. 用 Python 的 pow 做一次迷你 RSA：取 p=61、q=53，算 n=3233，选 e=17，求 d（提示：d 是 e 关于 (p−1)(q−1)=3120 的模逆元，用扩展欧几里得算法或 Python 3.8+ 的 <code>pow(17, -1, 3120)</code>），再对消息 m=42 算 c = 42^17 mod 3233，解密算 c^d mod 3233，看是不是回到 42；<br>4. 试试 ECC 的直觉：不用算曲线，就对比一下数字——256 位 ECC 钥匙和 3072 位 RSA 钥匙安全性相当，想想为什么手机更喜欢 ECC。<br>第 3 步做完，RSA 就不再是黑盒子了。</p>
+      <h2>避坑</h2>
+      <p>别把“素数”理解成“很大的数”——小素数也是素数，安全性来自“大素数乘积难分解”，不是素数本身大；别手算大数模幂，用 Python 的三参数 pow(a, e, n)，它内部用了快速幂，直接算 a**e 会先算出天文数字再取余，慢到卡死；费马小定理要求 p 是素数，合数上不成立，别乱套；椭圆曲线图只是示意，真正的密码学曲线定义在有限域上，点的坐标都是模运算的结果，和纸上的连续曲线不是一回事；数学学到“能判断方案靠不靠谱”就够了，别掉进证明里出不来。</p>
+      <p>数学底子打好了，下一章就把它们变成真正能用的加密：<a href="m5c6-symmetric-asymmetric.html">第 6 章：对称与非对称加密 —— 两把钥匙的故事</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>模运算是时钟算术：超过模数就绕回来；加减乘可先取余再算；模逆元是“乘完等于 1”的数，RSA 靠它生成私钥。</li>
+          <li>欧几里得算法用辗转相除求最大公约数，扩展版能算模逆元；互素（gcd=1）是 RSA 选 e 的条件。</li>
+          <li>RSA 的安全来自“大素数乘起来容易、拆开来难”；费马小定理保证了加密再解密能回到原文。</li>
+          <li>椭圆曲线上的点可以“相加”，点乘容易、反推极难；256 位 ECC 约等于 3072 位 RSA 的安全性。</li>
+          <li>工作中不用自己实现这些算法，数学是用来判断方案靠不靠谱的；别自己发明加密算法。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m5c4-sql-injection.html">← 上一章：第 4 章：SQL 注入是怎么发生的</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m5c6-symmetric-asymmetric.html">下一章：第 6 章：对称与非对称加密 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

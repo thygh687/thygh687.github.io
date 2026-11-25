@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 13 章：C 语言：指针与内存 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 13 章：C 语言：指针与内存</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p>Python、JavaScript 这些语言很贴心：内存不够了自己扩，用完了自己收，你只管写逻辑。C 语言不这样：它把内存直接交到你手里——你要多少自己申请，用完了自己还，地址错了它也不拦着，只会默默地出问题。为什么安全工程师还要学这么“麻烦”的语言？因为操作系统、驱动、网络协议栈、绝大多数安全工具，都是 C 写的；更重要的是，历史上数量最多的严重漏洞——缓冲区溢出、越界读写、释放后使用——全都发生在 C 程序里。想看懂漏洞成因、读懂漏洞报告、理解为什么一个输入能让程序执行攻击者的代码，必须先亲手摸过 C 的内存。这一章就是那次亲手摸。</p>
+      <h2>为什么学 C：离内存最近的语言</h2>
+      <p><a href="m1c3-memory.html">模块一第 3 章</a>讲过内存：一段连续的存储空间，每个字节都有一个编号，就是地址。Python 里你操作的是“变量”，地址被语言藏起来了；C 里你操作的直接就是地址。C 程序跑起来时，内存主要分成几块：代码段（放程序本身）、栈（stack，放局部变量和函数调用信息）、堆（heap，放动态申请的内存）、全局区。理解这张地图，是理解后面一切漏洞的前提——缓冲区溢出之所以能“溢出”，就是因为数据写过了自己那块地方的边界，写进了隔壁的地盘。</p>
+      <h2>指针是什么：一个装地址的变量</h2>
+      <p>指针（pointer）就是一个变量，只不过它存的不是普通的数，而是另一个变量的地址。打个比方：普通变量是一间屋子，里面放着东西；指针是一张写着门牌号的纸条，拿着纸条就能找到那间屋子。声明一个指针：<code>int *p;</code>，意思是“p 是一个指向 int 的指针”。取地址用 <code>&amp;</code>：<code>p = &amp;x;</code> 就是把 x 的地址抄到纸条上。解引用用 <code>*</code>：<code>*p = 10;</code> 就是“顺着纸条找到那间屋子，把里面的东西换成 10”。</p>
+      <pre><code>int x = 5;
+int *p = &amp;x;   // p 存着 x 的地址
+*p = 10;       // 顺着 p 找到 x，把 x 改成 10
+// 现在 x 的值是 10</code></pre>
+      <p>初学者最容易晕的是 <code>*</code> 有两个意思：声明时 <code>int *p</code> 的 <code>*</code> 是说“p 是个指针”，使用时 <code>*p</code> 的 <code>*</code> 是说“去 p 指的地方看看”。分开记：一个是身份，一个是动作。还有一个关键点：指针本身也有地址、也占内存（64 位系统上一个指针占 8 个字节），指针可以指向指针，就像纸条上写的可以是另一张纸条的存放位置。</p>
+      <h2>数组与指针：名字就是地址</h2>
+      <p>在 C 里，数组的名字在大多数场合就是它第一个元素的地址：<code>int a[5] = {1, 2, 3, 4, 5};</code>，<code>a</code> 就等于 <code>&amp;a[0]</code>，<code>a[2]</code> 就等于 <code>*(a + 2)</code>。指针加 1，不是地址加 1，而是“移到下一个同类型的元素”：int 占 4 个字节，<code>p + 1</code> 的地址就比 <code>p</code> 大 4。这个设计很高效，也很危险——C 不检查你有没有越界：数组只有 5 个元素，你写 <code>a[10] = 99;</code>，编译器不拦，运行时就直接往数组后面的内存写东西，写坏了什么，全看运气。这就是缓冲区溢出的现场：数据越过边界，改写了隔壁的变量、改写了函数的返回地址，程序就可能按攻击者的意思跑起来。</p>
+      <h2>malloc 与 free：堆内存自己管</h2>
+      <p>栈上的变量是函数说了算：函数进，变量生；函数出，变量死。想让一块内存在函数返回后还活着，或者想要一块大小运行时才决定的内存，就得去堆上申请：<code>malloc</code>（申请）和 <code>free</code>（归还）。</p>
+      <pre><code>int *buf = malloc(100 * sizeof(int));  // 申请 100 个 int 的空间
+if (buf == NULL) { /* 申请失败，处理错误 */ }
+buf[0] = 42;
+free(buf);      // 用完归还
+buf = NULL;     // 好习惯：归还后把指针清零</code></pre>
+      <p>堆内存有三条铁规矩。第一，<strong>申请了就要还</strong>：只 malloc 不 free，内存越用越多，就是内存泄漏，程序越跑越慢，最后被系统杀掉。第二，<strong>还了就别再用</strong>：free 之后再读写这块内存，叫“释放后使用”（use-after-free），是漏洞排行榜上的常客——那块内存可能已经被分给别人了，你写的东西会写到别人的地盘上。第三，<strong>别还两次</strong>：同一块内存 free 两次，堆的管理结构就乱了，程序可能直接崩溃。把指针清零（<code>buf = NULL</code>）是个好习惯：对 NULL 再 free 是安全的，程序不会出事。</p>
+      <h2>栈与堆：一张对照表</h2>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="栈与堆内存布局图">
+          <rect x="40" y="20" width="220" height="50" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="150" y="40" text-anchor="middle" font-size="14" fill="#1a1a2e">栈 stack（高地址）</text>
+          <text x="150" y="60" text-anchor="middle" font-size="12" fill="#666">局部变量 · 函数调用 · 自动回收</text>
+          <rect x="40" y="90" width="220" height="50" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="150" y="110" text-anchor="middle" font-size="14" fill="#1a1a2e">堆 heap</text>
+          <text x="150" y="130" text-anchor="middle" font-size="12" fill="#666">malloc 申请 · free 归还 · 手动管理</text>
+          <rect x="40" y="160" width="220" height="50" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="150" y="180" text-anchor="middle" font-size="14" fill="#1a1a2e">全局区 / 代码段（低地址）</text>
+          <text x="150" y="200" text-anchor="middle" font-size="12" fill="#666">全局变量 · 程序代码</text>
+          <rect x="320" y="20" width="200" height="190" rx="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="45" text-anchor="middle" font-size="13" fill="#1a1a2e">栈：函数进了才有</text>
+          <text x="420" y="68" text-anchor="middle" font-size="13" fill="#1a1a2e">函数出了就没了</text>
+          <text x="420" y="105" text-anchor="middle" font-size="13" fill="#1a1a2e">堆：你申请它才有</text>
+          <text x="420" y="128" text-anchor="middle" font-size="13" fill="#1a1a2e">你不还它一直在</text>
+          <text x="420" y="165" text-anchor="middle" font-size="13" fill="#1a1a2e">栈快但小，堆大但慢</text>
+          <text x="420" y="188" text-anchor="middle" font-size="13" fill="#1a1a2e">管错了就出漏洞</text>
+        </svg>
+        <figcaption>图：内存布局——栈自动回收、堆手动管理，分清谁负责回收，就分清了一半的内存漏洞</figcaption>
+      </figure>
+      <p>栈和堆的根本区别是谁负责回收：栈是“函数退出了自动收”，堆是“你申请了你负责还”。栈快、但空间小（一般几 MB），放局部变量；堆大、但要自己管，放运行时才知道大小的东西。安全上，栈溢出能改写返回地址、劫持程序流程，堆漏洞能破坏堆的管理结构、也能劫持流程——两种都是经典漏洞类型，模块后面讲漏洞原理时会回到这张图。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我第一次亲手调出一个缓冲区溢出，是在一个练习程序里：一个 16 字节的栈上数组，我往里面写了 32 个字节，程序没有立刻崩溃，而是跑着跑着在完全不相干的地方出错了——因为多写的那 16 个字节改掉了隔壁的变量。那次我才真正明白：C 语言里的越界不是“报错”，而是“悄悄地把别人的东西改了”。后来做代码审计，我养成一个条件反射：看到 strcpy、strcat、gets、sprintf 这些不检查长度的函数，眼睛就亮了——它们就是历史上漏洞最多的函数。现在写 C，第一件事就是把这些函数换成带长度限制的版本（strncpy、snprintf、fgets），并且永远先问一句：这块地方到底有多大，我要写的东西会不会超？</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里装好 gcc（Linux：<code>sudo apt install gcc</code>），写一个小程序：定义 <code>int x = 5;</code>，打印 <code>x</code> 的值、<code>&amp;x</code> 的地址、指针 <code>p</code> 自己的地址，再用 <code>*p</code> 改掉 x，看 x 是不是真的变了。跑两次，看地址变不变——想一想为什么每次运行的地址可能不一样（提示：地址随机化）。<br>2. 写一个 5 个元素的 int 数组，打印 <code>a</code>、<code>&amp;a[0]</code>、<code>a+1</code>、<code>&amp;a[1]</code> 四个地址，验证 <code>a+1</code> 比 <code>a</code> 大 4 个字节而不是 1 个字节。<br>3. 写一个 malloc/free 的小程序：申请 10 个 int，填上 0 到 9，打印出来，再 free，最后把指针置 NULL。改一版“忘了 free”的，跑起来用系统工具看内存是不是在涨。<br>4. （只看，不利用）写一个 16 字节的 char 数组，用 strcpy 往里面复制一个 30 字节的字符串，编译时加上 <code>-fno-stack-protector</code> 再运行，观察程序的行为——体会“越界写”不是报错，而是悄悄改掉隔壁的内存。做完立刻删掉这个练习程序，绝不在任何真实程序里这样写。</p>
+      <h2>避坑</h2>
+      <p>别用不检查长度的函数：strcpy、strcat、gets、sprintf 是漏洞重灾区，一律换成带长度限制的版本；指针用之前先看它指哪：没初始化的指针（野指针）指的地方是随机的，写进去就是在随机破坏内存；malloc 的返回值要判空：申请失败返回 NULL，对 NULL 解引用程序直接崩；free 之后把指针置 NULL：防止释放后使用和重复释放；别在栈上放太大的数组：栈空间小，大数组、超大结构体放堆上；所有实验只在虚拟机里做，编译出的练习程序只在自己的机器上跑，绝不往别人的程序、别人的机器上试。</p>
+      <p>指针摸熟了，下一章就用它背后的 socket 思想写第一个网络工具：<a href="m4c14-port-scanner.html">第 14 章：动手：写一个端口扫描器</a>。回头看<a href="m1c4-assembly.html">模块一第 4 章</a>的汇编——指针和地址，正是汇编里一直在操作的东西，只是换了一身 C 语言的外衣。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>指针是一个装地址的变量：&amp; 取地址，* 解引用，声明时的 * 是身份、使用时的 * 是动作。</li>
+          <li>数组名就是首元素地址，指针加 1 是移到下一个同类型元素；C 不检查越界，越界写会悄悄改掉隔壁的内存。</li>
+          <li>栈由函数自动回收，放局部变量；堆靠 malloc 申请、free 归还，用完要把指针置 NULL 防释放后使用。</li>
+          <li>堆内存三条铁规矩：申请了就要还、还了就别再用、别还两次；malloc 失败返回 NULL，一定要判空。</li>
+          <li>缓冲区溢出、释放后使用这些经典漏洞，根子都在指针和内存管理上——看懂内存，才能看懂漏洞报告。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c12-software-engineering.html">← 上一章：第 12 章：软件工程与安全编码</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c14-port-scanner.html">下一章：第 14 章：动手：写一个端口扫描器 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

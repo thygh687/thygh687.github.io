@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 16 章：动手：写一个日志分析小工具 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 16 章：动手：写一个日志分析小工具</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p>服务器每天产生几万、几十万行日志：谁来过、要了什么、成功没有、什么时候来的。攻击发生时，它不会先给你打电话，它只会在日志里留下一行行痕迹：同一个 IP 一分钟试了两百次登录、一个不存在的地址被反复请求、半夜三点有人在翻管理后台。日志分析就是从这堆“废话”里把异常捞出来。这一章写一个日志分析小工具：读日志文件、用正则抽出 IP 和状态码、统计高频 IP、找出 404 扎堆和登录失败扎堆的地方。工具只分析你自己虚拟机的日志。</p>
+      <h2>日志长什么样：先读懂一行</h2>
+      <p>Web 服务器的访问日志，一行就是一次请求。常见的格式（Apache/Nginx 的 combined 格式）长这样：</p>
+      <pre><code>192.168.1.10 - - [25/Nov/2026:10:15:32 +0100] "GET /index.html HTTP/1.1" 200 1024</code></pre>
+      <p>拆开看：<code>192.168.1.10</code> 是来访者的 IP；<code>[25/Nov/2026:10:15:32 +0100]</code> 是时间；<code>"GET /index.html HTTP/1.1"</code> 是请求的方法、路径和协议；<code>200</code> 是状态码（200 成功、404 找不到、500 服务器错）；<code>1024</code> 是返回的字节数。读日志的第一步永远是先看懂一行：哪一段是 IP、哪一段是时间、哪一段是状态码。看不懂格式，工具写出来也是错的。</p>
+      <p>安全分析最关心的字段就三个：<strong>谁</strong>（IP）、<strong>干了什么</strong>（请求的路径和方法）、<strong>结果</strong>（状态码）。登录失败的日志也一样：谁、在什么时候、对哪个账号、成功还是失败。所有分析都是在这三个字段上做加法。</p>
+      <h2>正则抽 IP 和状态码</h2>
+      <p><a href="m4c8-regex.html">第 8 章</a>的正则表达式就是为这种活准备的。抽 IP 的模式：<code>\d+\.\d+\.\d+\.\d+</code>——四个数字组，中间用点隔开。抽状态码：找到请求引号后面的三位数字，比如 <code>" (\d{3}) </code>。抽时间：方括号里的那一段。Python 里用 <code>re</code> 模块，一行日志跑一遍正则，就能把字段拆出来：</p>
+      <pre><code>import re
+pattern = re.compile(r'(\d+\.\d+\.\d+\.\d+).*?"\w+ ([^"]*)" (\d{3})')
+m = pattern.search(line)
+if m:
+    ip, path, status = m.group(1), m.group(2), m.group(3)</code></pre>
+      <p>写正则时记住两件事：第一，先在两三行样本上试，试对了再跑整个文件——正则写错一位，抽出来的全是错的；第二，日志格式不止一种，换一个服务器、换一个配置，字段顺序可能就变了，工具的第一步永远是“先看几行真实日志，确认格式”。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="日志行拆解示意图">
+          <rect x="20" y="30" width="520" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="57" text-anchor="middle" font-size="13" fill="#1a1a2e">192.168.1.10 - - [25/Nov/2026:10:15:32] "GET /index.html HTTP/1.1" 200 1024</text>
+          <line x1="95" y1="74" x2="95" y2="110" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="74" x2="280" y2="110" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="465" y1="74" x2="465" y2="110" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="30" y="110" width="130" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="135" text-anchor="middle" font-size="13" fill="#1a1a2e">谁：IP</text>
+          <rect x="215" y="110" width="130" height="40" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="135" text-anchor="middle" font-size="13" fill="#1a1a2e">干了什么：路径</text>
+          <rect x="400" y="110" width="130" height="40" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="135" text-anchor="middle" font-size="13" fill="#1a1a2e">结果：状态码</text>
+          <text x="280" y="185" text-anchor="middle" font-size="13" fill="#1a1a2e">正则按位置把一行日志拆成字段，再按字段统计</text>
+          <text x="280" y="207" text-anchor="middle" font-size="13" fill="#1a1a2e">统计之前，先拿两三行样本把正则试对</text>
+        </svg>
+        <figcaption>图：一行日志拆成三个安全字段——谁、干了什么、结果怎么样</figcaption>
+      </figure>
+      <h2>统计高频 IP：数一数就现形</h2>
+      <p>把所有行的 IP 抽出来，数一数每个 IP 出现了多少次，排个序——这就是最简单的异常检测。正常情况下，访问量是分散的：几百个 IP，每人来几次；攻击时，某一个 IP 会一枝独秀：一个 IP 一分钟来了两千次，正常用户不可能这样。Python 里用 <code>collections.Counter</code>，几行代码就能完成：</p>
+      <pre><code>from collections import Counter
+counts = Counter(all_ips)
+for ip, n in counts.most_common(10):
+    print(ip, n)</code></pre>
+      <p>高频本身不是罪证，只是一个信号：它可能是攻击，也可能是搜索引擎的爬虫、公司内网的出口 IP、某个监控脚本在定时检查。分析的下一步永远是“看这个 IP 具体干了什么”：它请求的是正常页面，还是在挨个试不存在的地址、挨个试登录？频率加行为，才是判断。</p>
+      <h2>找 404 扎堆和登录失败扎堆</h2>
+      <p>两种“扎堆”最值得盯。第一种是 <strong>404 扎堆</strong>：同一个 IP 短时间内产生大量 404（找不到页面）。正常用户偶尔点到一个死链，产生一两个 404；攻击者在“扫目录”——挨个试 <code>/admin</code>、<code>/backup.zip</code>、<code>/.git/config</code> 这些可能藏着东西的地址，试一个、404 一个，一分钟试几百个。404 本身无害，但 404 扎堆就是有人在摸你的底。</p>
+      <p>第二种是<strong>登录失败扎堆</strong>：同一个 IP（或者同一个账号）短时间内大量登录失败。这是暴力破解的典型特征：攻击者拿着一本密码字典，对着一个账号挨个试。判断的办法是按“IP + 时间窗口”统计：比如 5 分钟内同一 IP 登录失败超过 10 次，就标出来。真实的防御系统就是这样工作的：标出来之后，可以封 IP、加验证码、通知管理员——这一章的工具做到“标出来”就够了，封禁是运维的下一步。</p>
+      <p>还有一个分析维度是<strong>时间</strong>：凌晨三点突然冒出一波平时没有的访问、一个平时只在白天出现的账号半夜登录了，这些“时间上的不正常”和“数量上的不正常”一样值得看。把日志按小时分组，画一张每小时请求量的图，异常的尖峰一眼就能看出来。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>有一次客户说“网站变慢了”，我打开日志一看：某个 IP 每分钟请求一次首页，看着不多，但它请求的路径是 <code>/search?q=</code> 后面跟一个随机长字符串——每次请求都逼着数据库做一次全文搜索，一分钟一次就够把数据库拖垮了。这就是慢速应用层攻击：频率不高，但每个请求都很贵。单看“高频 IP”榜单它排不上号，看“请求路径”才现形。从那以后我分析日志一定同时看三张表：高频 IP、404 最多的路径、最耗时的请求——只看一张表，漏掉的永远是下一张表上的东西。还有一条铁律：分析日志之前先备份原始日志，分析用的永远是副本——原始日志是证据，改了、删了，出了事就说不清了。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里造一份自己的日志：先跑 <code>python3 -m http.server 8000</code>，再用 <code>curl</code> 请求几次存在的页面和几次不存在的页面（比如 <code>/no-such-page</code>），让日志文件里既有 200 也有 404；再写几行假日志，模拟同一个 IP 一分钟内 20 次登录失败。<br>2. 写一个 <code>logcheck.py</code>：读日志文件，用正则抽出每行的 IP、请求路径、状态码，打印出访问量前 10 的 IP 和状态码的分布（200 有多少、404 有多少）。<br>3. 给工具加两个检测：统计每个 IP 的 404 数量，超过 10 次的标出来；再统计“登录失败”的行（自己约定的关键字，比如 <code>Failed password</code>），按 IP 分组，超过 5 次的标出来。<br>4. 把日志按小时分组，打印每小时的请求量，找一找有没有哪个小时明显高于其他时间；最后把分析结果写进一个带日期的报告文件，原始日志一份不动——体会“分析用副本、原始日志是证据”的规矩。</p>
+      <h2>避坑</h2>
+      <p>别分析别人的日志：只用自己虚拟机的日志，真实服务器、公司、别人的日志，未经允许不要碰；正则先在样本上试对再跑全文件：格式不对，统计全错；高频不等于有罪：爬虫、内网出口、监控脚本都会高频，判断要看“它具体干了什么”；别只看一张表：高频 IP、404 路径、登录失败、时间分布，几张表对照着看；分析之前先备份原始日志：分析用副本，原始日志是证据，绝不能边分析边改；别把工具当防御：这一章的工具只能“发现异常”，封 IP、加验证码、报警，是下一步的运维动作。</p>
+      <p>模块四到这里就收尾了：从网页、脚本、数学、工程方法，到指针、扫描器、密码检查器、日志分析——你已经亲手造了三件安全小工具。下一章 <a href="m4c17-c-deep.html">第 17 章：C 语言深入</a>会回到 C 语言，把指针和内存讲得更深。回头看<a href="m4c10-shell-scripting.html">第 10 章</a>的巡检脚本和<a href="m4c14-port-scanner.html">第 14 章</a>的扫描器——日志分析的思路和它们是同一套：读数据、按规则筛、把异常标出来，再交给人判断。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>日志一行就是一次请求：先看懂格式——谁（IP）、干了什么（路径和方法）、结果（状态码），再写工具。</li>
+          <li>正则抽字段：IP 用 \d+\.\d+\.\d+\.\d+，状态码是请求后的三位数字；先在两三行样本上试对再跑全文件。</li>
+          <li>统计高频 IP 是最简单的异常检测：正常访问是分散的，某一个 IP 一枝独秀就是信号，但要结合行为判断。</li>
+          <li>404 扎堆说明有人在扫目录摸底，登录失败扎堆说明有人在暴力破解——按 IP 加时间窗口统计，超过阈值就标出来。</li>
+          <li>分析用日志副本，原始日志是证据不能改；工具只能发现异常，封禁和报警是下一步的运维动作。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c15-password-checker.html">← 上一章：第 15 章：动手：写一个密码强度检查器</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c17-c-deep.html">下一章：第 17 章：C 语言深入 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

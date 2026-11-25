@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 14 章：动手：写一个端口扫描器 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 14 章：动手：写一个端口扫描器</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p>前面几章一直在学“别人的工具怎么工作”，这一章开始自己造工具。端口扫描器是安全圈最基础、也最有代表性的小工具：它回答一个最简单的问题——“这台机器上，哪些门是开着的？”这问题之所以重要，是因为攻击者的第一步永远是侦察：先知道目标开了哪些端口、跑着哪些服务，再决定从哪扇门下手。而防御者的第一步也一样：先知道自己机器上开了哪些不该开的门，关掉它们。这一章用 Python 写一个最简单的扫描器，只扫自己的虚拟机，只扫 127.0.0.1。</p>
+      <p><strong>硬规则，先说三遍：只扫 127.0.0.1 和自己的虚拟机，绝不扫别人的机器和真实网络。</strong>扫描别人的机器，未经允许就是攻击行为，很多国家和地区的法律都把它当作非法入侵的准备行为；公司的网络、学校的网络、云服务器，都有监控，扫一下就可能触发告警、封账号，甚至惹上法律麻烦。这一章所有的实验都在你自己的虚拟机里完成，目标地址永远是 127.0.0.1（本机回环地址）。</p>
+      <h2>socket 是什么：程序的电话筒</h2>
+      <p>socket（套接字）是程序用来联网的接口。你可以把它想成电话筒：想和别人通话，先拿起电话筒（创建 socket）、拨号（连接对方的 IP 和端口）、通话（收发数据）、挂断（关闭）。<a href="m3c5-tcp-udp.html">模块三第 5 章</a>讲过 TCP 三次握手——socket 编程里的一次 <code>connect()</code>，背后就是一次完整的三次握手：发 SYN、等 SYN+ACK、回 ACK。握手成功，说明对方的端口有人在听；握手被拒绝（收到 RST），说明端口没开；握手半天没回音，说明对方可能不存在，或者被防火墙挡了。</p>
+      <p>Python 里创建一个 TCP socket 只要两行：</p>
+      <pre><code>import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</code></pre>
+      <p><code>AF_INET</code> 是说“用 IPv4 地址”，<code>SOCK_STREAM</code> 是说“用 TCP”。然后 <code>s.connect(("127.0.0.1", 80))</code> 就是拨号：连本机的 80 端口。连上了，说明 80 端口开着；抛异常，说明没开或者被挡。端口扫描器的全部秘密就是这一行 <code>connect()</code>，对一堆端口挨个试一遍。</p>
+      <h2>TCP connect 扫描的思路</h2>
+      <p>扫描的思路简单得像敲门：从端口 1 敲到端口 1024（或者你指定的范围），每个端口试一次 connect，记下哪些敲开了。伪代码只有几行：</p>
+      <pre><code>for port in range(1, 1025):
+    尝试 connect(目标, port)
+    成功 -&gt; 记录：port 开放
+    失败 -&gt; 记录：port 关闭（或被过滤）
+    关闭 socket</code></pre>
+      <p>有三个细节决定扫描器好不好用。第一，<strong>超时</strong>：connect 不能无限等下去，一个没回音的端口等 3 秒和等 0.5 秒，扫 1000 个端口的总时间差出几倍——设个合理的超时（比如 0.5 到 1 秒）。第二，<strong>异常要分清</strong>：连接被拒绝（ConnectionRefusedError）和超时（socket.timeout）是两种不同的结果：被拒绝说明对方活着、端口没开；超时说明对方没回音，可能是防火墙，也可能是根本不通——排错时这两者的意义完全不同，<a href="m3c5-tcp-udp.html">第 5 章</a>已经讲过这个区分。第三，<strong>扫完要关</strong>：每个 socket 用完就 close，不然扫几千个端口会把自己机器的文件描述符耗光。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TCP connect 扫描示意图">
+          <defs>
+            <marker id="c14ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="20" y="20" width="140" height="44" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="90" y="47" text-anchor="middle" font-size="14" fill="#1a1a2e">扫描器（本机）</text>
+          <rect x="400" y="20" width="140" height="44" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="470" y="47" text-anchor="middle" font-size="14" fill="#1a1a2e">目标 127.0.0.1</text>
+          <line x1="160" y1="42" x2="398" y2="42" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c14ar)"/>
+          <text x="280" y="33" text-anchor="middle" font-size="12" fill="#1a1a2e">SYN → 端口 80</text>
+          <line x1="398" y1="85" x2="160" y2="85" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c14ar)"/>
+          <text x="280" y="76" text-anchor="middle" font-size="12" fill="#1a1a2e">SYN+ACK ← 有人在听</text>
+          <line x1="160" y1="128" x2="398" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c14ar)"/>
+          <text x="280" y="119" text-anchor="middle" font-size="12" fill="#1a1a2e">ACK → 握手完成：80 开放</text>
+          <line x1="160" y1="171" x2="398" y2="171" stroke="#b91c1c" stroke-width="1.5" marker-end="url(#c14ar)"/>
+          <text x="280" y="162" text-anchor="middle" font-size="12" fill="#b91c1c">SYN → 端口 81</text>
+          <line x1="398" y1="214" x2="160" y2="214" stroke="#b91c1c" stroke-width="1.5" marker-end="url(#c14ar)"/>
+          <text x="280" y="205" text-anchor="middle" font-size="12" fill="#b91c1c">RST ← 没人听：81 关闭</text>
+        </svg>
+        <figcaption>图：TCP connect 扫描——每个端口试一次握手，握手成功就是开放，收到 RST 就是关闭</figcaption>
+      </figure>
+      <h2>扫出来开放端口怎么看</h2>
+      <p>扫出一个开放端口，只说明“这个门开着”，不说明“门后是谁”。下一步是把端口号对上服务：22 是 SSH、80 是 HTTP、443 是 HTTPS、3306 是 MySQL、3389 是远程桌面——<a href="m3c10-ports.html">模块三第 10 章</a>有一张常用端口速查表，可以对照着看。但注意：端口号只是惯例，服务完全可以跑在别的端口上，80 端口后面也可能不是网页。所以“开放端口”只是侦察的第一步：它告诉你“这里有个东西”，至于那东西是什么、安不安全，要再用别的方法确认。</p>
+      <p>站在防御者的角度看扫描结果，问题清单是这样的：这个端口是我主动开的吗？开它的服务我还在用吗？它需不需要对所有人开放，还是只该对内网开放？一个早就没人用的测试服务还开着 8080 端口，就是一道没关的门。很多入侵事件的起点，就是一台被遗忘的机器上一个被遗忘的开放端口。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我第一次给客户做资产盘点，扫完把结果拿给管理员看，他指着其中一行说“这个 8080 不可能是开着的，那台机器三个月前就下线了”。结果一查：机器确实下线了，但它的 IP 被 DHCP 分配给了另一台新装的测试机，测试机上跑着一个默认配置的管理后台，还是弱口令。那次之后我养成习惯：扫描结果永远要和“应有的清单”对照着看——多出来的端口，比已知的端口更值得查。还有一次，我在自己虚拟机上扫 127.0.0.1，扫出一个完全没印象的端口，查了半天发现是某个软件装完偷偷起的本地服务。从那以后我明白：扫描首先是扫自己，自己的机器都说不清楚，就别谈扫别人。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里先起一个服务当靶子：跑 <code>python3 -m http.server 8000</code>，它会在 8000 端口监听；再开一个终端确认它在监听（Linux 用 <code>ss -tlnp</code>）。<br>2. 写一个 <code>scanner.py</code>：对 127.0.0.1 的 1–1024 端口做 TCP connect 扫描，超时设 0.5 秒，把开放的端口打印出来。先只扫 7990–8010 这个小范围，确认能扫到 8000 再扩大范围。<br>3. 给扫描器加两个功能：把结果按“开放 / 关闭”分开统计个数；把“被拒绝”和“超时”区分开打印——体会一下这两种失败在你自己的机器上分别长什么样。<br>4. 关掉 http.server 再扫一次：8000 应该从结果里消失。再扫一次虚拟机自己的局域网 IP（不是 127.0.0.1）——只扫自己的虚拟机——对比两次结果有什么不同，想一想为什么。</p>
+      <h2>避坑</h2>
+      <p>绝不扫别人的机器和真实网络：只扫 127.0.0.1 和自己的虚拟机，学校的、公司的、云上的地址一个都别碰；别一次扫全端口 1–65535：先小范围验证逻辑，再扩大，65535 个端口全扫一遍又慢又吵；超时别设太长也别设太短：太长扫得慢，太短会把慢一点的开放端口误判成关闭；socket 用完要 close：不关会耗尽文件描述符，扫描器自己先垮掉；别把扫描结果当结论：开放端口只说明门开着，门后是什么服务、安不安全，要另外确认；别在真机器上装来路不明的扫描工具：这一章的扫描器自己写、自己看、自己负责。</p>
+      <p>扫描器是“看门”的工具，下一章换一个方向：<a href="m4c15-password-checker.html">第 15 章：动手：写一个密码强度检查器</a>，按 NIST 的最新标准判断密码够不够强。回头看<a href="lesson-11-passwords.html">第 11 课</a>的密码基础——那一课讲了“密码该怎么设”，这一章的下一章讲“怎么写程序替人检查”。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>socket 是程序联网的接口：创建、连接、收发、关闭；一次 connect() 背后就是一次 TCP 三次握手。</li>
+          <li>TCP connect 扫描的思路：对每个端口试一次握手，成功就是开放，收到 RST 就是关闭，超时是第三种结果。</li>
+          <li>扫描器三个细节：设合理的超时（0.5–1 秒）、分清“被拒绝”和“超时”、每个 socket 用完就 close。</li>
+          <li>开放端口只说明门开着，不说明门后是谁；防御者要拿扫描结果对照“应有的清单”，多出来的端口最值得查。</li>
+          <li>硬规则：只扫 127.0.0.1 和自己的虚拟机，绝不扫别人的机器和真实网络——未经允许的扫描就是攻击行为。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c13-c-pointers.html">← 上一章：第 13 章：C 语言：指针与内存</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c15-password-checker.html">下一章：第 15 章：动手：写一个密码强度检查器 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

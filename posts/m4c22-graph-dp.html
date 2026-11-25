@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 22 章：图算法与动态规划 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 22 章：图算法与动态规划</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p>上一章的六条安全规矩是“守”的本事，这一章是“算”的本事：图和动态规划。安全工作里到处都是图：网络拓扑是一张图（电脑是点、网线是线），攻击路径是一张图（入口是起点、目标是终点、中间的每一步是一条边），权限关系也是一张图（谁能访问谁）。会走图，就能算出“攻击者从这台电脑出发，最少几步能摸到数据库”；会动态规划，就能把“怎么花最少的代价守住最多的路”这类大问题切成小问题一个一个解。这一章讲图的表示、DFS、BFS、Dijkstra 最短路和动态规划的思想，每样都配网络或安全里的例子。</p>
+      <h2>图是什么：点和线就够了</h2>
+      <p>图（graph）就是一堆点（顶点）和连着它们的线（边）。边有没有方向，决定了图是“有向”还是“无向”：网线是无向的——A 连着 B，B 也就连着 A；但“谁能访问谁”是带方向的——A 能访问 B，不代表 B 能访问 A。边上有没有数字（权重），决定了图是“带权”还是“不带权”：网线的延迟是权重，攻击步骤的难度也可以是权重。</p>
+      <p>程序里图有两种常见表示法：邻接表（每个点挂一张“我连着谁”的清单，省内存，适合稀疏的图——网络拓扑就是稀疏的，一台电脑只连着几台邻居）；邻接矩阵（一个大表格，第 i 行第 j 列写着 i 和 j 连没连，查得快但占地方，适合点少边密的图）。Python 里邻接表就是一个字典：<code>{"A": ["B", "C"], "B": ["A", "D"]}</code>——A 连着 B 和 C，B 连着 A 和 D。选哪种表示，先看你的图是稀疏还是稠密，网络和安全里的图大多是稀疏的，邻接表是默认选择。</p>
+      <h2>DFS 与 BFS：两种走法，两种用途</h2>
+      <p>图上有两个最基础的遍历算法：深度优先搜索（DFS）和广度优先搜索（BFS）。DFS 是“一头走到黑”：从起点出发，沿着一条路一直往深处走，走到底了再退回来换一条路——像走迷宫时先选一条道走到头。实现上靠栈（或者递归，递归本质上就是在用系统栈），<a href="m4c17-c-deep.html">第 17 章</a>讲过的栈在这里又出现了。BFS 是“一圈一圈往外扩”：先看起点的一步邻居，再看两步邻居，再看三步——像水面上的涟漪。实现上靠队列，<a href="m4c18-concurrency.html">第 18 章</a>讲过的队列在这里是主角。</p>
+      <p>两种走法各有用途：DFS 适合“探到底”——比如找一条从入口到目标的完整攻击路径、检查网络里有没有环路；BFS 适合“找最近”——不带权图上，BFS 第一次走到某个点时，走过的步数就是最短步数，所以“攻击者最少几步能到数据库”这类问题，BFS 直接给出答案。记住这句口诀：<strong>要最近，用 BFS；要走到底，用 DFS</strong>。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BFS 与 DFS 走法对比图">
+          <defs>
+            <marker id="c22a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <text x="140" y="22" text-anchor="middle" font-size="14" fill="#1a1a2e">BFS：一圈一圈往外扩</text>
+          <circle cx="140" cy="60" r="20" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="65" text-anchor="middle" font-size="13" fill="#1a1a2e">入口</text>
+          <circle cx="70" cy="130" r="18" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="70" y="135" text-anchor="middle" font-size="12" fill="#1a1a2e">A</text>
+          <circle cx="140" cy="130" r="18" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="135" text-anchor="middle" font-size="12" fill="#1a1a2e">B</text>
+          <circle cx="210" cy="130" r="18" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="210" y="135" text-anchor="middle" font-size="12" fill="#1a1a2e">C</text>
+          <circle cx="140" cy="200" r="18" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="205" text-anchor="middle" font-size="12" fill="#1a1a2e">目标</text>
+          <line x1="140" y1="80" x2="70" y2="112" stroke="#1a1a2e" stroke-width="1.2"/>
+          <line x1="140" y1="80" x2="140" y2="112" stroke="#1a1a2e" stroke-width="1.2"/>
+          <line x1="140" y1="80" x2="210" y2="112" stroke="#1a1a2e" stroke-width="1.2"/>
+          <line x1="140" y1="148" x2="140" y2="182" stroke="#1a1a2e" stroke-width="1.2"/>
+          <text x="140" y="240" text-anchor="middle" font-size="12" fill="#666">第 1 步到 A、B、C，第 2 步到目标</text>
+          <text x="140" y="260" text-anchor="middle" font-size="12" fill="#666">第一次走到时就是最短步数</text>
+          <text x="420" y="22" text-anchor="middle" font-size="14" fill="#1a1a2e">DFS：一头走到黑再回头</text>
+          <circle cx="420" cy="60" r="20" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="65" text-anchor="middle" font-size="13" fill="#1a1a2e">入口</text>
+          <circle cx="350" cy="130" r="18" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="350" y="135" text-anchor="middle" font-size="12" fill="#1a1a2e">A</text>
+          <circle cx="490" cy="130" r="18" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="490" y="135" text-anchor="middle" font-size="12" fill="#1a1a2e">B</text>
+          <circle cx="350" cy="200" r="18" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="350" y="205" text-anchor="middle" font-size="12" fill="#1a1a2e">目标</text>
+          <line x1="420" y1="80" x2="350" y2="112" stroke="#b91c1c" stroke-width="2"/>
+          <line x1="420" y1="80" x2="490" y2="112" stroke="#1a1a2e" stroke-width="1.2"/>
+          <line x1="350" y1="148" x2="350" y2="182" stroke="#b91c1c" stroke-width="2"/>
+          <text x="420" y="240" text-anchor="middle" font-size="12" fill="#666">沿入口 → A → 目标一路走到头</text>
+          <text x="420" y="260" text-anchor="middle" font-size="12" fill="#666">走到底了再退回来试 B 那条路</text>
+        </svg>
+        <figcaption>图：BFS 像涟漪一圈圈扩，最先到就是最近；DFS 像走迷宫，一条道走到头再换</figcaption>
+      </figure>
+      <h2>Dijkstra 最短路：带权图上的导航</h2>
+      <p>BFS 只能算“步数最少”，但现实里的路有长有短：一条网线延迟 1 毫秒，另一条 50 毫秒，步数一样、代价不一样。Dijkstra 算法就是带权图上的最短路算法，思路出奇地朴素：从起点出发，永远先处理“当前离起点最近的、还没处理过的点”，用它去更新邻居的距离——因为离起点最近的那个点，它的距离不可能再被别的路缩短了（所有边的权重都是正数），所以可以放心地“定下来”，再去处理下一个。</p>
+      <p>拿网络拓扑打比方：起点是你的电脑，目标是数据库服务器，边上的权重是链路延迟。Dijkstra 一步步定下来每个点到起点的最短延迟，最后告诉你“走哪条路延迟最低”。路由器算路由表，用的就是这类算法的亲戚（<a href="m3c21-routing-algorithms.html">模块三第 21 章</a>的链路状态路由，OSPF 背后就是 Dijkstra）。安全里的用法也一样：把攻击路径图上每条边的权重设成“这一步的难度”，Dijkstra 算出来的就是“攻击者最容易走的那条路”——防守方先堵这条路，性价比最高。</p>
+      <p>实现上有个要点：每次要找“当前最近的未处理点”，数据量大时不能每次都扫一遍，要用最小堆（heapq）来取，Python 标准库的 heapq 就是现成的。还有一条限制要记牢：Dijkstra 要求所有边的权重都是非负数——有负权边，它“定下来就不再改”的前提就垮了，负权最短路是另一个算法（Bellman-Ford）的活。</p>
+      <h2>动态规划：把大问题切成小问题，答案记下来别重算</h2>
+      <p>动态规划（dynamic programming，DP）不是一个具体的算法，而是一种思想：一个大问题能拆成重叠的小问题，小问题的答案记下来（这叫“记忆化”），大问题直接用小问题的答案拼出来，不用重复算。两个入门例子一次讲清：</p>
+      <p><strong>斐波那契数列：</strong>第 n 个数等于前两个数之和。 naive 的递归写法会把同一个数算上成千上万遍（算 fib(10) 要算两次 fib(8)、三次 fib(7)……越往下重复越多）；DP 的写法是自底向上：先算出 fib(0)、fib(1)，存在表里，fib(2) = 表里的两数之和，写进表里，一路算到 fib(n)——每个数只算一次。这就是 DP 的精髓：<strong>空间换时间，拿一张表换掉重复计算</strong>。</p>
+      <p><strong>0-1 背包入门：</strong>背包能装 10 公斤，有几件物品各有重量和价值，每件只能拿或不拿，怎么拿价值最高？DP 的思路是建一张表：dp[i][w] 表示“前 i 件物品、背包还能装 w 公斤时能拿到的最高价值”——对第 i 件物品，只有“拿”和“不拿”两种选择，拿的价值是“这件的价值 + 前 i-1 件在 w 减去这件重量时的最高价值”，不拿的价值是“前 i-1 件在 w 时的最高价值”，取大的那个。表填满，答案就在最后一个格子里。安全里的影子：防御预算有限、要守的路有很多条，“花最少的钱守住最多的关键路径”，就是背包问题的翻版——不是每个格子都要填满，而是要学会“把问题拆成状态、把答案存在表里”这个思考方式。</p>
+      <p>判断一个问题能不能用 DP，有两个标志：最优子结构（大问题的最优解里包含小问题的最优解——背包问题的最优拿法里，前 i-1 件的拿法也是最优的）；重叠子问题（小问题会被反复用到——斐波那契的 fib(8) 会被算很多次）。两个都满足，DP 就值得一试；不满足，硬套 DP 只会把简单问题写复杂。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>有一次做内网安全评估，我把全公司的网络拓扑画成一张图：每台机器一个点，能互相访问的画一条边，边的权重是“这一步要过几道认证”。Dijkstra 一跑，最容易的那条攻击路径立刻现形：从一台对外暴露的测试服务器出发，只需要三步就能摸到存放备份的服务器——中间两台机器的口令还是默认的。报告里我没写二十页理论，就放了这张图和这条路径，客户当天下午就把默认口令全改了。图算法在安全工作里最大的价值不是算得快，而是“让看不见的路径被看见”——一张图摆在桌上，谁都能看懂哪里最危险。另一个教训是关于 DP 的：我见过有人为了炫技，把一个用贪心就能解决的简单问题写成动态规划，表建了五层，别人三个月后维护时根本看不懂。算法选型第一条是“够用就好”：BFS 能解决的别上 Dijkstra，贪心能解决的别上 DP，代码是写给人看的，不是写给面试官看的。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里用字典写一张小网络拓扑的邻接表（6 台机器：入口、两台办公电脑、一台文件服务器、一台数据库、一个备份服务器），分别用 BFS 和 DFS 从入口出发走一遍，打印访问顺序，对比两种走法哪里不一样。<br>2. 给上面的拓扑加上权重（每条边写一个 1 到 10 的“难度”），用 Python 的 heapq 实现 Dijkstra，算出从入口到数据库的最短路径和总难度，再把“最容易的那条路”打印出来——这就是攻击路径分析的最小模型。<br>3. 写斐波那契的两个版本：naive 递归版和 DP 查表版，都算 fib(35)，用 time 计时对比——亲眼看到 DP 把几秒钟变成一瞬间，再想想“重复计算”到底贵在哪里。<br>4. 写一个 0-1 背包的入门版：背包容量 10，有 5 件物品（重量和价值自己定），用二维表 dp 算出最高价值，再反向推导出“到底拿了哪几件”——能反推出方案，才算真的会了 DP；最后想一想：如果把“物品”换成“要加固的服务器”，把“价值”换成“堵住的风险”，这张表能帮你做什么决定。</p>
+      <h2>避坑</h2>
+      <p>别把 DFS 和 BFS 的用途搞反：要最近用 BFS，要走到底用 DFS；别忘了给 DFS 和 BFS 加“已访问”集合：图里有环，不记访问过，程序会绕着环永远走下去；别在带权图上用 BFS 算最短路：BFS 只认步数不认权重，带权最短路要用 Dijkstra；别忘了 Dijkstra 要求权重非负：有负权边就不能用它；别一上来就写 DP：先问两个标志——最优子结构和重叠子问题，两个都满足再动手；别把简单问题写复杂：BFS 能解决的别上 Dijkstra，贪心能解决的别上 DP。</p>
+      <p>图和动态规划是算法的后半程，也是模块四算法部分的收尾。下一章回到工程现场：<a href="m4c23-debugging-testing.html">第 23 章：调试与测试深入：单元测试与调试器</a>——代码出了 bug，怎么找、怎么证明它真的修好了。回头看<a href="m4c4-algorithms.html">第 4 章</a>的搜索、排序和复杂度：那一章讲的是“算法有多快”，这一章讲的是“算法能帮你看到什么”——速度和视野，缺一不可。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>图就是点和线：边有没有方向分有向无向、有没有数字分带权不带权；网络和安全里的图大多是稀疏的，邻接表（字典）是默认表示法。</li>
+          <li>DFS 一头走到黑（靠栈/递归），适合探到底、找完整路径；BFS 一圈圈往外扩（靠队列），第一次走到就是最短步数，适合“最少几步能到”。</li>
+          <li>Dijkstra 是带权图上的最短路：永远先定下当前离起点最近的点，用最小堆取点，要求所有权重非负；路由器算路由、安全里找最容易的攻击路径，用的都是它。</li>
+          <li>动态规划是把大问题切成重叠的小问题、答案记在表里别重算：斐波那契自底向上填表，0-1 背包对每件物品只问“拿还是不拿”。</li>
+          <li>能不能用 DP 看两个标志：最优子结构和重叠子问题；两个都满足再动手，简单问题别硬套复杂算法。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c21-secure-coding-deep.html">← 上一章：第 21 章：安全编码深入：输入验证、输出编码与密钥管理</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c23-debugging-testing.html">下一章：第 23 章：调试与测试深入：单元测试与调试器 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块五小结：数据怎么存、怎么护 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块五小结：数据怎么存、怎么护</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · 模块五第 1–21 章</div>
+      <p>二十一章讲的其实是两件事：数据怎么存，数据怎么护。存的那一半是数据库：从一句 SQL 开始，到建库、设计表、防注入、保并发、查得快，再到不是所有数据都适合放表里。护的那一半是密码学：从模运算和素数开始，到对称与非对称、哈希签名证书、TLS 1.3、密码存储、PKI、OpenSSL，再到密钥怎么商量、随机数从哪来、量子计算机来了怎么办，最后合起来给一个小系统做一次密码学体检。两半合起来，就是一个系统最基本的体面：数据存得对，也护得住。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="模块五二十一章知识串联图">
+          <defs>
+            <marker id="arrm5" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="130" y="10" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">存：SQL 与建库，表长什么样</text>
+          <rect x="130" y="70" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">设计与范式：表怎么设计才合理</text>
+          <rect x="130" y="130" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">事务与索引：并发不出错、查询跑得快</text>
+          <rect x="130" y="190" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">注入与加固：数据库怎么防住攻击</text>
+          <rect x="130" y="250" width="300" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="275" text-anchor="middle" font-size="14" fill="#1a1a2e">护：密码学——从数学到 TLS 1.3 再到体检</text>
+          <rect x="130" y="310" width="300" height="40" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="335" text-anchor="middle" font-size="14" fill="#1a1a2e">动手验证：给一个小系统做密码学体检</text>
+          <line x1="280" y1="50" x2="280" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm5)"/>
+          <line x1="280" y1="110" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm5)"/>
+          <line x1="280" y1="170" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm5)"/>
+          <line x1="280" y1="230" x2="280" y2="248" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm5)"/>
+          <line x1="280" y1="290" x2="280" y2="308" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm5)"/>
+        </svg>
+        <figcaption>图：二十一章讲的其实是两件事——数据怎么存，数据怎么护</figcaption>
+      </figure>
+      <h2>这二十一章是怎么连起来的</h2>
+      <p>先学数据怎么存。<a href="m5c1-sql-basics.html">第 1 章</a> SQL 基础讲增删改查，<a href="m5c2-build-database.html">第 2 章</a>动手建一个数据库，<a href="m5c3-db-design.html">第 3 章</a>讲数据库设计里的表、主键、外键——数据先有了住的地方。<a href="m5c4-sql-injection.html">第 4 章</a>讲 SQL 注入是怎么发生的：把用户输入拼进 SQL 字符串，一句话就能让数据库做它不该做的事，原理在这里，实战在模块七。</p>
+      <p>然后是设计与范式。<a href="m5c14-normalization.html">第 14 章：数据库设计深入：范式 1NF–BCNF</a>把第 3 章的设计往深处挖：表到底怎么设计才合理，什么时候该拆、什么时候不该拆。范式是地基，后面的事务和索引都站在它上面。</p>
+      <p>接着是事务与索引。<a href="m5c15-transactions.html">第 15 章：事务与隔离：ACID、隔离级别与锁</a>讲并发写数据库不出错：ACID 四个性、四档隔离级别、三种读异常、锁与死锁。<a href="m5c16-indexing.html">第 16 章：索引与查询优化</a>讲查询慢了从哪下手：B 树思想、什么时候建索引、EXPLAIN 看查询计划、慢查询排查思路。一个管“写得对”，一个管“读得快”。</p>
+      <p>然后是 NoSQL。<a href="m5c17-nosql.html">第 17 章：NoSQL：文档、键值与图数据库</a>讲不是所有数据都适合放表里：文档（MongoDB 思想）、键值（Redis 思想）、图数据库各擅长什么，什么时候用 NoSQL、什么时候坚持关系型——结论是让查询决定选型，缓存永远不能当主库。</p>
+      <p>再往下是注入与加固。<a href="m5c11-db-hardening.html">第 11 章</a>数据库加固讲最小权限、备份与预编译语句——注入的防法在这里；<a href="m5c13-crypto-mistakes.html">第 13 章</a>常见密码学错误讲自己发明加密算法是大忌。加固和密码学错误这两章，一章管数据库的门，一章管密码学的坑。</p>
+      <p>护的那一半从数学开始。<a href="m5c5-crypto-maths.html">第 5 章</a>密码学需要的数学讲模运算、素数与椭圆曲线——RSA 和 ECC 背后的数学；<a href="m5c6-symmetric-asymmetric.html">第 6 章</a>对称与非对称加密讲两把钥匙的故事；<a href="m5c7-hash-signature-cert.html">第 7 章</a>哈希、签名与证书讲指纹、签名、信任链；<a href="m5c8-tls-handshake.html">第 8 章</a> TLS 握手全过程以 TLS 1.3 为主，1-RTT；<a href="m5c9-password-storage.html">第 9 章</a>密码存储讲加盐哈希，bcrypt / Argon2，按 NIST SP 800-63B Rev.4 存密码（单独使用至少 15 位，强制查泄露密码库）；<a href="m5c10-pki-deep.html">第 10 章</a> PKI 深入讲吊销、密钥管理与证书选型；<a href="m5c12-openssl-lab.html">第 12 章</a>动手用 OpenSSL 玩一遍：加密、解密、生成证书。</p>
+      <p>最后四章把密码学推到更深处。<a href="m5c18-crypto-modes-key-exchange.html">第 18 章：密码学模式与密钥交换</a>讲分组模式 ECB / CBC / GCM 的对比、Diffie-Hellman 密钥交换、ECC 为什么密钥短、中间人问题与认证。<a href="m5c19-randomness-cert-validation.html">第 19 章：随机数与证书验证</a>讲真随机与伪随机、熵、证书链验证的五关、浏览器报证书错误时该怎么办。<a href="m5c20-post-quantum.html">第 20 章：后量子密码学入门</a>讲量子计算机对 RSA / ECC 的威胁（Shor 算法思想）、对对称加密的影响（Grover 算法、密钥翻倍）、NIST 后量子标准方向。<a href="m5c21-capstone.html">第 21 章：动手：综合实战——给一个小系统做密码学体检</a>收尾：密码存得对不对、TLS 是不是 1.3、证书有没有过期、有没有硬编码密钥、备份能不能恢复，查完写出一页纸的体检报告。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>在虚拟机里建库建表、写 SQL 增删改查，用范式检查一张表的设计合不合理，说出哪里违反了哪一级范式。</li>
+        <li>开两个终端复现一次脏读，再把隔离级别调到串行化，看读操作怎么被挡住；故意造一次死锁，看数据库牺牲了哪一个事务。</li>
+        <li>对一条慢查询跑 EXPLAIN，指出它是全表扫描还是走了索引，缺索引就补一个，再验证 type、key、rows 的变化。</li>
+        <li>说出文档、键值、图三种 NoSQL 各适合什么场景，并检查一个 Redis 是不是只监听本地、有没有设密码。</li>
+        <li>用 OpenSSL 做一次 AES-GCM 加密、一次 ECDHE 密钥交换，验证一遍 Diffie-Hellman 的小例子；说出 ECB 为什么不能用。</li>
+        <li>对一张证书跑完验证五关：签名、有效期、域名匹配、吊销、链完整；浏览器报证书错误时，先看原因、核对域名、检查系统时间，而不是直接点“继续”。</li>
+        <li>按<a href="m5c21-capstone.html">第 21 章</a>的六大项检查清单，给自己的虚拟机小系统做一次密码学体检，写出一页纸的报告：问题按高中低排，修复建议写到“今天就能动手”。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>模块六，网络安全基础。安全真正开始的地方：攻击者怎么想，防御从哪里下手。模块五的本事在那里会继续用上：模块六讲身份认证时，会再见到 NIST 的密码规则和 MFA；讲漏洞时，会再见到注入和加固；讲风险管理时，会再见到备份恢复和证书过期这些“平时不起眼、出事要命”的项。数据库与密码学是地基，模块六是在这块地基上盖房子。</p>
+      <div class="lesson-nav">
+        <a href="m5c21-capstone.html">← 模块五第 21 章：动手：综合实战——给一个小系统做密码学体检</a>
+        <a href="../course.html">课程目录</a>
+        <a href="../course.html#m6">下一站：模块六：网络安全基础 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

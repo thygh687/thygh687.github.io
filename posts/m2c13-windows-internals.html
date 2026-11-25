@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块二第 13 章：Windows 内部深入：注册表、服务、UAC、组策略与 Sysmon · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块二第 13 章：Windows 内部深入：注册表、服务、UAC、组策略与 Sysmon</h1>
+      <div class="meta"><span class="tag">操作系统</span>2026-11-25 · 模块二</div>
+      <p>前面讲的进程、内存、文件系统，到了 Windows 上都有具体的“落脚点”。蓝队——也就是防守方的安全人员——天天打交道的就是这几个地方：注册表、服务、UAC、组策略、事件查看器，再加一个免费神器 Sysmon。攻击者也最爱这几个地方：开机自启藏在注册表里，恶意程序装成服务，权限提升绕过 UAC。本章把这几个部件一次讲清楚，而且只讲“看”，不讲“改”——看懂了，你就能在排错和取证时找到线索；改错了，一台电脑可能就起不来了。</p>
+      <p>先把上一章的结论接上：<a href="m2c12-kernels.html">第 12 章</a>说过，Windows 的 NT 内核是混合内核，很多系统服务跑在用户态；Linux 的配置是 /etc 下的纯文本文件，Windows 的配置则大量集中在一个叫注册表的数据库里。两种设计没有高下，但排错的入口完全不同：Linux 出问题去翻文本文件，Windows 出问题先去翻注册表、服务和事件日志。</p>
+
+      <h2>注册表是什么：Windows 的“总配置数据库”</h2>
+      <p>注册表（Registry）是 Windows 存放系统和程序配置的数据库。你可以把它想成一台电脑的“户口本 + 说明书”：装了什么软件、开机启动什么、某个程序的窗口上次开多大、用户换了什么壁纸，都记在这里。它不是一个文件，而是由多个配置单元（hive）拼成的逻辑整体，平时以文件形式存在 C:\Windows\System32\config 下面，普通用户不要直接动那些文件——要看注册表，用系统自带的注册表编辑器 <code>regedit</code>，而且只看不改。</p>
+      <p>注册表是树状结构：根下面是“键”（key，像文件夹），键下面可以有子键，也可以有“值”（value，像文件里的一条记录）。每条值有名字、类型和数据，常见类型有字符串（REG_SZ）、多字符串（REG_MULTI_SZ）、二进制（REG_BINARY）和双字（REG_DWORD，一个 32 位数字，常用来当开关：0 是关，1 是开）。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="注册表五个根键示意图">
+          <rect x="180" y="10" width="200" height="38" rx="8" fill="#1a1a2e"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#fff">注册表（Registry）</text>
+          <rect x="20" y="80" width="96" height="56" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="68" y="103" text-anchor="middle" font-size="13" fill="#1a1a2e">HKEY_CLASSES</text>
+          <text x="68" y="121" text-anchor="middle" font-size="13" fill="#1a1a2e">_ROOT</text>
+          <rect x="124" y="80" width="96" height="56" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="172" y="103" text-anchor="middle" font-size="13" fill="#1a1a2e">HKEY_CURRENT</text>
+          <text x="172" y="121" text-anchor="middle" font-size="13" fill="#1a1a2e">_USER</text>
+          <rect x="228" y="80" width="96" height="56" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="276" y="103" text-anchor="middle" font-size="13" fill="#1a1a2e">HKEY_LOCAL</text>
+          <text x="276" y="121" text-anchor="middle" font-size="13" fill="#1a1a2e">_MACHINE</text>
+          <rect x="332" y="80" width="96" height="56" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="380" y="103" text-anchor="middle" font-size="13" fill="#1a1a2e">HKEY_USERS</text>
+          <text x="380" y="121" text-anchor="middle" font-size="11" fill="#666">所有用户配置</text>
+          <rect x="436" y="80" width="96" height="56" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="484" y="103" text-anchor="middle" font-size="13" fill="#1a1a2e">HKEY_CURRENT</text>
+          <text x="484" y="121" text-anchor="middle" font-size="13" fill="#1a1a2e">_CONFIG</text>
+          <line x1="280" y1="48" x2="68" y2="80" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="48" x2="172" y2="80" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="48" x2="276" y2="80" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="48" x2="380" y2="80" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="48" x2="484" y2="80" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="68" y="165" text-anchor="middle" font-size="12" fill="#1a1a2e">文件关联</text>
+          <text x="68" y="183" text-anchor="middle" font-size="11" fill="#666">.docx 用谁打开</text>
+          <text x="172" y="165" text-anchor="middle" font-size="12" fill="#1a1a2e">当前用户</text>
+          <text x="172" y="183" text-anchor="middle" font-size="11" fill="#666">桌面、软件设置</text>
+          <text x="276" y="165" text-anchor="middle" font-size="12" fill="#1a1a2e">整台机器</text>
+          <text x="276" y="183" text-anchor="middle" font-size="11" fill="#666">驱动、服务、开机项</text>
+          <text x="380" y="165" text-anchor="middle" font-size="12" fill="#1a1a2e">各用户总库</text>
+          <text x="484" y="165" text-anchor="middle" font-size="12" fill="#1a1a2e">当前硬件配置</text>
+          <text x="280" y="225" text-anchor="middle" font-size="12" fill="#666">HKCU 是 HKEY_USERS 里当前登录用户的那一份；HKCC 是开机时检测到的硬件配置</text>
+          <text x="280" y="245" text-anchor="middle" font-size="12" fill="#666">自启、服务、驱动的线索，大多在 HKLM 里</text>
+        </svg>
+        <figcaption>图：注册表的五个根键——记住 HKCU 管“这个人”，HKLM 管“这台机器”</figcaption>
+      </figure>
+      <p><strong>五个根键各管什么：</strong></p>
+      <p><strong>HKEY_CLASSES_ROOT（HKCR）</strong>——文件关联和 COM 组件：双击 .docx 用哪个程序打开，就记在这里。攻击者改它，就能让双击一个文件时偷偷跑别的程序。<strong>HKEY_CURRENT_USER（HKCU）</strong>——当前登录用户的配置：桌面、软件设置、以及“只对这个用户生效”的开机自启（Software\Microsoft\Windows\CurrentVersion\Run）。<strong>HKEY_LOCAL_MACHINE（HKLM）</strong>——整台机器的配置：驱动、服务、以及“对所有用户生效”的开机自启（同样路径，但在 HKLM 下面）。蓝队查自启，两边都要看。<strong>HKEY_USERS（HKU）</strong>——所有用户的配置总库，HKCU 其实就是它里面当前登录用户那一份的快捷方式。<strong>HKEY_CURRENT_CONFIG（HKCC）</strong>——当前这次开机的硬件配置，基本是系统自己维护的，平时不用管它。</p>
+      <p>一个关键区别：HKCU 只影响当前用户，改它不需要管理员权限；HKLM 影响整台机器，改它要管理员权限。这就是为什么很多恶意程序先往 HKCU 的 Run 里写自启——不需要弹 UAC 就能开机自启动。排错时也一样：一个程序只在某个用户登录时出问题，去 HKCU 找；所有用户都有问题，去 HKLM 找。</p>
+
+      <h2>服务：没有窗口、一直在后台干活的程序</h2>
+      <p><a href="m2c2-process.html">第 2 章</a>讲过进程，服务就是一种特殊的进程：没有窗口、不需要有人登录也能运行、由系统统一管理。比如 Windows Update、打印服务、杀毒软件的核心，跑的都是服务。看服务用 <code>services.msc</code>（按 Win+R 输入这个名字回车）：每一行是一个服务，有名称、描述、启动类型（自动、手动、禁用）和当前状态（正在运行、已停止）。</p>
+      <p>启动类型值得细看：“自动”表示开机就启动；“自动（延迟启动）”是开机后晚一点再启动，避免开机时一拥而上把机器拖慢；“手动”是需要时才启动；“禁用”是连手动启动都不让。蓝队查服务，先看两类异常：一个是从来没见过的名字、描述含糊其辞的服务，二是启动类型被改成“自动”、可执行文件路径指向临时文件夹或用户目录深处的服务——正常服务的可执行文件大多在 C:\Windows 或程序自己的安装目录里，不会藏在 C:\Users\某人\AppData\Temp 这种地方。</p>
+      <p>服务和普通程序的区别，还在于它以什么身份运行。很多服务以 LocalSystem（系统）身份运行，这个身份的权限比管理员还高——它能读写几乎所有文件。所以一个有漏洞的服务被攻破，后果比一个普通程序被攻破严重得多。这也是本章只读不改的原因之一：停掉一个你不认识的服务，可能是停掉了一个恶意程序，也可能是停掉了杀毒软件或者网络服务；先看、记下来、查清楚，再决定——而“决定”这一步，在真实工作中要走审批，不是随手点的。</p>
+
+      <h2>UAC：为什么总弹那个确认框</h2>
+      <p>UAC（用户账户控制）就是每次装软件、改系统设置时弹出来的那个“你要允许此应用对你的设备进行更改吗？”的框。它背后的原理，<a href="m2c12-kernels.html">第 12 章</a>已经埋过伏笔：Windows 给每个进程一个完整性级别——低（浏览器沙箱里的标签页）、中（普通程序）、高（管理员）、系统。普通程序跑在“中”，哪怕你登录的是管理员账户，日常程序也只拿到“中”的令牌；只有当你点“是”通过 UAC，系统才发一张“高”的令牌，程序才能改系统目录、写 HKLM、装驱动。</p>
+      <p>所以 UAC 不是“防病毒软件”，它是一道“权限升级必须经过你同意”的关卡。它的价值在于：一个普通程序被恶意利用时，攻击者拿到的只是“中”权限，改不了系统关键位置；想往上走，就必须弹框——而弹框会惊动坐在电脑前的人。攻击者于是想尽办法绕过 UAC：找系统自带的、默认被信任的高权限程序做跳板，或者利用某些程序提权时不弹框的配置漏洞。这类“UAC 绕过”是 Windows 提权的经典手法，蓝队看事件日志时，留意“一个普通程序突然以高完整性级别启动了子进程”这类异常。</p>
+      <p>一个常见的误解要纠正：把 UAC 调到“从不通知”不等于“更方便”，等于把这道关拆了。家用电脑上最安全的做法是保持默认设置，弹框时先停一秒：这个框是我自己主动要做的事弹出来的，还是我什么都没干、它自己冒出来的？后者要格外警惕。</p>
+
+      <h2>组策略：管理员批量管电脑的办法</h2>
+      <p>组策略（Group Policy）是 Windows 在公司环境里批量管理电脑的机制：管理员在域控制器上定好一套规则——比如“所有电脑不许用 U 盘”“密码最短 12 位”“锁屏 10 分钟”——规则下发到每台电脑上自动执行，不用一台一台去点。家用电脑上没有域，但本地组策略编辑器（<code>gpedit.msc</code>，家庭版没有这个工具）里也能看到同样的规则模板：计算机配置管整台机器，用户配置管当前用户。</p>
+      <p>对初学者来说，组策略先理解两件事就够了。第一，它是“规则”，不是“程序”：它本身不干活，它告诉系统和程序“什么能做、什么不能做”，最终由系统在执行时去查这张规则表。第二，它和注册表是通的：很多组策略设置落到电脑上，就是注册表里对应的值——管理员改的是策略，系统写的是注册表。这也解释了为什么网上很多“改注册表实现某某功能”的教程，本质上就是手工做了组策略做的事。公司电脑上，组策略还能被用来封堵攻击面：禁用宏、限制可执行文件的运行位置、强制开防火墙，蓝队常说的“加固”，很多就是一组组策略。</p>
+
+      <h2>Sysmon：给 Windows 装一个“行车记录仪”</h2>
+      <p>Windows 自带的事件查看器已经很好，但它默认不记录“哪个进程启动了哪个子进程”“哪个进程连了哪个网”这种细节。Sysmon（System Monitor）是微软 Sysinternals 出的免费工具，装上之后，它会在后台默默记录这些细节，写进事件查看器的“应用程序和服务日志 → Microsoft → Windows → Sysmon → Operational”里。它不杀毒、不拦截，只记录——像行车记录仪，平时不打扰你，出事了回放才有价值。</p>
+      <p>Sysmon 的事件都有编号，记住最常用的几个：<strong>事件 1</strong> 进程创建（谁启动了谁、命令行参数是什么、父进程是谁）；<strong>事件 3</strong> 网络连接（哪个进程连了哪个 IP 和端口）；<strong>事件 7</strong> 镜像加载（哪个进程加载了哪个 DLL）；<strong>事件 11</strong> 文件创建；<strong>事件 12/13/14</strong> 注册表操作；<strong>事件 22</strong> DNS 查询。蓝队最常用的一招，就是把“事件 1 里父进程是 Word、子进程却是 PowerShell”这类反常的父子关系挑出来——正常办公软件不会这样生孩子，宏病毒和钓鱼附件最爱这样干。</p>
+      <p>Sysmon 需要一份配置文件来告诉它“记什么、不记什么”，默认配置已经能记不少；网上的开源配置（比如 SwiftOnSecurity 的公开配置）会过滤掉大量噪音，只留可疑的。初学者不用自己写配置，先理解“它记什么、去哪看”就够了。注意：装 Sysmon 要管理员权限，而且它一旦装上就一直在后台运行——只在自己的电脑或明确授权的实验环境里装，不要往别人的电脑上装。</p>
+
+      <h2>事件查看器：哪些事件值得看</h2>
+      <p>事件查看器（<code>eventvwr</code>）是 Windows 的日志总入口，分三个主日志加一堆应用日志。安全相关的，先认这几个编号：<strong>4624</strong> 登录成功（看登录类型：2 是本地登录，3 是网络登录，10 是远程桌面）；<strong>4625</strong> 登录失败（短时间大量 4625，就是有人在猜密码）；<strong>4688</strong> 进程创建（需先在组策略/审核策略里开启，否则默认不记命令行）；<strong>7045</strong> 服务安装（新服务被装上了——结合上一节，服务装上就可能开机自启）；<strong>4104</strong> PowerShell 脚本块日志（PowerShell 跑了什么脚本，默认不全记，开启后是抓无文件攻击的利器）。</p>
+      <p>看日志的思路和 <a href="m2c11-lab.html">第 11 章</a>讲的基线是一回事：先知道正常长什么样，再认异常。凌晨三点一个从没见过的账户登录成功（4624，类型 10），或者一分钟里几十个 4625，这就是异常。反过来，一台电脑上偶尔一两个 4625（自己输错密码）再正常不过——别一看到失败就喊中毒，看数量、看时间、看来源。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>有一次用户说电脑“变慢了，还总弹奇怪窗口”，我没先杀毒，先开了三样东西：services.msc、注册表 HKCU 的 Run、事件查看器。服务列表里多了一个名字像系统服务、描述却只有一句话的服务，可执行文件在 AppData 的深处；注册表 Run 里同一条路径；事件 7045 显示它就是前一天下午装上的。三处线索指向同一个文件，处理就很简单了。还有一次，Sysmon 事件 1 里 Word 的子进程是 PowerShell，命令行里还带着一串编码过的命令——用户刚打开一封“发票”邮件的附件。记住这个顺序：先看“谁启动了谁”，再看“它连了哪”，最后看“它改了什么”。进程的父子关系，是 Windows 取证里最诚实的一条线，因为程序可以改名、可以伪装图标，但它启动时的父进程和命令行，改起来要难得多。</div>
+
+      <h2>动手做</h2>
+      <p>只在自己的 Windows 电脑上做，全程只读，<strong>不改注册表、不改服务、不改组策略、不删任何东西</strong>。1. 按 Win+R 输入 <code>regedit</code>，展开 HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run，看当前用户有哪些开机自启；再展开 HKEY_LOCAL_MACHINE 同样路径，对比两边有什么不同，把名字记下来。2. 按 Win+R 输入 <code>services.msc</code>，按“启动类型”排个序，看哪些是“自动”，找一个你认识的服务（比如 Windows Update），双击只看它的属性页：看它以什么身份运行、可执行文件路径在哪，然后关掉属性页，不要点“停止”。3. 按 Win+R 输入 <code>eventvwr</code>，打开“Windows 日志 → 安全”，点右边的“筛选当前日志”，在“事件 ID”里填 4625，看最近有没有登录失败；再看“系统”日志里筛选 7045，有没有你不认识的服务安装记录。4. 故意输错一次自己的 Windows 密码（登录界面输错一次就好），登录成功后再去事件查看器里找刚才那条 4625，对上时间，确认“失败记录长什么样”。</p>
+      <h2>避坑</h2>
+      <p>注册表没有“撤销”按钮：改错一个值，系统可能直接起不来，所以本章只看不改，网上“复制粘贴一段注册表代码就能优化/提速”的教程不要跟；服务不要随手停：停错了可能断网、没声音，或者把安全软件停掉，先查清楚再动手，而且是在有授权的前提下；UAC 弹框先看清是谁在要权限：自己刚双击的安装程序弹框正常，浏览网页时突然弹框就不正常；别把 Sysmon 当杀毒软件：它只记录不拦截，装了不等于安全了；看日志别只看一条：一条 4625 是你输错了密码，一分钟五十条 4625 才是有人在猜密码，数量和时间才是判断的依据。</p>
+      <p>下一章换一边：<a href="m2c14-linux-admin.html">第 14 章：Linux 系统管理</a>讲 Linux 这边怎么管服务、定时任务、远程登录和日志——同样的“管一台机器”的事，Linux 用的是另一套工具。Windows 专项的深入（取证、加固、域环境）会在后面的专项里展开。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>注册表是 Windows 的总配置数据库：HKCU 管当前用户，HKLM 管整台机器，自启线索主要在两边的 Run 键里；只看不改。</li>
+          <li>服务是没有窗口、由系统管理的后台进程；查服务看名字、启动类型、运行身份和可执行文件路径，藏在临时目录里的服务要警惕。</li>
+          <li>UAC 是权限升级必须经过用户同意的关卡：普通程序跑在“中”完整性级别，管理员操作要升到“高”才放行。</li>
+          <li>组策略是批量管理电脑的规则集，很多策略最终就落在注册表的值上；公司加固常用它来统一封堵攻击面。</li>
+          <li>Sysmon 是免费的记录工具：事件 1 进程创建、事件 3 网络连接、事件 11 文件创建，父子进程关系是取证里最诚实的一条线。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m2c12-kernels.html">← 上一章：第 12 章：Windows 与 Linux 内核有什么不一样</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m2c14-linux-admin.html">下一章：第 14 章：Linux 系统管理：systemd、cron、SSH 与日志 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

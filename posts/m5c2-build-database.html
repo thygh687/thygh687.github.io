@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块五第 2 章：动手：建一个数据库 —— 装一个，建表插数据 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块五第 2 章：动手：建一个数据库 —— 装一个，建表插数据</h1>
+      <div class="meta"><span class="tag">数据库与密码学</span>2026-11-25 · 模块五</div>
+      <p><a href="m5c1-sql-basics.html">上一章</a>你学会了增删改查四句话，但那些话是对着一张“假想的表”说的。这一章把表变成真的：在虚拟机里装一个数据库，建一个库、建几张表、插进数据、再学会备份导出。做完这一章，你手里会有一个属于自己的“漏洞清单”练习库——后面第 3 章设计它、第 4 章拿它看注入是怎么回事，模块五剩下的章节都会回到这个库里来。</p>
+      <h2>先选一个数据库：SQLite 还是 MySQL</h2>
+      <p>数据库软件有很多，初学者先认识两个就够了。<strong>SQLite</strong> 是最轻的一个：不用装服务，不用配账号密码，整个数据库就是电脑上的一个文件，拿起来就能用，适合练习和小型工具。很多手机 App、浏览器（比如 Chrome 的历史记录）内部用的就是 SQLite。<strong>MySQL</strong> 是正经的服务器型数据库：要装服务、要建账号、要通过网络连，网站后台用的大多是它这一类。先学 SQLite，因为它零门槛，学会的 SQL 语句到了 MySQL 里九成以上照样能用；等你熟悉了，再装 MySQL 也不迟。</p>
+      <p>怎么选，一句话：练手用 SQLite，上线用 MySQL（或同类的 PostgreSQL）。不要反过来——拿 MySQL 练第一课，光是装服务和配权限就能耗掉一个晚上。</p>
+      <h2>装 SQLite：三分钟</h2>
+      <p>在虚拟机（<a href="lesson-07-linux-vm.html">第 7 课</a>搭好的那台）里打开终端。先确认装没装：<code>sqlite3 --version</code>。如果显示了版本号（比如 3.45.0），直接跳过安装；如果提示找不到命令，Ubuntu/Debian 用 <code>sudo apt update &amp;&amp; sudo apt install -y sqlite3</code>，装完再跑一遍 <code>sqlite3 --version</code> 确认。Windows 的虚拟机里也一样：去 SQLite 官网下预编译的 sqlite-tools，解压就能用。</p>
+      <p>装 MySQL 则是另一条路：<code>sudo apt install -y mysql-server</code>，然后 <code>sudo mysql_secure_installation</code> 做初始安全设置，再用 <code>mysql -u root -p</code> 登录。本章的练习全部用 SQLite 做，MySQL 只需要知道“它存在、长这样、以后用得到”就够了。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 600 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="建库流程：装好、建库、建表、插数据、备份">
+          <defs>
+            <marker id="c2ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="15" y="35" width="96" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="63" y="58" text-anchor="middle" font-size="13" fill="#1a1a2e">1. 装好</text>
+          <text x="63" y="76" text-anchor="middle" font-size="12" fill="#1a1a2e">sqlite3</text>
+          <rect x="135" y="35" width="96" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="183" y="58" text-anchor="middle" font-size="13" fill="#1a1a2e">2. 建库</text>
+          <text x="183" y="76" text-anchor="middle" font-size="12" fill="#1a1a2e">一个文件</text>
+          <rect x="255" y="35" width="96" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="303" y="58" text-anchor="middle" font-size="13" fill="#1a1a2e">3. 建表</text>
+          <text x="303" y="76" text-anchor="middle" font-size="12" fill="#1a1a2e">定列和类型</text>
+          <rect x="375" y="35" width="96" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="423" y="58" text-anchor="middle" font-size="13" fill="#1a1a2e">4. 插数据</text>
+          <text x="423" y="76" text-anchor="middle" font-size="12" fill="#1a1a2e">INSERT</text>
+          <rect x="495" y="35" width="96" height="52" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="543" y="58" text-anchor="middle" font-size="13" fill="#1a1a2e">5. 备份</text>
+          <text x="543" y="76" text-anchor="middle" font-size="12" fill="#1a1a2e">导出一份</text>
+          <line x1="111" y1="61" x2="135" y2="61" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c2ar)"/>
+          <line x1="231" y1="61" x2="255" y2="61" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c2ar)"/>
+          <line x1="351" y1="61" x2="375" y2="61" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c2ar)"/>
+          <line x1="471" y1="61" x2="495" y2="61" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c2ar)"/>
+          <text x="300" y="125" text-anchor="middle" font-size="13" fill="#666">SQLite 里“建库”就是新建一个文件；第 5 步备份，就是把这个文件再复制一份</text>
+        </svg>
+        <figcaption>图：从零到一个能用的库，只需要五步；备份那一步不是收尾，是习惯</figcaption>
+      </figure>
+      <h2>建库：一个命令，一个文件</h2>
+      <p>在终端里跑 <code>sqlite3 vuln_lab.db</code>，就进入了 SQLite 的交互界面，同时当前目录下多了一个叫 <code>vuln_lab.db</code> 的文件——这就是你的数据库。SQLite 的“建库”就是这么朴素：文件名就是库名，文件丢了库就没了，所以备份才这么重要。</p>
+      <h2>建表：先定规矩，再装数据</h2>
+      <p>建表用 CREATE TABLE，意思是“定一张表的规矩”：每列叫什么、存什么类型、有什么约束。给漏洞清单建第一张表：</p>
+      <p><code>CREATE TABLE vulns (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, severity TEXT NOT NULL, status TEXT DEFAULT '待修复', found_date TEXT);</code></p>
+      <p>拆开看：<code>id INTEGER PRIMARY KEY AUTOINCREMENT</code> 是编号列，整数、主键（每行唯一，用来认出这一行）、自动加一，你插数据时不用管它；<code>name TEXT NOT NULL</code> 是漏洞名，文本类型，不许为空；<code>severity TEXT NOT NULL</code> 是严重程度；<code>status TEXT DEFAULT '待修复'</code> 是状态，不写就默认“待修复”；<code>found_date TEXT</code> 是发现日期。主键和外键的道理，<a href="m5c3-db-design.html">第 3 章</a>会讲透，这里先会用：主键就是每行数据的“身份证号”。</p>
+      <p>建完表，用 <code>.tables</code> 看看有哪些表，用 <code>.schema vulns</code> 看看这张表的结构长什么样——这两个点开头的命令是 SQLite 自己的小工具，不是 SQL，出了 SQLite 就用不上了。</p>
+      <h2>插数据：把练习库填满</h2>
+      <p>插几条你自己编的记录，数据越像真的越好：</p>
+      <p><code>INSERT INTO vulns (name, severity, found_date) VALUES ('弱口令', '高', '2026-11-20');</code><br><code>INSERT INTO vulns (name, severity, found_date) VALUES ('未打补丁', '高', '2026-11-21');</code><br><code>INSERT INTO vulns (name, severity, found_date) VALUES ('开放端口', '低', '2026-11-22');</code><br><code>INSERT INTO vulns (name, severity, status, found_date) VALUES ('过期证书', '中', '修复中', '2026-11-23');</code></p>
+      <p>注意第三条没写 status，它会自动填默认值“待修复”；第一条没写 id，它会自动编号。用 <code>SELECT * FROM vulns;</code> 验证一下——四行都在，id 从 1 到 4，说明建表和插数据都对了。这就是<a href="m5c1-sql-basics.html">第 1 章</a>的增删改查第一次落在真实的数据库上。</p>
+      <h2>备份导出：两招</h2>
+      <p>SQLite 的备份简单到不好意思：第一招，直接复制 <code>vuln_lab.db</code> 这个文件，拷到另一个文件夹或 U 盘，就是一次完整备份。第二招，导出成 SQL 文本：在终端里跑 <code>sqlite3 vuln_lab.db .dump &gt; backup.sql</code>，得到一个纯文本文件，里面是重建整个库需要的所有 CREATE TABLE 和 INSERT 语句；恢复时跑 <code>sqlite3 new.db &lt; backup.sql</code> 就能原样重建。文本备份的好处是能看、能改、能放进版本管理；文件复制的好处是快。两个都学会，工作中轮换着用。</p>
+      <p>MySQL 的备份思路一样，只是工具换成 <code>mysqldump</code>：<code>mysqldump -u root -p 库名 &gt; backup.sql</code>。记住这个命令的名字，以后在服务器上天天见。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>备份这件事，我见过两种人：一种是“出过事的人”，一种是“还没出过事的人”。我刚工作那年，有个同事在客户服务器上调数据库，改之前觉得“就改一行，没事”，结果 WHERE 条件写错，改掉了几千行客户资料。最后是靠前一天夜里的自动备份救回来的，从那以后他每天上班第一件事就是检查备份任务跑没跑。还有一件事：备份文件本身也要当回事——我见过备份文件和数据库放在同一台机器、同一个硬盘上，硬盘一坏，数据和备份一起没了。备份的规矩就三条：定期做、异地放、定期恢复演练一次。第三条最容易被省掉，也最要命：没恢复过的备份，等于没备份。</div>
+      <h2>动手做</h2>
+      <p>只在虚拟机里做：<br>1. 在虚拟机里装好 sqlite3，确认 <code>sqlite3 --version</code> 能显示版本号；<br>2. 新建练习库：<code>sqlite3 vuln_lab.db</code>，按上面那条 CREATE TABLE 建好 vulns 表，再建第二张表 assets（资产表）：<code>CREATE TABLE assets (id INTEGER PRIMARY KEY AUTOINCREMENT, hostname TEXT NOT NULL, ip TEXT, os TEXT);</code>，插两台你编的机器进去；<br>3. 给 vulns 表插至少 8 条记录，严重程度高、中、低都要有，状态待修复、修复中、已修复都要有；<br>4. 用 <code>SELECT * FROM vulns WHERE severity = '高';</code> 查高危漏洞，用 <code>SELECT COUNT(*) FROM vulns;</code> 数一数一共多少条；<br>5. 做一次备份：先 <code>.dump</code> 导出 backup.sql，再把 vuln_lab.db 文件复制一份到另一个目录；然后故意删一条记录，再用备份恢复，验证备份真的能救命。<br>这个 vuln_lab.db 就是你的“漏洞清单”练习库，留着它——<a href="m5c3-db-design.html">第 3 章</a>要给它画 ER 图，<a href="m5c4-sql-injection.html">第 4 章</a>要在它上面看注入的查询长什么样。</p>
+      <h2>避坑</h2>
+      <p>别在真实网站或公司的数据库上练建表删表，所有练习只在虚拟机自己的库里做；建表之前先想好列和类型，表建好再改结构比一开始想清楚麻烦得多；TEXT 类型别用来存“高/中/低”这种固定选项还指望它按严重程度排序，排序的坑<a href="m5c1-sql-basics.html">第 1 章</a>已经讲过；SQLite 的库就是一个文件，删文件等于删库，操作文件之前先想一想；备份做完要验证恢复，别等到真出事才发现备份是空的。</p>
+      <p>库有了、表有了、数据有了，接下来该问一句：这两张表这样设计合理吗？漏洞和资产之间该是什么关系？<a href="m5c3-db-design.html">第 3 章：数据库设计：表、主键、外键</a>就是回答这个问题的。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>练手用 SQLite（一个文件就是一个库），上线用 MySQL 这类服务器型数据库；SQL 语句九成通用。</li>
+          <li>建库：sqlite3 vuln_lab.db；建表：CREATE TABLE 定列名、类型和约束；主键是每行数据的身份证号。</li>
+          <li>插数据用 INSERT，默认值（DEFAULT）和自增（AUTOINCREMENT）能少写很多字。</li>
+          <li>备份两招：直接复制数据库文件，或 .dump / mysqldump 导出 SQL 文本；备份要异地放、要演练恢复。</li>
+          <li>你现在有了一个“漏洞清单”练习库 vuln_lab.db，后面两章都要用它。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m5c1-sql-basics.html">← 上一章：第 1 章：SQL 基础 —— 增删改查</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m5c3-db-design.html">下一章：第 3 章：数据库设计：表、主键、外键 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

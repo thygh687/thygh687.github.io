@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块一第 19 章：CPU 数据通路：单周期与多周期处理器 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块一第 19 章：CPU 数据通路：单周期与多周期处理器</h1>
+      <div class="meta"><span class="tag">组成原理</span>2026-11-25 · 模块一</div>
+      <p><a href="m1c2-cpu.html">第 2 章</a>讲过，CPU 不停地重复四个步骤：取指、译码、执行、写回。但那四个步骤只是“做什么”，没有讲“数据在 CPU 里面是怎么走的”。这一章就把 CPU 的盖子打开，看一条指令的数据从哪里进、经过哪些部件、最后写到哪里——这条路，就叫<strong>数据通路</strong>。把数据通路搭出来，CPU 就不再是一个黑盒子了。</p>
+      <h2>数据通路就是指令流过 CPU 的路</h2>
+      <p>想象一条工厂流水线：原料从仓库取出来，经过几台机器加工，最后变成成品送进仓库。CPU 里也一样：指令和数据从寄存器和内存里取出来，经过 ALU 算一算，最后把结果写回去。数据通路就是这条“原料—加工—成品”的路线，由导线和部件连起来。导线上传什么、什么时候传，由<a href="m1c20-control-unit.html">下一章</a>讲的控制器指挥——数据通路是“路”，控制器是“红绿灯”，两者合起来才是一台能干活的 CPU。</p>
+      <p>一条指令走完数据通路，要经过五个部件。先看这张图，从左到右就是数据流动的方向：</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="五段数据通路图">
+          <defs>
+            <marker id="arr19" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="10" y="110" width="105" height="70" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="62" y="138" text-anchor="middle" font-size="14" fill="#1a1a2e">① 取指</text>
+          <text x="62" y="160" text-anchor="middle" font-size="12" fill="#1a1a2e">PC → 指令存储器</text>
+          <rect x="140" y="110" width="105" height="70" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="192" y="138" text-anchor="middle" font-size="14" fill="#1a1a2e">② 译码</text>
+          <text x="192" y="160" text-anchor="middle" font-size="12" fill="#1a1a2e">读寄存器堆</text>
+          <rect x="270" y="110" width="105" height="70" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="322" y="138" text-anchor="middle" font-size="14" fill="#1a1a2e">③ 执行</text>
+          <text x="322" y="160" text-anchor="middle" font-size="12" fill="#1a1a2e">ALU 运算</text>
+          <rect x="400" y="110" width="105" height="70" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="452" y="138" text-anchor="middle" font-size="14" fill="#1a1a2e">④ 访存</text>
+          <text x="452" y="160" text-anchor="middle" font-size="12" fill="#1a1a2e">读写数据存储器</text>
+          <rect x="530" y="110" width="100" height="70" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="580" y="138" text-anchor="middle" font-size="14" fill="#1a1a2e">⑤ 写回</text>
+          <text x="580" y="160" text-anchor="middle" font-size="12" fill="#1a1a2e">写寄存器堆</text>
+          <line x1="115" y1="145" x2="138" y2="145" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr19)"/>
+          <line x1="245" y1="145" x2="268" y2="145" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr19)"/>
+          <line x1="375" y1="145" x2="398" y2="145" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr19)"/>
+          <line x1="505" y1="145" x2="528" y2="145" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arr19)"/>
+          <path d="M 580 180 L 580 250 L 192 250 L 192 182" fill="none" stroke="#1a1a2e" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arr19)"/>
+          <text x="390" y="242" text-anchor="middle" font-size="12" fill="#666">写回的虚线：结果写回寄存器堆，供下一条指令用</text>
+          <text x="320" y="40" text-anchor="middle" font-size="14" fill="#1a1a2e">一条指令的数据通路：取指 → 译码 → 执行 → 访存 → 写回</text>
+          <text x="320" y="66" text-anchor="middle" font-size="12" fill="#666">PC 是程序计数器，永远指向下一条要取的指令</text>
+          <text x="320" y="290" text-anchor="middle" font-size="12" fill="#666">不是每条指令都走满五段：加法不用访存，跳转不用写回</text>
+        </svg>
+        <figcaption>图：数据通路的五段——指令从左流到右，算出的结果沿虚线写回寄存器堆</figcaption>
+      </figure>
+      <p>注意一个细节：<strong>不是每条指令都走满五段。</strong>加法指令算完直接写回，不用访存；跳转指令改一下 PC 就走，不用写回。数据通路是按“最长的一条指令”搭的，短的指令只是跳过其中某一段。这就像一条公路，不是每辆车都要开完全程，有人在中途下高速，很正常。</p>
+      <h2>三个关键部件：寄存器堆、ALU、多路选择器</h2>
+      <p>数据通路上最重要的三个部件，值得一个一个认识。第一是<strong>寄存器堆</strong>：CPU 里的一小排高速小抽屉，存着正在算的数。<a href="m1c4-assembly.html">第 4 章</a>汇编里的寄存器就是它。寄存器堆有两个读口、一个写口——一条指令可以同时读两个数（比如加法的两个加数），算完再把结果写回去。第二是 <strong>ALU</strong>（算术逻辑单元）：真正干活的车间，加减乘除、与或非都在这里算出来，<a href="m1c6-logic.html">第 6 章</a>的逻辑门搭成的加法器就是它的前身。第三是<strong>多路选择器</strong>：数据通路上的“道岔”，在几条输入线里选一条接通——比如 ALU 的第二个输入，既可以是寄存器里的数，也可以是指令里直接带的常数，选哪一个，由控制信号说了算。</p>
+      <p>这三个部件分工很清楚：寄存器堆管“存数”，ALU 管“算数”，多路选择器管“选路”。数据通路图上所有的小方块，归根结底都是这三类东西的组合。以后你在 CPU 手册里看到眼花缭乱的框图，先找这三样：数存在哪、数在哪算、路在哪选，图就读懂一半了。</p>
+      <h2>单周期：一条指令一个时钟，又慢又简单</h2>
+      <p>有了数据通路，第一个问题是：一个时钟周期里干多少活？最简单的答案叫<strong>单周期处理器</strong>：一条指令，从取指到写回，五段全在一个时钟周期里走完。下一个时钟，下一条指令。简单到什么程度？控制器几乎不用记状态——每个时钟干的事都一样，控制信号只由当前指令决定。</p>
+      <p>但单周期有个致命的慢：时钟周期必须按最慢的那条指令来定。访存指令要跑完整条路，花的时间最长；加法指令明明半个周期就能算完，也得等满一个周期。就像一条路限速按最慢的车定，所有车都得跟着慢。更糟的是，时钟周期定下来之后，想提速只能换更快的元器件——这条路走到头，就是<a href="m1c10-performance.html">第 10 章</a>讲的主频天花板。单周期在真实 CPU 里几乎不用，但它是最好的教学模型：先把它弄懂，再学多周期和流水线才有参照。</p>
+      <h2>多周期：一条指令分几步走</h2>
+      <p><strong>多周期处理器</strong>把一条指令拆成几步，每步占一个时钟周期：第一个周期取指，第二个周期译码读寄存器，第三个周期 ALU 运算，第四个周期访存（需要的话），第五个周期写回。快指令只用三四个周期，慢指令用满五个，时钟周期可以按最慢的“一步”来定，而不是按最慢的“一条指令”来定——时钟就能跑得更快。</p>
+      <p>代价是控制器变复杂了：它必须记住“现在是第几步”，不同步骤发不同的控制信号。这就需要<a href="m1c20-control-unit.html">下一章</a>讲的控制器设计，以及<a href="m1c15-sequential-logic.html">第 15 章</a>讲的时序逻辑——状态机记住当前状态，时钟一到就跳到下一个状态。单周期和多周期的取舍，其实就是“时钟慢、控制简单”和“时钟快、控制复杂”之间的取舍。真实 CPU 的答案是两者都不要，而是<a href="m1c21-pipelining.html">第 21 章</a>的流水线：把五段排成一条线，让五条指令同时各走一段。</p>
+      <p>还有一个容易混淆的点：<strong>多周期不等于流水线。</strong>多周期是“一条指令分几步、一步一个时钟”，同一时刻 CPU 里只有一条指令在走；流水线是“五条指令同时各走一段”，同一时刻 CPU 里有五条指令。分清楚这一点，第 21 章的冒险才好理解。</p>
+      <div class="video-note"><strong>视频：</strong>想看 CPU 内部长什么样，可以看这个已核实的视频：CPU 是如何工作的（YouTube）：<a href="https://youtube.com/watch?v=GtVDTp826DE">https://youtube.com/watch?v=GtVDTp826DE</a>。对照视频里的数据流动，再看本章的数据通路图，会清楚很多。</div>
+      <div class="teacher-note"><strong>老师经验：</strong>现场排错时，数据通路的思路比任何工具都管用。客户说“程序算出来的数不对”，我不会先怀疑软件，先问三个问题：数存在哪（寄存器还是内存）、数在哪算（ALU 的输入对不对）、结果写回哪。十次有八次，问题出在“数根本没到该到的地方”——比如一个驱动把数据写错了地址，ALU 算的是旧数，结果当然不对。还有一次更典型：程序偶尔算错、重启就好，最后查出来是内存条接触不良，数据在总线上传着传着变了样。记住：算错先查“路”，再查“算”，路通了，算才有意义。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里装一个免费的 CPU 模拟器（比如 Logisim 或类似的数字逻辑模拟器，只在虚拟机里装），打开它自带的单周期 CPU 示例，单步执行三条指令，观察每一步数据从哪个部件流到哪个部件。<br>2. 在纸上画一张自己的数据通路图：只画取指、译码、执行、写回四段（加法指令不用访存），标出每段之间传的是什么数据。<br>3. 对照<a href="m1c4-assembly.html">第 4 章</a>的一段汇编（比如求 1 到 5 的和），写出每条指令要走数据通路的哪几段、跳过哪几段。<br>4. 算一笔账：假设单周期 CPU 的时钟是 100MHz（每条指令 1 个周期），多周期 CPU 的时钟是 400MHz（加法 4 个周期、访存 5 个周期），跑 100 条加法各要多少时间？哪个更快？为什么？</p>
+      <h2>避坑</h2>
+      <p>别以为每条指令都走满五段：加法跳过访存，跳转跳过写回，画图和做题时先问“这条指令需要哪几段”；别把多周期和流水线混为一谈：多周期是同一时刻只有一条指令，流水线是同一时刻有五条指令；别只看时钟频率：单周期时钟慢但每条指令只要 1 个周期，多周期时钟快但每条指令要 4–5 个周期，快慢要拿“每条指令的平均时间”比，不能只比主频；画数据通路图时别漏了写回那条虚线——没有它，算出来的结果就没地方去。</p>
+      <p>数据通路是“路”，路修好了，还得有人指挥交通：<a href="m1c20-control-unit.html">下一章：控制器设计</a>讲谁来发控制信号、硬布线和微程序两种指挥办法。回头看<a href="m1c2-cpu.html">第 2 章</a>的取指执行循环：现在你知道，每一次循环里，数据正是沿着本章这条路走完的。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>数据通路是数据在 CPU 里流动的路线：取指 → 译码 → 执行 → 访存 → 写回五段，不是每条指令都走满五段。</li>
+          <li>三个关键部件：寄存器堆存数、ALU 算数、多路选择器选路，数据通路图上的方块基本都是这三类。</li>
+          <li>单周期处理器一条指令一个时钟：控制简单，但时钟必须按最慢的指令定，又慢又浪费。</li>
+          <li>多周期处理器一条指令分几步走：时钟可以更快，但控制器要记住当前是第几步，复杂度上去了。</li>
+          <li>多周期不等于流水线：多周期同一时刻只有一条指令在走，流水线同一时刻有五条指令各走一段。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m1c18-cache-deep.html">← 上一章：第 18 章：Cache 深入</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m1c20-control-unit.html">下一章：第 20 章：控制器设计 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

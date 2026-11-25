@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块五第 17 章：NoSQL：文档、键值与图数据库 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块五第 17 章：NoSQL：文档、键值与图数据库</h1>
+      <div class="meta"><span class="tag">数据库与密码学</span>2026-11-25 · 模块五</div>
+      <p>前面十几章都在讲关系型数据库：表、行、列、主键、外键、范式、事务、索引。它很强大，但不是所有数据都适合放进表里。一篇结构每次都不一样的文章、一个每秒几万次的登录计数器、一张“谁认识谁、谁关注谁”的关系网——硬塞进表里，要么拆得支离破碎，要么慢得没法用。这一章讲另一大家族 NoSQL：文档、键值、图三种数据库各长什么样、各自擅长什么，以及什么时候该坚持关系型。先说结论：NoSQL 不是“取代 SQL”，而是“在 SQL 不合适的地方补位”。</p>
+      <h2>为什么会有 NoSQL：表装不下的数据</h2>
+      <p>关系型数据库要求数据先有固定的形状（schema）：建表时定好列，之后每一行都得按这个形状来。可现实里很多数据的形状是不固定的：用户资料里有人填了三个地址、有人一个也没填；商品有的有颜色，有的没有，有的突然多了一个“保修期”字段。硬用表装，就得不停加列，或者拆成一堆关联表，查询一次要 JOIN 七八张表，<a href="m5c16-indexing.html">第 16 章</a>的索引再努力也救不回来。NoSQL 的出发点就是：先放宽“形状必须固定”这条规矩，让数据按它本来的样子存。</p>
+      <p>代价也要说在前面：放宽形状规矩，等于把一部分保证交还给了写代码的人。关系型数据库用外键、约束、事务帮你挡了很多错；NoSQL 里这些保证要么弱、要么没有，数据写坏了数据库不会拦你。所以选 NoSQL 不是“更先进”，是“在某个场景下更划算”——这个判断，是本章最要紧的本事。</p>
+      <h2>文档数据库：一个 JSON 就是一行</h2>
+      <p>文档数据库（代表是 MongoDB 的思想）存的是“文档”——你可以把它理解成一个 JSON 对象：一个用户就是一个文档，里面嵌着地址数组、偏好设置、订单列表，想加字段就加，不用先改表结构。读一个用户，一次就把整个文档拿回来，不用 JOIN。适合内容管理、用户资料、商品详情这种“一个东西的信息比较完整、形状经常变”的场景。</p>
+      <p>但文档数据库不擅长“跨文档算账”：想算“所有用户本月的消费总和”，关系型数据库一条 GROUP BY 就出来了，文档数据库要扫很多文档慢慢算；两个文档之间要保证“要么一起改、要么一起不改”（<a href="m5c15-transactions.html">第 15 章</a>的 ACID），早期文档数据库根本不支持，后来才慢慢补上，而且仍然比关系型弱。所以钱、库存这种“算错一分都不行”的数据，别放文档数据库里。</p>
+      <h2>键值数据库：最快的字典</h2>
+      <p>键值数据库（代表是 Redis 的思想）是全世界最简单的数据模型：一个键对应一个值，就像一本巨大的字典。<code>SET session:abc123 "{user: 42}"</code> 存一个登录会话，<code>GET session:abc123</code> 取出来，<code>INCR page_views</code> 让计数器加一——全是 O(1) 的操作，快到以微秒计。它通常把数据放内存里，速度是磁盘数据库的几十上百倍。</p>
+      <p>代价是：它只会“按键找值”，不支持“按值查”——你想找“所有姓张的用户”，键值数据库帮不上忙，得你自己维护额外的索引；数据放内存里，机器一断电就可能丢（Redis 可以配持久化，但那是可选的、要付出性能的）。所以键值数据库的正确位置是缓存、会话、计数器、排行榜、消息队列这些“丢了可以重建、慢了用户就跑”的场景，而不是唯一的数据仓库。记住这条铁律：<strong>缓存里可以没有数据，但数据库里必须有</strong>——缓存丢了从库里重建，库丢了就真没了。</p>
+      <h2>图数据库：关系本身就是数据</h2>
+      <p>图数据库（代表是 Neo4j 的思想）存的是“点”和“边”：人是点，关注、好友、转账是边，边上还能带属性（什么时候关注的、转了多少钱）。它最擅长回答“关系的问题”：张三的朋友的朋友里有谁认识李四？这笔钱经过几个账户转到了哪里？在关系型数据库里，这种问题要一层一层 JOIN，层数一多就慢到没法用；在图数据库里，顺着边走就是答案，几跳之内都很快。反欺诈、社交推荐、知识图谱、权限关系，都是图数据库的主场。</p>
+      <p>但图数据库也不擅长“算总数、做报表”——它不是为聚合查询生的；而且学它要换一套查询语言（比如 Cypher），团队的学习成本和运维成本都要算进去。关系不复杂、只有一两层关联的场景，用关系型数据库加 JOIN 就够了，别为了时髦上图数据库。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="三种NoSQL模型对比图">
+          <rect x="20" y="10" width="160" height="130" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="38" text-anchor="middle" font-size="14" fill="#1a1a2e">文档：一个 JSON</text>
+          <text x="100" y="66" text-anchor="middle" font-size="12" fill="#1a1a2e">{ 用户：小明，</text>
+          <text x="100" y="86" text-anchor="middle" font-size="12" fill="#1a1a2e">地址：[北京，上海]，</text>
+          <text x="100" y="106" text-anchor="middle" font-size="12" fill="#1a1a2e">订单：[...] }</text>
+          <rect x="200" y="10" width="160" height="130" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="38" text-anchor="middle" font-size="14" fill="#1a1a2e">键值：一本字典</text>
+          <text x="280" y="66" text-anchor="middle" font-size="12" fill="#1a1a2e">session:abc → {...}</text>
+          <text x="280" y="86" text-anchor="middle" font-size="12" fill="#1a1a2e">views:首页 → 1024</text>
+          <text x="280" y="106" text-anchor="middle" font-size="12" fill="#1a1a2e">queue:任务 → [...]</text>
+          <rect x="380" y="10" width="160" height="130" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="38" text-anchor="middle" font-size="14" fill="#1a1a2e">图：点和边</text>
+          <circle cx="430" cy="70" r="14" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="430" y="74" text-anchor="middle" font-size="11" fill="#1a1a2e">张三</text>
+          <circle cx="500" cy="70" r="14" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="500" y="74" text-anchor="middle" font-size="11" fill="#1a1a2e">李四</text>
+          <circle cx="465" cy="115" r="14" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="119" text-anchor="middle" font-size="11" fill="#1a1a2e">王五</text>
+          <line x1="444" y1="70" x2="486" y2="70" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="438" y1="82" x2="456" y2="102" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="492" y1="82" x2="474" y2="102" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="180" text-anchor="middle" font-size="14" fill="#1a1a2e">怎么选？先问数据长什么样、查询长什么样</text>
+          <rect x="20" y="200" width="520" height="34" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="280" y="222" text-anchor="middle" font-size="13" fill="#1a1a2e">形状多变、一次取一整坨 → 文档　　只要按键取、要极快 → 键值</text>
+          <rect x="20" y="244" width="520" height="34" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="280" y="266" text-anchor="middle" font-size="13" fill="#1a1a2e">问题本身就是“谁和谁有关系” → 图　　要算账、要强一致 → 关系型</text>
+          <text x="280" y="308" text-anchor="middle" font-size="12" fill="#666">一句话：没有最好的数据库，只有最对症的数据库</text>
+        </svg>
+        <figcaption>图：三种 NoSQL 模型——文档装整坨数据，键值做极速字典，图存关系本身</figcaption>
+      </figure>
+      <h2>什么时候用 NoSQL，什么时候坚持关系型</h2>
+      <p>用 NoSQL 的信号：数据形状经常变、读的模式是“一次取一整个东西”、数据量大到一台关系型数据库扛不住、或者查询本身就是关系遍历。坚持关系型的信号：数据之间关系明确、要跨表算账做报表、钱和库存这种错不得的数据、需要 <a href="m5c15-transactions.html">第 15 章</a>那种强事务保证。</p>
+      <p>真实世界的答案常常是“都要”：关系型数据库做主库（钱、订单、用户核心数据），Redis 做缓存和会话，文档数据库存内容和日志，图数据库跑反欺诈——每种数据库干它最擅长的一件事。这叫多模型架构，听着复杂，其实就是“别拿螺丝刀当锤子”。</p>
+      <p>安全上还要多想一层：NoSQL 数据库历史上出过不少“默认无密码、直接暴露在公网”的事故——有些版本装完默认谁都能连，管理员没改配置就上了线，数据被整个拖走。无论用哪种数据库，上线前三件事不变：设强密码、只允许内网访问、按最小权限开账号。这三件事和数据库的种类无关，和“它在公网上裸奔”有关。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我见过两种典型的选型翻车。一种是“什么都往 Redis 里塞”：有人把订单主数据也放 Redis，觉得快，结果一次重启持久化没配好，订单丢了一大片——缓存只能是缓存，主数据必须在有事务、有持久化的库里。另一种是“为了 NoSQL 而 NoSQL”：一个只有几千用户的内部系统，数据结构清清楚楚，非要上文档数据库，结果跨表统计写得比 SQL 难十倍，团队天天加班。我的判断方法很土但管用：先把查询列出来——最常查的十个问题是什么？如果十个里有八个是“按条件筛、跨表汇总”，那就是关系型；如果八个是“取一整坨、按键取、顺着关系走”，再谈 NoSQL。先有查询，再有选型，顺序别反了。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里装一个 Redis（只监听 127.0.0.1，绝不暴露到局域网和公网）：用 <code>SET</code> 存一个会话、用 <code>GET</code> 取出来、用 <code>INCR</code> 做一个页面计数器，再用 <code>EXPIRE</code> 给会话设一个 60 秒过期，60 秒后再 <code>GET</code>，看它是不是真的消失了。<br>2. 在虚拟机里装一个 MongoDB（同样只监听本地）：插一条用户文档，里面嵌一个地址数组；再插一条字段完全不同的用户文档，确认数据库没有拦你——这就是“形状不固定”的意思；然后查一次“所有姓张的用户”，体会文档数据库做条件查询和关系型有什么不同。<br>3. 对比实验：把同一份“用户 + 订单”数据，一份放关系型练习库、一份放文档库，分别写“算某个用户本月消费总和”的查询，看看哪边写起来更顺、哪边更容易写错。<br>4. 安全检查：用端口扫描（只扫自己的虚拟机）确认 Redis 的 6379 和 MongoDB 的 27017 没有对着局域网开放，再检查两个数据库是不是都设了密码——没设密码就先停下来，把密码设好再继续。</p>
+      <h2>避坑</h2>
+      <p>别把缓存当主库：Redis 丢了数据能从主库重建，主库丢了就是真丢了；别以为“NoSQL 就不用设计”：形状不固定不等于形状可以乱，文档里字段名拼错一个，查询就永远查不到；别把钱和库存放进弱事务的数据库；别让数据库裸奔上公网：默认无密码、监听 0.0.0.0，是 NoSQL 泄露事故里最常见的死法；别为了追新换数据库：先列出最常查的十个问题，让查询决定选型。</p>
+      <p>数据库这条线到这里告一段落：从建表、范式、事务、索引，到这一章的 NoSQL，你已经知道数据怎么存、怎么查、怎么在并发下不出错。下一章开始，话题回到密码学的主线：<a href="m5c18-crypto-modes-key-exchange.html">第 18 章：密码学模式与密钥交换</a>——密钥是怎么安全地商量出来的。回头看，<a href="m5c16-indexing.html">第 16 章</a>的索引和<a href="m5c15-transactions.html">第 15 章</a>的事务，是所有数据库选型的地基：不管换成哪种数据库，“写得对、读得快”这两个问题永远都在。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>NoSQL 不是取代 SQL，而是在关系型不合适的地方补位：数据形状多变、超大规模、关系遍历，是它的主场。</li>
+          <li>文档数据库（MongoDB 思想）一次存取一整个 JSON 文档，适合内容和用户资料；不擅长跨文档算账和强事务。</li>
+          <li>键值数据库（Redis 思想）是极速字典，只会按键取值，适合缓存、会话、计数器；绝不能当唯一主库。</li>
+          <li>图数据库存点和边，最擅长“谁和谁有关系”的问题，如反欺诈和推荐；报表聚合不是它的活。</li>
+          <li>选型先列出最常查的十个问题，让查询决定数据库；无论哪种数据库，上线前都要设密码、只允许内网访问、按最小权限开账号。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m5c16-indexing.html">← 上一章：第 16 章：索引与查询优化</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m5c18-crypto-modes-key-exchange.html">下一章：第 18 章：密码学模式与密钥交换：分组模式、Diffie-Hellman、ECC 深入 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

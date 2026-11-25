@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块二第 14 章：Linux 系统管理：systemd、cron、SSH 与日志 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块二第 14 章：Linux 系统管理：systemd、cron、SSH 与日志</h1>
+      <div class="meta"><span class="tag">操作系统</span>2026-11-25 · 模块二</div>
+      <p>上一章讲了 Windows 怎么管一台电脑：注册表、服务、组策略、事件查看器。这一章讲另一边：Linux 怎么管一台电脑。服务器的世界基本是 Linux 的，学安全的人迟早要在一台没有图形界面的 Linux 服务器上干活——那里没有鼠标可点，只有命令行。所以这一章的四个工具要一个一个练熟：systemd 管服务，cron 管定时任务，SSH 管远程登录，journalctl 和日志文件管“出了什么事”。</p>
+      <p>先接上 <a href="m2c12-kernels.html">第 12 章</a>的对照：Windows 的配置集中在注册表里，Linux 的配置是 /etc 下的纯文本文件；Windows 的服务用 services.msc 看，Linux 的服务用 systemctl 看；Windows 的日志在事件查看器里，Linux 的日志在 journald 和 /var/log 里。思路是同一套，换的只是工具名字。动手做的部分全部在虚拟机里的 Ubuntu 上做，不要在任何真实服务器上练手。</p>
+
+      <h2>systemd：一号进程，管所有服务</h2>
+      <p>Linux 开机后运行的第一个进程，PID 永远是 1，现代发行版里它基本就是 systemd。你可以把 systemd 想成这台机器的“大管家本人”：开机时它按顺序把服务一个一个启动起来，服务崩了它负责重启，关机时它负责一个一个停掉。systemd 管的东西叫“单元”（unit），服务只是其中一种，叫 service 单元，还有管挂载点的 mount 单元、管定时器的 timer 单元，等等。</p>
+      <p>管服务只用 <code>systemctl</code> 这一个命令，记住四个动作就够用：<code>systemctl status ssh</code> 看一个服务现在的状态（在运行吗？开机自启吗？最近的日志说了什么）；<code>systemctl start ssh</code> 现在启动它；<code>systemctl stop ssh</code> 现在停掉它；<code>systemctl enable ssh</code> 让它开机自动启动，<code>systemctl disable ssh</code> 取消开机自启。注意 start 和 enable 是两件不同的事：start 管“现在”，enable 管“下次开机”。一个服务可以现在开着但下次开机不开，也可以现在没开但下次开机自动开——新手最常搞混的就是这一对。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="systemd 管理服务示意图">
+          <defs>
+            <marker id="c14ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="180" y="10" width="200" height="38" rx="8" fill="#1a1a2e"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#fff">systemd（PID 1）</text>
+          <rect x="30" y="80" width="150" height="52" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="105" y="102" text-anchor="middle" font-size="13" fill="#1a1a2e">ssh.service</text>
+          <text x="105" y="120" text-anchor="middle" font-size="11" fill="#666">远程登录服务</text>
+          <rect x="205" y="80" width="150" height="52" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="102" text-anchor="middle" font-size="13" fill="#1a1a2e">nginx.service</text>
+          <text x="280" y="120" text-anchor="middle" font-size="11" fill="#666">网站服务</text>
+          <rect x="380" y="80" width="150" height="52" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="455" y="102" text-anchor="middle" font-size="13" fill="#1a1a2e">cron.service</text>
+          <text x="455" y="120" text-anchor="middle" font-size="11" fill="#666">定时任务服务</text>
+          <line x1="230" y1="48" x2="105" y2="80" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c14ar)"/>
+          <line x1="280" y1="48" x2="280" y2="80" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c14ar)"/>
+          <line x1="330" y1="48" x2="455" y2="80" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c14ar)"/>
+          <rect x="60" y="160" width="440" height="66" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="185" text-anchor="middle" font-size="13" fill="#1a1a2e">systemctl status / start / stop / enable / disable</text>
+          <text x="280" y="207" text-anchor="middle" font-size="12" fill="#666">start 管“现在”，enable 管“下次开机”——两件不同的事</text>
+        </svg>
+        <figcaption>图：systemd 是 PID 1，管着所有服务；start 管现在，enable 管下次开机</figcaption>
+      </figure>
+      <p>服务的状态也要会读。<code>systemctl status</code> 输出里最关键的两行：<code>Active: active (running)</code> 表示正在运行，<code>Loaded: loaded (...; enabled;)</code> 里那个 <code>enabled</code> 表示开机自启。组合起来有四种情况，排错时先看这个组合：running + enabled 是正常在岗；running + disabled 是临时启动的，重启就没了；inactive + enabled 是开机自启但现在挂了——重点查它为什么挂；inactive + disabled 是彻底没在跑。服务的配置文件一般在 /etc/systemd/system/ 或 /lib/systemd/system/，是纯文本，改完要跑 <code>systemctl daemon-reload</code> 让 systemd 重新读一遍——在虚拟机里练这个没问题，练完记得恢复。</p>
+      <p>安全上，服务管理有两个要点。第一，服务以什么用户运行：很多服务不需要 root，配置文件里会写 <code>User=www-data</code> 之类，让它以低权限用户跑——这和 <a href="m2c12-kernels.html">第 12 章</a>讲的最小权限是一个道理，服务被攻破时，攻击者拿到的只是那个低权限用户的身份。第二，没用的服务要关：每多一个服务就多一个攻击面，服务器上只留真正需要的服务，是加固的第一步。</p>
+
+      <h2>cron：定时任务，到点就干活</h2>
+      <p>cron 是 Linux 的定时任务服务，名字来自希腊语“时间”。它的工作方式很简单：守着一张时间表，到点就把写好的命令跑一遍。备份每天凌晨两点跑、日志每周清理一次、证书快到期前自动续期，背后都是 cron。时间表存在 crontab（cron table）里，每个用户可以有自己的一张表，用 <code>crontab -e</code> 编辑，<code>crontab -l</code> 查看。</p>
+      <p>crontab 每一行的格式是五个时间字段加一条命令：<code>分 时 日 月 星期 命令</code>。比如 <code>0 2 * * * /home/yufei/backup.sh</code> 的意思是：每天凌晨 2 点 0 分，跑一次备份脚本。星号表示“每逢”：第一个 <code>*</code> 在“日”的位置上就是“每天”，<code>*/10 * * * *</code> 就是“每 10 分钟一次”。新手最容易写错的是星期字段：0 和 7 都表示星期日，1 是星期一，别按日常习惯从 1 数星期日。</p>
+      <p>安全上 cron 有两面。防守方用它做定时备份、定时巡检、定时更新；攻击者拿到一台机器后，也爱往 crontab 里藏一条定时任务——哪怕你把他的后门程序删了，到点 cron 又会把它下载回来，这就是“持久化”的一种。所以检查一台可疑的 Linux 机器，<code>crontab -l</code> 和系统级的 /etc/crontab、/etc/cron.d/ 都是必查的地方：看有没有指向陌生地址、临时目录的定时任务。虚拟机里练的时候，写一条每分钟往一个文件里追加当前时间的任务，观察一分钟，再删掉——亲眼看到它到点执行，比背格式记得牢。</p>
+
+      <h2>SSH：远程登录的加密通道</h2>
+      <p>SSH（Secure Shell）是登录远程 Linux 服务器的标准方式。你在自己电脑上开终端，敲 <code>ssh 用户名@服务器地址</code>，输入密码或用密钥验证，通过之后，你敲的每条命令都在服务器上执行，结果传回你的屏幕。关键在“加密”两个字：SSH 通道里的所有内容——包括密码——都是加密传输的。老式的 Telnet 是明文传密码的，早就该进博物馆了，看到还在用 Telnet 的地方，直接判为不安全。</p>
+      <p>SSH 登录有两种验证方式。密码验证：输入账户密码，简单但怕弱密码和暴力猜测。密钥验证：你手里有一对密钥——私钥自己留着，公钥放到服务器上；登录时服务器出道题，只有拿着对应私钥的人能答上来。这比密码安全得多，因为私钥是一长串随机数，猜不出来，而且可以给私钥再设一个密码短语，多一道锁。学安全的标准做法是：服务器上禁用密码登录，只允许密钥登录，同时把 root 账户的远程登录关掉（<code>PermitRootLogin no</code>），普通用户登录后再用 sudo 提权。</p>
+      <p>还有一点要早点养成习惯：第一次连一台服务器时，SSH 会问你“这台服务器的指纹是 XXX，要继续吗？”——这个指纹是服务器的身份标识。第一次确认前，最好通过另一条可信渠道核对一下指纹；确认之后，SSH 会把指纹记下来，下次再连同一台服务器时如果指纹变了，它会大声警告你——那可能意味着中间有人冒充服务器，或者服务器真的重装了。指纹警告不要随手忽略，更不要图省事删掉 known_hosts 文件了事。</p>
+
+      <h2>日志在哪：journalctl 与 /var/log</h2>
+      <p>Linux 的日志有两个去处。systemd 接管的系统，日志由 journald 集中收集，用 <code>journalctl</code> 查看：<code>journalctl -xe</code> 看最近的日志并跳到末尾，<code>journalctl -u ssh</code> 只看 ssh 这个服务的日志，<code>journalctl --since "2026-11-25 08:00"</code> 看某个时间点之后的，<code>journalctl -f</code> 实时滚动（像 Windows 事件查看器里的“实时刷新”）。另一个去处是 /var/log 下的纯文本日志文件：登录记录在 auth.log（Ubuntu/Debian）或 secure（CentOS/RHEL）里，系统总日志在 syslog 里，内核消息用 <code>dmesg</code> 看。文本日志的好处是能用 grep 直接搜，比如 <code>grep "Failed password" /var/log/auth.log</code> 就能把所有登录失败的记录挑出来。</p>
+      <p>看日志的思路和上一章 Windows 那边一模一样：先建基线，再看异常。SSH 登录失败的记录长这样：<code>Failed password for root from 203.0.113.7 port 12345 ssh2</code>。一两条是你自己输错了密码；一分钟几十条、来自同一个陌生 IP、挨个试 root、admin、test 这些账户名，就是暴力破解。应对办法是装 fail2ban 这类工具：失败几次就把这个 IP 暂时封掉；更彻底的是前面说的只允许密钥登录——密码猜得再久也猜不中一个不存在的入口。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>刚接手一台 Linux 服务器，我做的第一件事永远是四条命令：<code>systemctl list-units --failed</code> 看哪些服务挂了，<code>crontab -l</code> 和 <code>ls /etc/cron.d/</code> 看定时任务里有没有陌生货，<code>journalctl --since "1 hour ago" -p err</code> 看最近一小时的错误，最后 <code>grep "Failed password" /var/log/auth.log | tail -20</code> 看谁在猜密码。有一次，一台服务器的定时任务里藏了一条每分钟从外网下载脚本的命令，服务列表里却干干净净——攻击者没装服务，就靠 cron 活着。从那以后我查机器必查 cron。还有一条血泪教训：改 sshd 的配置之前，先开两个 SSH 窗口连着，一个改、一个留着不动——万一改错把自己锁在外面，另一个窗口还能救回来。远程改 SSH 配置不留后路，是新人最容易犯、代价最大的错。</div>
+
+      <h2>动手做</h2>
+      <p>全部在虚拟机里的 Ubuntu 上做。1. 跑 <code>systemctl status ssh</code>（如果没有 ssh 服务，装一个 openssh-server 再试），读出 Active 和 Loaded 两行，判断它是四种组合里的哪一种；再跑 <code>systemctl is-enabled ssh</code> 和 <code>systemctl is-active ssh</code>，对比两个命令回答的问题有什么不同。2. 写一条 cron 任务：<code>crontab -e</code> 加一行 <code>* * * * * date &gt;&gt; /tmp/cron-test.txt</code>，等两分钟后看 /tmp/cron-test.txt 里是不是多了两行时间，然后用 <code>crontab -r</code> 删掉这张表（小心：-r 是删除整张表，确认表里只有这条测试任务再执行）。3. 在虚拟机里用 <code>ssh 127.0.0.1</code> 连自己的虚拟机一次（需要先装 openssh-server 并启动它），看第一次的指纹提示长什么样；再跑 <code>journalctl -u ssh --since "10 minutes ago"</code>，找到你这次登录的记录。4. 故意用错误密码 ssh 登录两次，再跑 <code>grep "Failed password" /var/log/auth.log</code>，找到刚才那两条失败记录，对上时间和来源地址 127.0.0.1。</p>
+      <h2>避坑</h2>
+      <p>别把 start 和 enable 搞混：start 只管现在，enable 才管下次开机，重启后服务“不见了”多半是只 start 没 enable；改 systemd 配置文件后要 <code>systemctl daemon-reload</code>，不然改了等于没改；crontab 里星期 0 和 7 都是星期日，月份和星期不要同时写具体值（容易写出意料之外的时间表）；生产服务器上不要用密码登录 SSH，密钥登录 + 禁用 root 远程登录才是标准做法；SSH 指纹警告不要忽略，看到指纹变了先停下来核实，不要删 known_hosts 蒙混过关；所有练习只在虚拟机里做，不要拿真实服务器练手。</p>
+      <p>管服务的思路到这里就齐了：Windows 一边是服务、注册表、组策略，Linux 一边是 systemd、cron、SSH。下一章回到原理：<a href="m2c15-segmentation.html">第 15 章：分段与地址转换</a>——在讲分页之前，先把更古老的分段讲清楚，你会更明白分页到底解决了什么问题。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>systemd 是 PID 1，管所有服务：systemctl status 看状态，start 管现在，enable 管下次开机，两者不要搞混。</li>
+          <li>cron 是定时任务服务，格式是“分 时 日 月 星期 命令”；检查可疑机器时，crontab 和 /etc/cron.d/ 是必查的持久化藏身点。</li>
+          <li>SSH 是加密的远程登录通道：优先用密钥登录，禁用密码登录和 root 远程登录，第一次连接要核对服务器指纹。</li>
+          <li>日志有两个入口：journalctl 查 systemd 收集的日志（可按服务、按时间过滤），/var/log 下的文本日志可用 grep 直接搜。</li>
+          <li>短时间大量 Failed password 记录就是暴力破解的信号；看日志先建基线，再看数量、时间和来源。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m2c13-windows-internals.html">← 上一章：第 13 章：Windows 内部深入：注册表、服务、UAC、组策略与 Sysmon</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m2c15-segmentation.html">下一章：第 15 章：分段与地址转换 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

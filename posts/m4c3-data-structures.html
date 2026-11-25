@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 3 章：数据结构 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 3 章：数据结构</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p><a href="m4c2-python-intro.html">上一章</a>的密码小工具里，密码是一个字符串，检查结果是几个 True/False 的变量。一个变量装一个值，够用吗？检查一个密码够，检查一千个 IP 呢？记录一百个开放端口呢？给每个值都起一个变量名，程序会写到崩溃。数据结构就是解决这个问题的：把一堆值按某种方式组织起来，存在一个变量里。这一章讲 Python 里最常用的四种：列表、字典、集合、元组。每种都先给生活比喻，再给安全里的真例子，最后讲“什么时候用哪个”——选型思路比记住语法更重要。</p>
+      <h2>列表：排成一排的清单</h2>
+      <p>列表（list）就是一排有顺序的东西，像购物清单、点名册。写法是用方括号，元素之间用逗号隔开：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">blocked_ips = ["10.0.0.5", "10.0.0.9", "10.0.0.23"]
+print(blocked_ips[0])   # 10.0.0.5：第一个元素，下标从 0 开始
+print(len(blocked_ips)) # 3：列表里有几个元素
+blocked_ips.append("10.0.0.41")  # 末尾加一个
+print("10.0.0.9" in blocked_ips) # True：检查某个值在不在列表里</pre>
+      <p>列表的关键是“有顺序”：第一个、第二个、第三个，位置是固定的，下标从 0 开始数（不是从 1，这是新手最常数错的地方）。列表可以改：加元素用 <code>append</code>，删用 <code>remove</code>，改某个位置直接赋值 <code>blocked_ips[1] = "10.0.0.10"</code>。循环配列表是绝配：<code>for ip in blocked_ips:</code> 就是“对清单里的每一个 IP，做一件事”。</p>
+      <p>安全里的例子：可疑 IP 清单、扫描出来的开放端口列表、一份日志里抽出来的所有时间戳。凡是“一串东西、顺序重要、可能还要增删”，先想到列表。它也是<a href="m4c2-python-intro.html">上一章</a>密码工具的升级零件：把“123456”“password”“qwerty”这些常见弱密码放进一个列表，检查时循环比对——<a href="m4c7-files-exceptions.html">第 7 章</a>还会教你把这个清单存在文件里读进来。</p>
+      <h2>字典：按名字取东西的抽屉柜</h2>
+      <p>列表按位置取东西，但有时候位置没意义，名字才有意义。端口 22 对应 SSH、端口 80 对应 HTTP、端口 443 对应 HTTPS——你想查的是“22 号端口是什么服务”，不是“第几个端口”。字典（dict）就是为这种需求生的：它存的是一对对“键 → 值”，像一个贴了标签的抽屉柜，拉开写着“22”的抽屉，里面是“SSH”。</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">services = {22: "SSH", 80: "HTTP", 443: "HTTPS", 53: "DNS"}
+print(services[22])       # SSH：按键取值
+services[3306] = "MySQL"  # 加一对新的
+print(services.get(9999, "未知端口"))  # 未知端口：键不存在时给默认值，不报错</pre>
+      <p>字典的键必须是唯一的：同一个键出现两次，后面的值会覆盖前面的。字典没有顺序概念（Python 3.7 之后其实会记住插入顺序，但你不应该依赖它来排序）。查字典用 <code>.get(键, 默认值)</code> 是个好习惯：键不存在时返回你给的默认值，而不是直接报错——写扫描工具时，对着一份不完整的端口表查服务名，这个写法能省掉很多崩溃。</p>
+      <p>字典在安全里到处都是：端口号到服务名的映射、IP 到归属主机的映射、一次扫描结果的记录（{"ip": "10.0.0.5", "port": 22, "status": "open"}）。<a href="m3c10-ports.html">模块三第 10 章</a>的常用端口速查表，翻译成代码就是一个字典。后面<a href="m4c6-functions-oop.html">第 6 章</a>讲到“扫描结果对象”时，你会看到字典和对象的关系。</p>
+      <h2>集合：只管“有没有”，不管“有几个”</h2>
+      <p>集合（set）像一个只装不重复东西的袋子。日志里同一个攻击 IP 可能出现几千次，你想知道“到底有哪几个不同的 IP”，把几千条记录全倒进集合，重复的自动只留一份：</p>
+      <pre style="background:#f1f5f9;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:15px;line-height:1.7;">ips = ["10.0.0.5", "10.0.0.9", "10.0.0.5", "10.0.0.5", "10.0.0.23"]
+unique_ips = set(ips)
+print(unique_ips)        # {'10.0.0.5', '10.0.0.9', '10.0.0.23'}：重复的没了
+print(len(unique_ips))   # 3：不同的 IP 有 3 个</pre>
+      <p>集合没有顺序、不能按下标取东西，它只擅长两件事：去重，和快速判断“在不在”。<code>"10.0.0.5" in unique_ips</code> 的检查速度比在列表里查快得多——列表要从头找到尾，集合是直接定位。<a href="m4c4-algorithms.html">下一章</a>讲复杂度时，会解释为什么这个差别在大规模数据上是天壤之别。集合还能做交集、并集、差集：白名单和黑名单求交集，就是“既在白名单又在黑名单”的矛盾项；今天的攻击 IP 集合减去昨天的，就是“新出现的攻击者”。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="列表字典集合元组四种结构对比图">
+          <rect x="20" y="20" width="250" height="90" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="45" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">列表 list：有顺序的清单</text>
+          <text x="145" y="72" text-anchor="middle" font-size="13" fill="#1a1a2e">["10.0.0.5", "10.0.0.9", ...]</text>
+          <text x="145" y="94" text-anchor="middle" font-size="13" fill="#666">按位置取 · 可增删改</text>
+          <rect x="290" y="20" width="250" height="90" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="45" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">字典 dict：抽屉柜</text>
+          <text x="415" y="72" text-anchor="middle" font-size="13" fill="#1a1a2e">{22: "SSH", 80: "HTTP"}</text>
+          <text x="415" y="94" text-anchor="middle" font-size="13" fill="#666">按键取值 · 键唯一</text>
+          <rect x="20" y="130" width="250" height="90" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="155" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">集合 set：去重的袋子</text>
+          <text x="145" y="182" text-anchor="middle" font-size="13" fill="#1a1a2e">{"10.0.0.5", "10.0.0.9"}</text>
+          <text x="145" y="204" text-anchor="middle" font-size="13" fill="#666">无顺序 · 不重复 · 查得快</text>
+          <rect x="290" y="130" width="250" height="90" rx="8" fill="#fdf2f8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="415" y="155" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">元组 tuple：封好的包裹</text>
+          <text x="415" y="182" text-anchor="middle" font-size="13" fill="#1a1a2e">("10.0.0.5", 22, "open")</text>
+          <text x="415" y="204" text-anchor="middle" font-size="13" fill="#666">有顺序 · 建好不能改</text>
+        </svg>
+        <figcaption>图：四种结构一句话区分——列表讲顺序，字典讲名字，集合讲去重，元组讲“别改我”</figcaption>
+      </figure>
+      <h2>元组：建好就不能改的包裹</h2>
+      <p>元组（tuple）长得像列表，只是括号换成圆括号：<code>("10.0.0.5", 22, "open")</code>。区别只有一个，却很关键：元组建好之后不能改——不能加、不能删、不能换里面的值。什么时候需要“不能改”？当一组值天生就是一体的、改了就错的时候：一次扫描结果里的“IP + 端口 + 状态”就是一个整体，改掉其中一个，整条记录就对不上了；屏幕的宽高、一个坐标点，也是如此。</p>
+      <p>元组还有一个用途：函数想一次返回多个值，就打包成元组还给你。比如一个函数检查完一个端口，返回 <code>(22, "open")</code>，调用方一次拿到端口号和状态两个值。<a href="m4c6-functions-oop.html">第 6 章</a>会讲到函数返回值的更多写法。记住这条经验：不确定该用列表还是元组时，先问自己“这组数据以后会不会改”——不会改，用元组；会改，用列表。</p>
+      <h2>选型思路：什么时候用哪个</h2>
+      <p>四种结构没有“最好”，只有“最合适”。选的时候问自己四个问题：</p>
+      <p><strong>1. 顺序重要吗？</strong>重要（比如按时间排的日志行、按大小排的端口），用列表或元组；不重要（比如只想知道有哪些不同的 IP），用集合。<br><strong>2. 是按名字找，还是按位置找？</strong>按名字（端口号找服务名、用户名找权限），用字典；按位置（第几个），用列表。<br><strong>3. 会不会改？</strong>会改（黑名单要不断加人），用列表、字典或集合；不会改（一组固定的配置），用元组。<br><strong>4. 会不会重复？</strong>重复有没有意义：端口列表里同一个端口出现两次是错误，要去重，用集合；登录记录里同一 IP 出现多次是有意义的（说明它试了很多次），要保留，用列表。</p>
+      <p>举一个完整的选型例子：你要写一个“日志分析小工具”，读一份登录日志，输出“每个 IP 失败了几次”。怎么做？用字典：键是 IP，值是失败次数。循环读日志，每读到一行失败记录，就把对应 IP 的计数加一——<code>counts[ip] = counts.get(ip, 0) + 1</code>。最后把字典按次数排序输出。字典、列表、循环三样拼起来，就是一个真实能用的工具。<a href="m4c7-files-exceptions.html">第 7 章</a>学了文件操作之后，你就能真的把它写出来。</p>
+      <p>还有一个进阶提醒：结构可以嵌套。列表里可以装字典——一份扫描结果就是“字典的列表”，每个字典是一台主机的结果；字典的值也可以是列表——一个 IP 对应它开放的所有端口。真实程序里的数据几乎都是嵌套的，先把四种基本结构练熟，嵌套就是水到渠成。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>现场最常见的新手错误，不是语法错，而是结构选错。有一次我看一个实习生写“查某个 IP 在不在黑名单里”，黑名单是几万条的列表，他每查一次就从头循环一遍，查一千个 IP 要跑好几分钟——改成集合，一秒不到。反过来也有人把“按时间顺序的事件流”塞进集合，结果顺序全乱了，排错时根本看不出攻击的时间线。我的经验是：写代码之前，先在纸上画出你要存的东西长什么样——是清单、是抽屉柜、还是去重的袋子。画对了，代码自然顺；画错了，写得再熟练也是绕远路。还有一条：字典的键一定要选“不会变的、唯一的东西”，比如 IP、端口号、用户名，别用随时会变的值当键，否则以后查都查不回来。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里新建 <code>structures.py</code>，写一个常见弱密码列表 <code>weak = ["123456", "password", "qwerty", "admin", "12345678"]</code>，再写一个循环：输入一个测试密码，判断它在不在弱密码列表里，在就提示“这是常见弱密码，换一个”。<br>2. 写一个端口服务字典 <code>{22: "SSH", 80: "HTTP", 443: "HTTPS", 53: "DNS", 3306: "MySQL"}</code>，用 <code>input</code> 让使用者输入一个端口号（记得 <code>int()</code> 转换），查出服务名；输入一个字典里没有的端口（比如 9999），看 <code>.get</code> 的默认值怎么帮你避免报错。<br>3. 造一份假的登录失败 IP 清单（自己编 10 个，里面故意放几个重复的），用 <code>set()</code> 去重，输出“不同的 IP 有几个、分别是哪些”。再想一想：如果这份清单有一百万行，列表和集合哪个查“某 IP 在不在”更快？为什么？<br>4. 用字典做一个登录失败计数器：假数据是几行 <code>["10.0.0.5", "10.0.0.9", "10.0.0.5"]</code>，循环统计每个 IP 出现几次，输出结果。提示：用 <code>counts.get(ip, 0) + 1</code>。</p>
+      <h2>避坑</h2>
+      <p>别从 1 开始数下标：列表第一个元素的下标是 0，<code>blocked_ips[3]</code> 在只有 3 个元素的列表里会越界报错；别用 <code>字典[键]</code> 查可能不存在的键：先用 <code>.get</code> 或 <code>in</code> 判断，否则程序会崩；别把集合当列表用：集合没有顺序、不能按下标取，<code>my_set[0]</code> 是错的；别用会变的东西当字典的键：列表不能当键；别在循环里一边改列表一边遍历它：删元素时容易跳过下一个，正确做法是先收集要删的、循环结束再删，或者遍历一份副本。</p>
+      <p>四种结构只是起点。现实里的安全工具要处理的数据比这复杂得多：调用的层层嵌套、排队等待的任务、像目录一样的树形结构、像网络拓扑一样的图——这些是<a href="m4c5-data-structures-advanced.html">第 5 章：数据结构进阶</a>的内容。但在那之前，<a href="m4c4-algorithms.html">下一章</a>要先回答一个问题：数据组织好了，怎么高效地找、怎么高效地排——也就是算法与复杂度。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>列表是有顺序、可增删改的清单，按下标（从 0 开始）取东西，适合“一串东西、顺序重要”的场景，如 IP 清单、端口列表。</li>
+          <li>字典是“键 → 值”的抽屉柜，按名字取值，键唯一；查不到的键用 <code>.get(键, 默认值)</code> 避免报错，适合端口表、扫描记录。</li>
+          <li>集合自动去重、无顺序，判断“在不在”很快，适合统计不同的 IP、做白名单黑名单的交集差集。</li>
+          <li>元组是有顺序但建好不能改的包裹，适合“IP + 端口 + 状态”这种一体的数据，也适合函数一次返回多个值。</li>
+          <li>选型问四个问题：顺序重要吗、按名字还是位置找、会不会改、重复有没有意义；结构可以嵌套，列表里可以装字典。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c2-python-intro.html">← 上一章：第 2 章：Python 入门</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c4-algorithms.html">下一章：第 4 章：算法与复杂度 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

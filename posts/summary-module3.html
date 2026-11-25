@@ -21,7 +21,7 @@
   <main>
     <article>
       <h1>模块三小结：数据是怎么跨过半个地球找到你的</h1>
-      <div class="meta"><span class="tag">小结</span>2026-11-25 · 模块三第 1–18 章</div>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · 模块三第 1–25 章</div>
       <p>十八章讲的其实是一件事：数据是怎么从一台电脑出发，跨过半个地球，找到另一台电脑的。每一章都是这条路上的一个环节：先分层看路，再给每台机器编地址，地址之间靠路由找路，路上靠 TCP 保证送到，到了应用层靠 DNS 找名字、靠 TLS 保密，最后还要会抓包验证、会排错、会给整张网做体检。</p>
       <figure class="diagram">
         <svg viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="模块三十八章知识串联图">
@@ -54,6 +54,8 @@
       <p>路有了，接下来是“送到”的问题。<a href="m3c5-tcp-udp.html">第 5 章</a>讲 TCP 与 UDP：三次握手建连、四次挥手断连，可靠的 TCP 和快速的 UDP 各用在什么地方；<a href="m3c6-congestion.html">第 6 章</a>讲网络堵了怎么办：流量控制怕对方收不过来，拥塞控制怕整条路堵死，两个机制一个管一端、一个管全网。</p>
       <p>再往上是应用层和日常服务。<a href="m3c7-dns-http-tls.html">第 7 章</a>是应用层三大件：DNS 把名字变成地址，HTTP 搬运网页，TLS 给整个过程加密，而且 TLS 讲的是 1.3 为主；<a href="m3c8-http2-quic.html">第 8 章</a>看新一代的网页协议：HTTP/2、HTTP/3 与 QUIC，网页打开为什么越来越快。<a href="m3c9-dhcp-nat.html">第 9 章</a>讲 DHCP 自动发地址和 NAT 共享上网——地址不够用时顶在前面的两个办法；<a href="m3c10-ports.html">第 10 章</a>是一张端口速查表，哪个端口对应哪个服务，查端口先查这张表；<a href="m3c11-wireless.html">第 11 章</a>讲无线网络安全：WPA2、WPA3 是怎么加密的，Wi-Fi 又是怎么被攻破的。</p>
       <p>最后是攻防与动手。<a href="m3c12-attacks.html">第 12 章</a>讲网络攻击：嗅探、欺骗、中间人、拒绝服务——路上的包默认是不安全的，谁都能看、谁都能改；<a href="m3c13-hardening.html">第 13 章</a>讲怎么加固：VPN、分段、NAC 与邮件认证，把网一段一段隔开。<a href="m3c14-wireshark.html">第 14 章</a>用 Wireshark 把数据包亲眼抓下来看，前面十几章的概念在这里第一次有了形状；<a href="m3c15-lan-lab.html">第 15 章</a>动手搭一个局域网实验，两台虚拟机互相 ping；<a href="m3c16-troubleshooting.html">第 16 章</a>把排错做成一套方法：断网了从哪开始查；<a href="m3c17-ipv6.html">第 17 章</a>看下一代地址 IPv6：128 位、SLAAC 自动配置、双栈过渡；<a href="m3c18-capstone.html">第 18 章</a>收尾，把前面 17 章的本事合起来，给一个小网络做一次完整的安全体检，写出一页纸的体检报告。</p>
+      <h2>新增的第 18–24 章：把网络看得更深</h2>
+      <p>前 17 章把网络从分层讲到排错，新增的第 18–24 章是把其中几个关键环节再往深处挖一层，让“会用”变成“看得懂、讲得清”。<a href="m3c18-arp.html">第 18 章</a>讲 ARP：有了 IP 为什么还要 MAC，广播问一句、单播答一句，免费 ARP 既做冲突检测也在主备切换时通知全网——它补的是<a href="m3c2-physical.html">第 2 章</a>链路层和<a href="m3c3-ip.html">第 3 章</a> IP 之间最后那道翻译；<a href="m3c19-switching-vlan.html">第 19 章</a>讲交换机肚子里的 MAC 表、VLAN 和生成树：一个物理局域网怎么切成几个逻辑局域网，环路又是怎么被防住的；<a href="m3c20-headers.html">第 20 章</a>对着真实报文，把 IPv4、TCP、UDP 的头部一个字段一个字段看清楚——<a href="m3c14-wireshark.html">第 14 章</a>抓包时看到的每一行，从这里开始都有了出处；<a href="m3c21-routing-algorithms.html">第 21 章</a>讲路由算法的两大家族：距离向量数跳数、链路状态画地图算最短路，再看自治系统之间的 BGP 为什么是策略路由，呼应<a href="m3c4-subnetting.html">第 4 章</a>的路由协议；<a href="m3c22-app-protocols.html">第 22 章</a>补齐应用层剩下的协议——SMTP、FTP、SNMP、NTP，再亲手写一个只在自己虚拟机里跑的 Socket 回声程序；<a href="m3c23-sdn-qos.html">第 23 章</a>把视线抬到整张网怎么管：SDN 把控制平面和数据平面分开，QoS 在带宽不够时决定谁先走，呼应<a href="m3c1-layers.html">第 1 章</a>的分层思想；<a href="m3c24-dns-security.html">第 24 章</a>讲 DNS 安全深入：DNSSEC 的签名信任链，加上 SPF、DKIM、DMARC 邮件认证三件套，补上<a href="m3c7-dns-http-tls.html">第 7 章</a> DNS 和<a href="m3c13-hardening.html">第 13 章</a>加固里留下的口子。这七章学完，再去做结课实战的安全体检，看到的就不再是孤立的知识点，而是一张从链路层到应用层、从转发到管理、从原理到攻防连起来的整网。</p>
       <h2>现在你能做什么</h2>
       <ul>
         <li>画出一张网的分层图，说出数据从应用层到物理层每层干了什么，出了问题先定位到哪一层。</li>
@@ -66,7 +68,7 @@
       <h2>下一步</h2>
       <p>模块四，编程基础。安全工程师必须会写代码：先 Python，再 C，写出自己的小工具。模块三与模块四是直接接上的——模块四第 14 章要写一个端口扫描器，用的就是本模块的 TCP 和端口知识：三次握手怎么建连、端口开着和关着在包里长什么样；第 16 章的日志分析小工具，分析的也是这一模块里抓包和排错时见过的日志。学编程不是换一个话题，是把这一模块“用手查”的本事，变成“用代码查”的本事。</p>
       <div class="lesson-nav">
-        <a href="m3c18-capstone.html">← 模块三第 18 章：动手：综合实战——给一个小网络做安全体检</a>
+        <a href="m3c18-capstone.html">← 模块三第 25 章：动手：综合实战——给一个小网络做安全体检</a>
         <a href="../course.html">课程目录</a>
         <a href="../course.html#m4">下一站：模块四：编程基础 →</a>
       </div>

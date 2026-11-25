@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块五第 3 章：数据库设计：表、主键、外键 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块五第 3 章：数据库设计：表、主键、外键</h1>
+      <div class="meta"><span class="tag">数据库与密码学</span>2026-11-25 · 模块五</div>
+      <p><a href="m5c2-build-database.html">上一章</a>你建了两张表：漏洞表 vulns 和资产表 assets。但有个问题还没解决：漏洞和资产是什么关系？一台机器上有多个漏洞，一个漏洞也可能出现在多台机器上——这个关系不画清楚，数据很快就会乱。这一章讲数据库设计最核心的三个概念：主键、外键和表之间的关系。设计得好不好，决定了这个库以后是越用越顺，还是越用越乱。</p>
+      <h2>主键：每行数据的身份证号</h2>
+      <p>主键（Primary Key）是一列（或几列），它的值在全表唯一、永远不为空，用来认出某一行。漏洞表里的 id 就是主键：id 是 1 的就是“弱口令”那一行，永远不会有第二行也叫 id 1。为什么不能拿“漏洞名”当主键？因为两台机器上可能都有“弱口令”，名字会重复；而且名字可能改，id 不会改。主键的规矩就两条：唯一、不为空。实际工作中，主键几乎总是用自动编号的 id，不用有业务含义的字段——业务会变，编号不会变。</p>
+      <h2>外键：表和表之间的绳子</h2>
+      <p>外键（Foreign Key）是一列，它的值必须指向另一张表的主键。给漏洞表加一列 <code>asset_id</code>，意思就是“这个漏洞出在哪台资产上”，它的值必须是资产表里真实存在的 id。比如资产表里 id=1 是主机 web-01，那么漏洞表里 asset_id=1 的行，就是 web-01 上的漏洞。外键就是把两张表拴在一起的绳子：有了它，数据库会帮你把关——你想往漏洞表里插一个 asset_id=999 的记录，数据库会拒绝，因为资产表里没有 id 999；你想删掉一台还有漏洞的资产，数据库也会拦住你（或者按你事先的设定级联处理）。</p>
+      <p>没有外键会怎么样？那就全靠人自觉：有人手滑把 asset_id 写错一位，漏洞就“挂”到了一台不存在的机器上，查也查不出来。外键就是把“自觉”变成“强制”。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ER 图：资产表和漏洞表通过外键一对多关联">
+          <defs>
+            <marker id="c3ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="30" y="30" width="200" height="150" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="130" y="58" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">assets 资产表</text>
+          <line x1="30" y1="70" x2="230" y2="70" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="50" y="98" font-size="13" fill="#1a1a2e">🔑 id（主键）</text>
+          <text x="50" y="124" font-size="13" fill="#1a1a2e">hostname</text>
+          <text x="50" y="150" font-size="13" fill="#1a1a2e">ip</text>
+          <text x="50" y="172" font-size="13" fill="#1a1a2e">os</text>
+          <rect x="370" y="30" width="200" height="150" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="470" y="58" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">vulns 漏洞表</text>
+          <line x1="370" y1="70" x2="570" y2="70" stroke="#1a1a2e" stroke-width="1"/>
+          <text x="390" y="98" font-size="13" fill="#1a1a2e">🔑 id（主键）</text>
+          <text x="390" y="124" font-size="13" fill="#1a1a2e">name</text>
+          <text x="390" y="150" font-size="13" fill="#1a1a2e">severity / status</text>
+          <text x="390" y="172" font-size="13" fill="#1a1a2e">🔗 asset_id（外键）</text>
+          <line x1="230" y1="98" x2="370" y2="165" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c3ar)"/>
+          <text x="300" y="115" text-anchor="middle" font-size="13" fill="#1a1a2e">一对多</text>
+          <text x="300" y="215" text-anchor="middle" font-size="13" fill="#666">一台资产可以有多个漏洞；一个漏洞只属于一台资产</text>
+          <text x="300" y="235" text-anchor="middle" font-size="13" fill="#666">asset_id 只能填 assets 表里真实存在的 id</text>
+        </svg>
+        <figcaption>图：ER 图（实体关系图）——方框是表，连线是关系；这张图就是第 2 章两张表的“设计图纸”</figcaption>
+      </figure>
+      <h2>三种关系：认清再建表</h2>
+      <p><strong>一对多</strong>最常见：一个资产有多个漏洞，一个用户发多篇文章，一家公司有多个员工。做法就是在“多”的那一边加外键，指向“一”的主键。上图就是一对多。</p>
+      <p><strong>多对多</strong>也常见：一个漏洞可以出现在多台资产上，一台资产也可以有多个漏洞——这时一对多就不够用了。做法是加一张<strong>中间表</strong>，比如 vuln_asset，里面只有两列：vuln_id 和 asset_id，每行代表“某个漏洞出现在某台资产上”这样一个配对。两张表各通过外键连到中间表，多对多就拆成了两个一对多。用户和角色、学生和课程，都是同样的拆法。</p>
+      <p><strong>一对一</strong>最少见：一个人只有一张身份证，一台电脑只有一个主板序列号。做法是两张表共用同一个主键，或者一方加唯一外键。一对一常常意味着“其实可以合成一张表”，除非有特殊原因（比如一部分字段要单独设权限）才分开。</p>
+      <p>判断关系有个笨办法：拿两个具体的例子问自己——“一个 A 能对应几个 B？一个 B 能对应几个 A？”答案一出来，关系就定了。定不下来就别急着建表，先画图。</p>
+      <h2>冗余的代价：同样的信息别存两遍</h2>
+      <p>冗余就是同样的信息在库里存了多份。比如把资产的操作系统直接写进漏洞表的每一行：web-01 上有 10 个漏洞，操作系统就被重复写了 10 遍。坏处有三样。第一，<strong>改起来麻烦</strong>：操作系统升级了，要改 10 行，漏改一行数据就不一致了。第二，<strong>占地方</strong>：数据量大了全是重复。第三，<strong>容易错</strong>：有人在一行写“Windows Server 2022”，另一行写“Win2022”，以后想统计都统计不准。</p>
+      <p>正确的做法是：操作系统只存在资产表里，漏洞表只存 asset_id，想知道漏洞所在机器的操作系统，用 JOIN（连接查询）把两张表拼起来查：<code>SELECT vulns.name, assets.os FROM vulns JOIN assets ON vulns.asset_id = assets.id;</code>。JOIN 是把两张表按外键拼成一张“虚拟大表”再查，<a href="m5c1-sql-basics.html">第 1 章</a>的 WHERE 圈行，JOIN 是拼表——两个配合，九成的查询都够用了。</p>
+      <p>但冗余也不是绝对的魔鬼：数据量极大、查询极频繁的报表场景里，人们有时会故意留一点冗余换速度。这叫“反规范化”，是学到后面的取舍，初学阶段先记住：默认不冗余，有理由才冗余。范式（1NF 到 BCNF）就是把“不冗余”这件事系统化的一套规则，<a href="../course.html#m5">模块五第 14 章</a>会专门讲。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我接手过一个真实的内部系统，漏洞信息存在一张“大宽表”里：漏洞名、资产名、资产 IP、负责人、负责人电话全挤在一张表里。结果负责人换了手机号，要改几百行；有人只改了一部分，同一负责人在库里就有了两个手机号，通知发出去一半发到了旧号码上。最后花了两周时间拆表、补外键、写脚本清洗重复数据。设计时多花一小时画 ER 图，能省下上线后两周的救火。还有一句现场常听到的话：“先跑起来，以后再拆”——这句话十次有九次的结局是“再也没有以后了”，表越长越大，拆不动了。所以第一版设计就要认真，哪怕表只有两张。</div>
+      <h2>动手做</h2>
+      <p>只在虚拟机里，用第 2 章的 vuln_lab.db 做：<br>1. 给练习库画一张 ER 图：纸上画就行，方框写表名，框里列出列名，主键标出来，连线标出关系——assets 和 vulns 是一对多，vulns.asset_id 是外键；<br>2. 在 SQLite 里给 vulns 表加上 asset_id 列：<code>ALTER TABLE vulns ADD COLUMN asset_id INTEGER REFERENCES assets(id);</code>，然后用 UPDATE 把每条漏洞挂到一台资产上；<br>3. 试一次外键的把关：往 vulns 里插一条 asset_id=999 的记录，看数据库报什么错（如果没报错，说明 SQLite 默认没开外键检查，跑 <code>PRAGMA foreign_keys = ON;</code> 再试）；<br>4. 写一条 JOIN 查询，查出“每条漏洞所在主机的操作系统”；<br>5. 想一想：如果一个漏洞能同时出现在多台资产上，现在的设计够吗？不够的话，中间表该长什么样？把答案画进 ER 图里。<br>画完这张图，你就有了数据库设计的第一个作品。</p>
+      <h2>避坑</h2>
+      <p>别拿有业务含义的字段当主键（名字、邮箱都会变），用自动编号的 id；外键列和主键列的类型要一致，不然关联查不出结果；SQLite 默认不强制外键检查，练外键前先开 <code>PRAGMA foreign_keys = ON;</code>；一张表塞所有字段的“大宽表”一时爽，改数据时哭都来不及；建表前先画 ER 图，想清楚关系再动手，返工的代价比画图大得多。</p>
+      <p>表设计好了，数据也有了组织。但如果有人能往你的查询里“塞”东西，设计再好也白搭——<a href="m5c4-sql-injection.html">第 4 章：SQL 注入是怎么发生的</a>，讲的就是这个最经典的数据库攻击。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>主键是每行数据的身份证号：唯一、不为空，常用自动编号的 id，不用会变的业务字段。</li>
+          <li>外键是表之间的绳子：它的值必须指向另一张表真实存在的主键，数据库会替你把关。</li>
+          <li>三种关系：一对多（多的那边加外键）、多对多（加中间表拆成两个一对多）、一对一（少见，常可合并）。</li>
+          <li>同样的信息别存两遍：冗余会让修改、统计都容易出错；要拼数据用 JOIN，不要靠复制。</li>
+          <li>建表前先画 ER 图：方框是表，连线是关系，设计时一小时，省下上线后两周救火。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m5c2-build-database.html">← 上一章：第 2 章：动手：建一个数据库</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m5c4-sql-injection.html">下一章：第 4 章：SQL 注入是怎么发生的 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

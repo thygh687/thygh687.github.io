@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块四第 20 章：数据库编程：Python 连数据库 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块四第 20 章：数据库编程：Python 连数据库</h1>
+      <div class="meta"><span class="tag">编程基础</span>2026-11-25 · 模块四</div>
+      <p>上一章的批量查询工具跑起来之后，结果打印在屏幕上就没了：下次想查“昨天扫到的开放端口有哪些”，只能重新扫一遍。数据要留下来、查得出来、越攒越有用，就得有个地方存：数据库。这一章讲 Python 怎么连数据库：用 Python 自带的 sqlite3，不装任何东西，在虚拟机里建库、建表、插数据、查数据，重点讲参数化查询——防注入的第一步，也是安全工程师写代码时最重要的一条红线。</p>
+      <h2>为什么不用文件存，要用数据库</h2>
+      <p><a href="m4c7-files-exceptions.html">第 7 章</a>学过文件读写：数据可以写进文本文件。但文件有三个短板：第一，查起来慢——要找“上周三的所有失败登录”，得把整个文件读一遍；第二，改起来危险——改中间一行，得重写整个文件，写一半断电就全毁了；第三，两个人同时写一个文件，会互相覆盖。数据库就是为了解决这三个问题而生的：数据按表和字段组织，查的时候按条件筛、按索引找；改的时候有事务保护，要么全改完、要么全不改；多个人同时读写，有锁和隔离级别管着。</p>
+      <p>SQLite 是最适合入门的数据库：它没有服务器，整个数据库就是电脑上的一个文件，Python 自带 sqlite3 模块，不用安装、不用配置、不用起服务。它的定位是“单机小工具的数据库”：你的端口扫描器、日志分析器、密码检查器，配 SQLite 正合适。等以后数据量大了、多人同时用了，再换 PostgreSQL、MySQL 这样带服务器的数据库——但连接、游标、SQL、参数化、事务这套路子，换哪个数据库都一样。</p>
+      <h2>连接与游标：先拿到两样东西</h2>
+      <p>Python 连 SQLite 只需要两步：<code>conn = sqlite3.connect("scan.db")</code> 拿到连接（connection），<code>cur = conn.cursor()</code> 拿到游标（cursor）。连接是你和数据库之间的“电话线”，游标是你手里的话筒：SQL 语句都是通过游标发出去的。习惯上用完要 <code>conn.close()</code> 关掉连接，就像打完电话要挂断——不关，文件会被一直占着，别的程序打不开。</p>
+      <p>表要先建好再用：<code>CREATE TABLE IF NOT EXISTS ports (host TEXT, port INTEGER, status TEXT, scanned_at TEXT)</code>。字段类型在 SQLite 里很宽松：TEXT 是文本，INTEGER 是整数，REAL 是小数，BLOB 是二进制。主键（PRIMARY KEY）是每行唯一的身份证，比如扫描记录可以用 <code>id INTEGER PRIMARY KEY AUTOINCREMENT</code> 让数据库自动编号。建表语句写一次就行，<code>IF NOT EXISTS</code> 保证重复运行不报错——工具每次启动都执行一次建表，是常见的安全写法。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Python 连接数据库流程图">
+          <rect x="20" y="20" width="150" height="50" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="95" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">你的 Python 程序</text>
+          <text x="95" y="60" text-anchor="middle" font-size="12" fill="#666">sqlite3 模块</text>
+          <rect x="215" y="20" width="130" height="50" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">连接 conn</text>
+          <text x="280" y="60" text-anchor="middle" font-size="12" fill="#666">电话线</text>
+          <rect x="390" y="20" width="150" height="50" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="465" y="42" text-anchor="middle" font-size="14" fill="#1a1a2e">游标 cur</text>
+          <text x="465" y="60" text-anchor="middle" font-size="12" fill="#666">话筒：发 SQL 用</text>
+          <line x1="170" y1="45" x2="213" y2="45" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="345" y1="45" x2="388" y2="45" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="180" y="110" width="200" height="120" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="138" text-anchor="middle" font-size="14" fill="#1a1a2e">SQLite 数据库文件 scan.db</text>
+          <text x="200" y="168" font-size="13" fill="#1a1a2e">表 ports：host | port | status</text>
+          <text x="200" y="192" font-size="13" fill="#1a1a2e">127.0.0.1 | 22 | open</text>
+          <text x="200" y="214" font-size="13" fill="#1a1a2e">127.0.0.1 | 80 | closed</text>
+          <line x1="280" y1="70" x2="280" y2="108" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c20a)"/>
+          <defs>
+            <marker id="c20a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <text x="280" y="262" text-anchor="middle" font-size="13" fill="#666">流程：连接 → 游标 → execute(SQL) → commit() 提交 → close() 关闭</text>
+        </svg>
+        <figcaption>图：Python 连 SQLite——连接是电话线，游标是话筒，SQL 是说的话</figcaption>
+      </figure>
+      <h2>增删改查：四句 SQL 够用很久</h2>
+      <p>SQL 是操作数据库的语言，四句核心语句覆盖九成日常操作：<code>INSERT INTO ports VALUES (...)</code> 插一行，<code>SELECT * FROM ports WHERE status='open'</code> 按条件查，<code>UPDATE ports SET status='closed' WHERE port=80</code> 改一行，<code>DELETE FROM ports WHERE port=80</code> 删一行。Python 里都是 <code>cur.execute("SQL 语句")</code> 发出去，<code>cur.fetchall()</code> 把查到的结果一次拿回来（结果是元组的列表），<code>cur.fetchone()</code> 只拿一行。</p>
+      <p>查的时候要学会用 WHERE 筛、用 ORDER BY 排、用 LIMIT 限：<code>SELECT host, port FROM ports WHERE status='open' ORDER BY port LIMIT 10</code>——“只看前 10 个开放端口”。安全工作里查数据库最常见的就是这种“按条件筛出可疑的”：失败登录超过 5 次的 IP、最近一小时新增的开放端口、某个用户的所有操作记录。SQL 写得好，分析就快一半。</p>
+      <h2>参数化查询：防注入的第一步</h2>
+      <p>这是本章最重要的一节，也是整个模块四最重要的一条安全红线。假设你要按用户输入的主机名查数据库，新手常这样写：</p>
+      <p><code>cur.execute("SELECT * FROM ports WHERE host='" + host + "'")</code>——把用户输入直接拼进 SQL 字符串里。如果用户输入的是正常的 127.0.0.1，没问题；但如果输入的是 <code>' OR '1'='1</code>，拼出来的 SQL 就变成了 <code>WHERE host='' OR '1'='1'</code>——条件永远为真，整张表的数据全被查出来了。这就是 SQL 注入：攻击者把 SQL 代码“注入”进了你的查询语句里，让数据库执行了你没想让它执行的东西。<a href="m4c21-secure-coding-deep.html">第 21 章</a>会把注入讲得更全，模块五第 4 章还会专门讲它是怎么发生的——这里先记住防法。</p>
+      <p>防法叫参数化查询（parameterized query）：SQL 语句里用占位符 <code>?</code> 留空，真正的值作为参数单独传进去：<code>cur.execute("SELECT * FROM ports WHERE host=?", (host,))</code>。数据库收到之后，会把参数当成纯粹的数据来处理，绝不会把它当成 SQL 代码来执行——输入里就算有引号、有 OR、有分号，也只会被当成一个普通的字符串去比对。规则就一句话：<strong>SQL 语句是代码，写死在程序里；用户输入是数据，永远只当参数传</strong>。代码和数据一混，就是注入的温床；分开，就是防注入的第一步。这一条没有例外：只要 SQL 里掺了用户输入，就必须用参数化。</p>
+      <h2>事务提交：要么全做完，要么全不做</h2>
+      <p>插数据、改数据之后，还有一步不能忘：<code>conn.commit()</code> 提交。SQLite 默认是“手动挡”：execute 只是把改动记在内存里，不 commit，关掉连接就全丢了。新手最常见的困惑就是“我明明插了数据，重启一看没了”——十有八九是忘了 commit。</p>
+      <p>commit 背后是事务（transaction）的概念：把一组操作包成一个整体，要么全部成功、一起落盘，要么中途出错、全部回滚（rollback）。比如“转账”要两步：A 减 100、B 加 100——第一步成了、第二步失败，钱就凭空消失了；包进一个事务里，第二步失败就连第一步一起撤销，账永远是对的。Python 里用 <code>try: ... conn.commit() except: conn.rollback()</code> 来兜底。安全工具里事务同样重要：日志分析器一次写入几千条记录，中途断电不能留下一半新、一半旧的脏数据——包进事务，断电了就当这次没写过，下次重新写。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我审过的代码里，SQL 注入出现最多的地方不是登录框，而是“内部工具”——运维写的批量查询小脚本、分析师用的报表工具。写的人觉得“这是内部用的，没人会攻击”，于是直接拼接字符串。结果有一次，某个主机名里带了个单引号（机器名是运维随手起的，带了个 <code>o'brien-server</code> 这样的名字），查询直接报错，整个报表任务挂了——还好只是报错，要是换成恶意的输入，整张表就出去了。内部工具也要按外部标准写：参数化查询没有“内部例外”。还有一条现场经验：数据库文件本身也要当成敏感资产——SQLite 就是一个文件，谁拿到文件谁就拿到全部数据。所以存扫描结果的数据库文件，权限要收紧（只有运行工具的账号能读），备份要加密，删库之前先确认备份真的能恢复。数据丢了可以重扫，数据泄了可就收不回来了。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里建一个 scan.db：建一张表 ports（id、host、port、status、scanned_at），插 10 条本地扫描结果（只扫 127.0.0.1），再查出所有 status='open' 的端口并打印——全程只用 Python 自带的 sqlite3，不用装任何东西。<br>2. 做一次注入实验：先写一个拼接字符串的查询，输入 <code>' OR '1'='1</code>，看它是不是把整张表都吐出来了；再改成参数化查询（<code>?</code> 占位符），输入同样的内容，看它是不是只返回空结果——亲眼看到两种写法的区别，这条红线就记住了。实验只在自己的虚拟机、自己的数据库上做。<br>3. 练习事务：写一个一次插 100 条记录的脚本，在第 50 条之后故意抛一个异常，分别试“包在事务里 + 出错 rollback”和“不包事务直接 commit”两种写法，重启后查表里剩了多少条——体会“要么全做完、要么全不做”是什么意思。<br>4. 把第 16 章日志分析器的结果存进数据库：建一张表 alerts（时间、来源 IP、事件类型、次数），把分析出的可疑 IP 写进去，再用一条 SQL 查出“失败登录超过 5 次的 IP”——这是第 24 章工具集里“结果入库”模块的雏形。</p>
+      <h2>避坑</h2>
+      <p>别把用户输入拼进 SQL 字符串：只要 SQL 里掺了用户输入，就必须用参数化查询，没有例外；别忘了 commit：execute 只是记在内存里，不提交就等于没写；别在查数据时用 <code>SELECT *</code> 偷懒：表字段一多就慢、就乱，要什么字段写什么字段；别把数据库文件随手放在共享目录：SQLite 就是一个文件，谁拿到文件谁就拿到全部数据，权限要收紧；别以为 SQLite 能扛住高并发写入：它是单机小工具的数据库，多人同时写要换带服务器的数据库；别在循环里一次 execute 一条再 commit 一次：批量写要先攒起来、一次 executemany、一次 commit，速度差几十倍。</p>
+      <p>数据有了地方存，工具才算有了记忆。下一章 <a href="m4c21-secure-coding-deep.html">第 21 章：安全编码深入：输入验证、输出编码与密钥管理</a>，把前面几章零散的安全习惯收成一套完整的规矩：输入怎么验、输出怎么编、密钥放哪里。回头看<a href="m4c19-http-api.html">第 19 章</a>调 API 时留下的密钥问题和本章的参数化查询：它们其实是同一条规矩的两个面——永远别把不可信的东西，和代码混在一起。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>数据库解决文件的三个短板：按条件查得快、事务保证改得稳、多人读写有锁管着；SQLite 是单机小工具最适合的入门数据库，Python 自带 sqlite3，不用安装。</li>
+          <li>连接是电话线、游标是话筒：connect 拿连接、cursor 拿游标、execute 发 SQL、fetchall 拿结果，用完 close 关闭。</li>
+          <li>增删改查四句 SQL 覆盖九成操作：INSERT、SELECT、UPDATE、DELETE，查的时候用 WHERE 筛、ORDER BY 排、LIMIT 限。</li>
+          <li>参数化查询是防注入的第一步：SQL 语句写死在程序里，用户输入只当参数传（? 占位符），数据库就绝不会把输入当代码执行。</li>
+          <li>事务是“要么全做完、要么全不做”：改完数据要 commit 提交，出错要 rollback 回滚，否则断电或异常会留下一半新、一半旧的脏数据。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m4c19-http-api.html">← 上一章：第 19 章：用代码调 HTTP 与 API</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m4c21-secure-coding-deep.html">下一章：第 21 章：安全编码深入：输入验证、输出编码与密钥管理 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

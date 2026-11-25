@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 17 课：Windows 自己的工具：PowerShell、事件查看器与 Defender · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>第 17 课：Windows 自己的工具：PowerShell、事件查看器与 Defender</h1>
+      <div class="meta"><span class="tag">Windows 工具</span>2026-11-25 · 阶段四</div>
+      <p>学安全的人迟早要回答一个问题：电脑出问题了，到底是哪里坏了？是某个程序卡住了，是某个服务没起来，还是中了恶意软件？猜是没用的，要看证据。好消息是，证据不用另外去找——Windows 自己就带了三件现成的工具：PowerShell 用来看电脑“现在怎么样”，事件查看器用来看电脑“刚才发生了什么”，Defender 用来守住“有没有坏东西进来”。这一课就把这三件工具讲透：它们各自是干什么的、怎么打开、看什么、哪些操作只是“看看”，哪些操作会“改东西”。</p>
+      <p>先把三件工具的分工记牢：<strong>PowerShell 是手</strong>，你问它什么，它就去查什么，还能替你做事；<strong>事件查看器是账本</strong>，系统和程序做的每件大事都记在里面，出了问题先翻账本；<strong>Defender 是门卫</strong>，平时站在门口检查进出的东西，发现可疑的就拦下来。这三件配合起来，就是 <a href="lesson-06-commands.html">第 6 课</a>那条排错链的升级版：以前靠 ping 和 ipconfig 排网络问题，现在靠这三件排整台电脑的问题。后面 <a href="lesson-18-git.html">第 18 课</a>会讲 Git——你今天用这三件工具查到的结果、做的实验，值得用 Git 记下来，留到底。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PowerShell、事件查看器与 Defender 分工图">
+          <rect x="180" y="10" width="200" height="52" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="32" text-anchor="middle" font-size="15" fill="#1a1a2e">电脑出问题了？</text>
+          <text x="280" y="52" text-anchor="middle" font-size="12" fill="#666">先别猜，先看证据</text>
+          <line x1="230" y1="62" x2="130" y2="110" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="62" x2="280" y2="110" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="330" y1="62" x2="430" y2="110" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="20" y="112" width="160" height="84" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="100" y="136" text-anchor="middle" font-size="14" fill="#1a1a2e">PowerShell</text>
+          <text x="100" y="156" text-anchor="middle" font-size="12" fill="#666">现在怎么样？</text>
+          <text x="100" y="174" text-anchor="middle" font-size="12" fill="#666">查进程、查服务</text>
+          <rect x="200" y="112" width="160" height="84" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="136" text-anchor="middle" font-size="14" fill="#1a1a2e">事件查看器</text>
+          <text x="280" y="156" text-anchor="middle" font-size="12" fill="#666">刚才发生了什么？</text>
+          <text x="280" y="174" text-anchor="middle" font-size="12" fill="#666">翻日志、看时间线</text>
+          <rect x="380" y="112" width="160" height="84" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="136" text-anchor="middle" font-size="14" fill="#1a1a2e">Defender</text>
+          <text x="460" y="156" text-anchor="middle" font-size="12" fill="#666">有没有坏东西？</text>
+          <text x="460" y="174" text-anchor="middle" font-size="12" fill="#666">查状态、做扫描</text>
+          <text x="280" y="228" text-anchor="middle" font-size="13" fill="#1a1a2e">三件工具回答三个问题：现在、刚才、有没有坏东西</text>
+          <text x="280" y="250" text-anchor="middle" font-size="12" fill="#666">这一课只做“看”，不改配置</text>
+        </svg>
+        <figcaption>图：三件工具的分工——PowerShell 看现在，事件查看器看刚才，Defender 看有没有坏东西</figcaption>
+      </figure>
+
+      <h2>PowerShell 是什么：不只是“高级版命令提示符”</h2>
+      <p>PowerShell 是 Windows 自带的一个命令行工具，蓝底白字的一个窗口。你在里面敲命令，它就执行；你问它问题，它就把答案打出来。<a href="lesson-02-files-processes.html">第 2 课</a>讲过进程和服务，<a href="lesson-08-linux-commands.html">第 8 课</a>讲过 Linux 命令——PowerShell 就是 Windows 世界里的那个“命令行”，只不过它更强：它不只认“动词 + 名词”这样的命令，还能直接问系统要结构化的数据，比如“把所有正在跑的进程按内存从大到小排出来”。</p>
+      <p>它和命令提示符（cmd）有什么区别？打个比方：cmd 像一台只能打电话的老式座机，PowerShell 像一台智能手机——打电话也能打，但还能查天气、看地图、装应用。初学阶段不用深究它们的全部差别，记住一点就够了：<strong>以后在 Windows 上排错和做自动化，优先用 PowerShell</strong>，cmd 只作为备选。以后模块二讲操作系统、模块三讲网络排错时，PowerShell 还会反复出现。</p>
+
+      <h2>怎么打开 PowerShell：普通身份和管理员身份</h2>
+      <p>打开的方法有两个，都很常用。第一种：按 <code>Win + X</code>，在弹出的菜单里点“终端”或“Windows PowerShell”——Windows 11 上一般是“终端”，打开后默认就是 PowerShell。第二种：点开始菜单，输入 <code>powershell</code>，在搜索结果上点一下就打开了。</p>
+      <p>关键在第二种打开方式里藏着一个选择：直接点开，是<strong>普通身份</strong>；右键点它、选“以管理员身份运行”，是<strong>管理员身份</strong>。窗口标题栏会写清楚：管理员身份的窗口标题里有“管理员”三个字，普通身份没有。两者的差别，就是 <a href="lesson-09-linux-permissions.html">第 9 课</a>讲过的权限差别在 Windows 上的样子：普通身份只能做普通用户能做的事——看看进程、看看服务、看看日志；管理员身份能动系统——装软件、改服务、改配置。</p>
+      <p><strong>这一课的规矩：只用普通身份，只做“看”的操作。</strong>看进程、看服务、看日志，普通身份完全够用。管理员身份不是不能碰，而是要等你清楚“这个命令会改什么、改坏了怎么收场”之后再碰。安全工作里有一条铁律：<strong>权限只用到刚好够用的那一级</strong>，能用普通身份办的事，绝不为了图方便开管理员——管理员身份下敲错一个命令，破坏力也大得多。</p>
+      <p>怎么确认自己现在是什么身份？敲一行命令：<code>whoami</code>，它会打出你当前登录的用户名。再看窗口标题有没有“管理员”三个字，两处一对照，就不会搞错。</p>
+
+      <h2>三个常用命令，各举一例</h2>
+      <p>PowerShell 的命令大多是“动词-名词”的样子，见名知义。先学三个，够你把一台电脑的现状摸个大概。</p>
+      <p><strong>1. <code>Get-Process</code>：现在有哪些进程在跑。</strong>直接敲 <code>Get-Process</code>，会列出所有正在运行的进程：名字、占了多少内存、占了多少 CPU。输出太长时，可以加个筛选，只看自己关心的，比如 <code>Get-Process chrome</code> 只看浏览器 Chrome 的进程——如果你开了很多标签页，会看到一堆 chrome 进程，这很正常：现代浏览器一个标签页常常就是一个进程，<a href="lesson-02-files-processes.html">第 2 课</a>讲过进程的概念，这里就是活生生的例子。想找最占内存的“大户”，可以这样写：<code>Get-Process | Sort-Object WS -Descending | Select-Object -First 5</code>，意思是把进程按内存从大到小排，取前 5 个。这行命令里的 <code>|</code> 是管道——把前一个命令的输出送给后一个命令处理，和 Linux 里的管道是一个思路，<a href="lesson-08-linux-commands.html">第 8 课</a>讲过。</p>
+      <p><strong>2. <code>Get-Service</code>：有哪些服务，哪些在跑、哪些停了。</strong>服务是“没有窗口、在后台干活的程序”，比如打印服务、更新服务。敲 <code>Get-Service</code> 会列出所有服务和它们的状态：Running 是在跑，Stopped 是停了。只看在跑的：<code>Get-Service | Where-Object {$_.Status -eq "Running"}</code>。只看某一个服务，比如管 Windows 更新的服务：<code>Get-Service wuauserv</code>，它会告诉你这个服务现在是 Running 还是 Stopped。服务停了不一定是坏事——很多服务平时就是停着的，用到时才启动；但如果你明明在用打印机，打印服务却是 Stopped，那问题就找到了。</p>
+      <p><strong>3. <code>Get-EventLog</code>：从命令行翻日志。</strong>比如看最近 10 条系统日志：<code>Get-EventLog -LogName System -Newest 10</code>。它会打出时间、来源、事件 ID 和一句话描述。注意：<code>Get-EventLog</code> 是老命令，现在更推荐 <code>Get-WinEvent</code>（比如 <code>Get-WinEvent -LogName System -MaxEvents 10</code>），新电脑上两个都能用，先学会 <code>Get-EventLog</code> 的样子，知道有 <code>Get-WinEvent</code> 这个新版就够了。日志的细看，还是交给下一节的事件查看器——图形界面翻日志，比命令行直观得多。</p>
+      <p>这三个命令的共同点是：<strong>它们都是“看”，不改任何东西。</strong>查进程不会杀掉进程，查服务不会启动或停止服务，查日志不会删掉日志。所以放心敲，敲错了最多是一句报错，不会把系统弄坏。真正会“改”的命令长得也不一样，比如 <code>Stop-Process</code>（结束进程）、<code>Stop-Service</code>（停服务）——看到 Stop、Remove、Set 这类动词，先停手，想清楚再决定要不要执行。</p>
+
+      <h2>事件查看器：电脑的账本，出了问题先翻它</h2>
+      <p>Windows 把系统和程序干的大事都记在日志里：谁登录过、哪个服务崩了、哪次更新装失败了、哪天蓝屏过。事件查看器就是翻这本账本的工具。打开方法：按 <code>Win + X</code>，点“事件查看器”；或者在开始菜单搜“事件查看器”。打开后左边是一棵树，最常用的三个分支是：<strong>Windows 日志 → 应用程序</strong>（程序的事）、<strong>Windows 日志 → 安全</strong>（登录、权限的事）、<strong>Windows 日志 → 系统</strong>（系统和服务的事）。</p>
+      <p>日志一打开常常是几千上万条，直接翻是翻不完的，要会筛。事件查看器右边有个“筛选当前日志”，点开它，两个筛子最常用：<strong>按级别筛</strong>和<strong>按来源筛</strong>。级别分五档：信息、警告、错误、严重、审核成功/失败。平时只看“错误”和“严重”就够了——信息级别的条目多如牛毛，大多是“某某服务启动成功”这种报平安的；“错误”和“严重”才是“出事了”的信号。按来源筛，是只看某个程序或某个组件记的账，比如只看来源是 <code>Service Control Manager</code>（服务控制管理器）的条目，那就是所有服务的启动、停止、崩溃记录。</p>
+      <p>再加一个时间筛：筛选窗口里可以选“记录时间”，比如“过去 24 小时”。排错时先定时间——“电脑是今天下午三点左右蓝屏的”，就把时间框在今天下午，再按级别筛出错误，范围一下子就小了。这是 <a href="lesson-13-malware.html">第 13 课</a>“入侵五步链”里时间线思维的日常版：先把时间对上，再看那段时间里发生了什么。</p>
+      <p><strong>例子一：看一次登录失败。</strong>在“安全”日志里筛级别“审核失败”，会看到事件 ID <code>4625</code> 的条目——这就是“登录失败”。点开一条，看里面的“帐户名”和“登录类型”：帐户名是你输错的那个用户名，登录类型 2 是本地登录、3 是网络登录、10 是远程桌面登录。如果 4625 在短时间内反复出现、帐户名还是 <code>Administrator</code> 这类常见名，那就是有人在猜密码——这时该做的不是删日志，而是去改一个更强的密码、开双因素，<a href="lesson-11-passwords.html">第 11 课</a>讲过怎么做。注意，偶尔一两次 4625 很可能是你自己输错了密码，别一看到就慌：看数量、看时间、看帐户名，三处合起来判断。</p>
+      <p><strong>例子二：看一次服务崩溃。</strong>在“系统”日志里筛来源 <code>Service Control Manager</code>、级别“错误”，会看到事件 ID <code>7034</code> 的条目——“服务意外终止”。点开看，它会写明是哪个服务、意外终止了几次。配套的还有 <code>7036</code>（服务状态变了，比如从“正在运行”变成“已停止”）和应用程序日志里的事件 ID <code>1000</code>（应用程序错误，写着是哪个程序崩了、崩在哪个模块）。把这三条按时间排在一起，故事就完整了：先是程序报错 1000，接着服务意外终止 7034，状态变成已停止 7036——这就是一次服务崩溃的完整时间线。以后模块里讲蓝队和取证，画的就是这种时间线，只不过规模更大。</p>
+      <p>翻日志时还有一条规矩要记牢：<strong>只看，不清。</strong>事件查看器里有个“清除日志”的按钮，千万别点——日志是证据，清掉就等于把账本撕了。出了问题要修，先把日志看明白，修好之后日志自然会记下“修好了”的新条目。用 <code>Get-EventLog</code> 查日志也是只读的，放心用。</p>
+
+      <h2>Defender：在哪看状态，快速扫描怎么做</h2>
+      <p>Windows Defender（现在叫“Microsoft Defender 防病毒”，在设置里叫“Windows 安全中心”）是 Windows 自带的杀毒和防护软件，不用另外装。打开方法：点开始菜单，搜“Windows 安全中心”，或者进“设置 → 隐私和安全性 → Windows 安全中心”。打开后第一眼看的是首页状态：绿色打勾写着“无需执行任何操作”，就是正常；如果出现黄色感叹号或红色叉号，点进去看它提示你做什么。</p>
+      <p>首页里最常用的两块是“病毒和威胁防护”和“防火墙和网络防护”。“病毒和威胁防护”里能看到实时保护开没开、病毒库是什么时候更新的、最近一次扫描是什么时候。快速扫描就在这里：点“快速扫描”，Defender 会扫一遍系统里最常藏恶意软件的地方——启动项、内存里在跑的进程、系统文件夹，几分钟就能扫完。快速扫描适合平时定期做，比如每周一次；如果怀疑电脑已经中了招、或者快速扫描报了东西，再做“完全扫描”，把整个硬盘扫一遍，那次要花的时间就长得多，几十分钟到几小时都有可能，扫的时候电脑会变慢，挑不忙的时候做。</p>
+      <p><strong>发现威胁之后怎么办？</strong>Defender 报出威胁时，一般会直接把它隔离——隔离的意思是把它关进一个打不开、跑不起来的“小黑屋”，它就害不了人了。你要做的只有一件事：确认它是“已隔离”状态，然后该删就删、该留就留，听 Defender 的建议。不要做的事有三件：<strong>不要点“允许”</strong>——点了就是亲手把坏东西放出来；<strong>不要自己跑到隔离区以外去找那个文件、双击打开看它到底是什么</strong>——好奇心是恶意软件最好的帮手；<strong>不要同时装两个杀毒软件</strong>——两个门卫会互相打架，反而谁都守不好门。威胁处理完之后，再跑一次快速扫描确认干净，然后想一想它是怎么进来的：是不是点了 <a href="lesson-12-phishing.html">第 12 课</a>讲的那种钓鱼链接、是不是装了来路不明的软件——堵住入口，比杀掉一次毒更重要。</p>
+      <p>还有一个容易被忽略的点：Defender 的防护是分层的，不只杀毒。它还管“勒索软件防护”（保护你的文档文件夹不被陌生程序乱改）、“应用和浏览器控制”（拦住可疑的下载和网站）。这些开关都在 Windows 安全中心里，<strong>这一课只看它们开没开，不改它们</strong>。以后讲到 <a href="lesson-15-firewall.html">第 15 课</a>的防火墙规则、模块三的网络防护时，这些开关还会再出现，到时再讲什么时候该动它们。</p>
+
+      <h2>“看”和“改”：动手之前先分清楚</h2>
+      <p>这是本课最重要的一张分界线，动手之前先把它背下来。只读的“看”操作，随便做：<code>Get-Process</code>、<code>Get-Service</code>、<code>Get-EventLog</code>、<code>Get-WinEvent</code>、翻事件查看器、看 Defender 状态、跑快速扫描——这些只读不写，做错了也伤不到系统。会“改”的操作，动手前先停三秒：<code>Stop-Process</code>、<code>Stop-Service</code>、<code>Start-Service</code>、<code>Set-Service</code>、清除日志、改 Defender 的开关、隔离区里点“允许”或“还原”——每一个都会改变系统状态，改之前要能回答三个问题：我要改的是什么？改完会发生什么？改坏了怎么还原？答不上来，就先别改，先去查、去问、去虚拟机里试。</p>
+      <p>这条分界线后面会贯穿整个学习过程：<a href="lesson-07-linux-vm.html">第 7 课</a>搭虚拟机，就是为了给“改”的操作准备一个安全的试验场——在主力机上只做“看”，想练“改”就去虚拟机。以后做远程维修、做应急响应，规矩也一样：先看证据，再动手；动手之前，先想好退路。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>现场最常见的新手错误，不是不会查，而是查都没查就动手。用户说电脑卡，我见过有人上去就把一堆服务全停了、把一堆进程全杀了，卡是暂时不卡了，打印机不能用了、更新也坏了——因为他杀掉的进程里有系统服务。我的规矩是：动手之前，先用 Get-Process 找到底是哪个进程在吃 CPU 和内存，再用事件查看器看它是什么时候开始出问题的，时间线对上才动手。还有一次，用户说“杀毒软件报毒，我点允许放行了，因为那个软件我认识”——结果那个“认识的软件”是被捆绑了恶意程序的安装包。记住：报毒之后不要凭“认识”放行，认识的是文件名，不认识的是文件里到底被塞了什么。隔离是默认动作，放行才是需要证据的例外。</div>
+      <p><strong>避坑：</strong>别用管理员身份跑这一课的所有操作——普通身份看得够了，管理员身份敲错命令的代价大得多；别在 PowerShell 里照抄网上来历不明的命令——先看懂每个词是干什么的，尤其是 Stop、Remove、Set、Clear 这类动词，看到就先停手；别看到事件查看器里一堆“错误”就慌——很多错误是程序自己重试就好的小毛病，关键看错误是不是反复出现、是不是跟你遇到的问题在同一个时间点；别清除日志——日志是证据，清掉等于撕账本；Defender 报毒后别点“允许”、别自己打开隔离的文件看，别同时装两个杀毒软件；也别拿别人的电脑练手——只在自己的电脑上做只读查看。</p>
+
+      <h2>动手做</h2>
+      <p>在自己的 Windows 主力机上做，只做只读查看，不改任何系统配置。第一步，打开 PowerShell（普通身份，先确认窗口标题里没有“管理员”三个字），依次敲 <code>whoami</code>、<code>Get-Process | Sort-Object WS -Descending | Select-Object -First 5</code>、<code>Get-Service wuauserv</code>、<code>Get-EventLog -LogName System -Newest 10</code>，把每条命令的输出记下来：最占内存的前 5 个进程是谁？Windows 更新服务现在是 Running 还是 Stopped？最近 10 条系统日志里有没有错误级别的？第二步，打开事件查看器，在“系统”日志里筛来源 <code>Service Control Manager</code>、级别“错误”，看最近一周有没有事件 ID 7034 的服务意外终止；再去“安全”日志里筛级别“审核失败”，看有没有事件 ID 4625 的登录失败，有的话记下帐户名和时间，判断是不是你自己输错的。第三步，打开 Windows 安全中心，看实时保护开没开、病毒库是哪天更新的，然后跑一次快速扫描，记下扫了多久、有没有发现威胁。做完把三步的结果写成几行笔记——日期、每条命令、看到的结果、你的判断——这份笔记就是 <a href="lesson-18-git.html">下一课</a>要讲的实验笔记的雏形。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>PowerShell 是 Windows 自带的命令行工具：普通身份只能看，管理员身份能改系统；这一课只用普通身份，只做“看”的操作。</li>
+          <li>Get-Process 查正在跑的进程，Get-Service 查服务的状态，Get-EventLog（新版是 Get-WinEvent）从命令行翻日志——三个都是只读命令，放心敲。</li>
+          <li>事件查看器是电脑的账本：按级别筛出“错误”和“严重”，按来源筛出某个组件的记录，再按时间框定范围；登录失败看安全日志里的 4625，服务崩溃看系统日志里的 7034。</li>
+          <li>Defender 在 Windows 安全中心里看状态：绿色打勾就是正常；快速扫描几分钟扫完常藏毒的地方，发现威胁后让它保持隔离，别点“允许”，也别自己打开隔离的文件。</li>
+          <li>动手前先分清“看”和“改”：Stop、Remove、Set、清除日志这类操作会改变系统状态，改之前要能回答改什么、改完会怎样、改坏了怎么还原；答不上来就先去虚拟机里试。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="lesson-16-directions.html">← 上一课：第 16 课：基础打牢后，四个方向怎么选</a>
+        <a href="../course.html">课程目录</a>
+        <a href="lesson-18-git.html">下一课：第 18 课：Git：给学习留底，代码与笔记的时光机 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

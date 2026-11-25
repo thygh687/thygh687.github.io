@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块三第 20 章：报文头部详解：IPv4、TCP、UDP 字段 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块三第 20 章：报文头部详解：IPv4、TCP、UDP 字段</h1>
+      <div class="meta"><span class="tag">计算机网络</span>2026-11-25 · 模块三</div>
+      <p>前面十几章讲的都是“协议大概是干什么的”。这一章换个姿势：对着真实报文，一个字段一个字段地看。会读头部，抓包才不是看天书——Wireshark 里每一行展开的字段，都能对应到这一章讲的某一个格子。这一章的例子用一个真实取值的报文：你的虚拟机（192.168.1.10）向一台服务器发 TCP 连接请求，目标端口 443。</p>
+      <h2>IPv4 头部：20 个字节的“快递单”</h2>
+      <p>IPv4 头部最少 20 个字节，按 32 位（4 字节）一行排，一共 5 行。每一行、每一个格子都有固定位置和固定长度，读包就是按这个格子一张图去对。</p>
+      <p><strong>版本（4 位）+ 首部长度 IHL（4 位）：</strong>版本填 4，表示 IPv4；IHL 是头部长度，以 4 字节为单位，填 5 就是 20 字节。IHL 大于 5，说明头部后面还跟了选项（Options），现在很少用了。</p>
+      <p><strong>服务类型 TOS / DSCP（8 位）：</strong>现在主要用其中前 6 位做 DSCP，标记这个包的优先级——语音、视频的包会被标成高优先级，<a href="m3c23-sdn-qos.html">第 23 章</a>讲 QoS 时会再回来。</p>
+      <p><strong>总长度（16 位）：</strong>整个 IP 包的长度（头部 + 数据），单位字节，最大 65535。路由器靠它知道包在哪里结束。</p>
+      <p><strong>标识（16 位）+ 标志（3 位）+ 片偏移（13 位）：</strong>这三个是分片用的。包太大、链路装不下时，发送方把它切成几片，同一批片共享一个标识号；标志里的 DF（不分片）表示“宁可丢了也别切我”，MF（更多分片）表示“后面还有片”；片偏移告诉接收方这一片是原数据的第几个字节起，好拼回去。DF 被置位、包又太大时，路由器会丢包并回一个“需要分片”的 ICMP 报文——这就是路径 MTU 发现的原理。</p>
+      <p><strong>生存时间 TTL（8 位）：</strong>每经过一个路由器减 1，减到 0 就丢弃。TTL 的本意是防止包在环路里永远转下去，顺带成了测跳数的工具：tracert / traceroute 就是靠故意把 TTL 从 1 开始递增，看哪一跳回“TTL 耗尽”来画出路径。例子里的包 TTL 是 64，这是 Linux 系统常见的初始值（Windows 常见 128）。</p>
+      <p><strong>协议（8 位）：</strong>告诉接收方，数据部分交给哪个上层协议：6 是 TCP，17 是 UDP，1 是 ICMP。抓包时先看这个字段，就知道后面跟的是什么。</p>
+      <p><strong>首部校验和（16 位）：</strong>只校验头部本身，不校验数据。算错了、头部在路上被改坏了，包就被扔掉。注意：校验和是每跳重新算的，因为 TTL 每跳都会变。</p>
+      <p><strong>源地址、目标地址（各 32 位）：</strong>发送方和接收方的 IP。整个传输过程里它俩不变，变的是每一跳的 MAC——这正是<a href="m3c18-arp.html">第 18 章</a>讲过的。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="IPv4 头部结构图，带真实取值">
+          <rect x="20" y="10" width="520" height="300" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="32" text-anchor="middle" font-size="14" fill="#1a1a2e">IPv4 头部（20 字节）—— 一次真实 TCP 连接请求的取值</text>
+          <g font-size="12" fill="#1a1a2e">
+            <rect x="40" y="45" width="65" height="30" fill="#eff6ff" stroke="#1a1a2e"/><text x="72" y="64" text-anchor="middle">版本 4</text>
+            <rect x="105" y="45" width="65" height="30" fill="#eff6ff" stroke="#1a1a2e"/><text x="137" y="64" text-anchor="middle">IHL 5</text>
+            <rect x="170" y="45" width="130" height="30" fill="#eff6ff" stroke="#1a1a2e"/><text x="235" y="64" text-anchor="middle">服务类型 0</text>
+            <rect x="300" y="45" width="220" height="30" fill="#eff6ff" stroke="#1a1a2e"/><text x="410" y="64" text-anchor="middle">总长度 60 字节</text>
+            <rect x="40" y="75" width="260" height="30" fill="#fff" stroke="#1a1a2e"/><text x="170" y="94" text-anchor="middle">标识 0x1234</text>
+            <rect x="300" y="75" width="65" height="30" fill="#fff" stroke="#1a1a2e"/><text x="332" y="94" text-anchor="middle">标志 DF</text>
+            <rect x="365" y="75" width="155" height="30" fill="#fff" stroke="#1a1a2e"/><text x="442" y="94" text-anchor="middle">片偏移 0</text>
+            <rect x="40" y="105" width="130" height="30" fill="#eff6ff" stroke="#1a1a2e"/><text x="105" y="124" text-anchor="middle">TTL 64</text>
+            <rect x="170" y="105" width="130" height="30" fill="#eff6ff" stroke="#1a1a2e"/><text x="235" y="124" text-anchor="middle">协议 6（TCP）</text>
+            <rect x="300" y="105" width="220" height="30" fill="#eff6ff" stroke="#1a1a2e"/><text x="410" y="124" text-anchor="middle">首部校验和（每跳重算）</text>
+            <rect x="40" y="135" width="480" height="30" fill="#fff" stroke="#1a1a2e"/><text x="280" y="154" text-anchor="middle">源地址 192.168.1.10</text>
+            <rect x="40" y="165" width="480" height="30" fill="#fff" stroke="#1a1a2e"/><text x="280" y="184" text-anchor="middle">目标地址 93.184.216.34</text>
+            <rect x="40" y="195" width="480" height="30" fill="#fefce8" stroke="#1a1a2e"/><text x="280" y="214" text-anchor="middle">数据：TCP 段（40 字节，含选项）</text>
+          </g>
+          <text x="280" y="245" text-anchor="middle" font-size="12" fill="#666">每行 32 位；IHL=5 表示头部 20 字节；协议 6 表示后面是 TCP</text>
+          <text x="280" y="265" text-anchor="middle" font-size="12" fill="#666">总长度 60 = 20 字节 IP 头 + 40 字节 TCP 段；TTL 每过一个路由器减 1</text>
+          <text x="280" y="295" text-anchor="middle" font-size="12" fill="#666">DF 置位：路由器不得分片，包太大就丢弃并通知发送方</text>
+        </svg>
+        <figcaption>图：IPv4 头部 20 字节，按 32 位一行排；例子是一个发往 443 端口的 TCP 连接请求</figcaption>
+      </figure>
+      <h2>TCP 段结构：序号、确认号与六个标志位</h2>
+      <p>TCP 段的头部也是最少 20 字节，同样按 32 位一行排。理解 TCP 头部，就是理解<a href="m3c5-tcp-udp.html">第 5 章</a>讲过的可靠机制在报文里长什么样。</p>
+      <p><strong>源端口、目标端口（各 16 位）：</strong>例子里源端口 49152（系统临时分配的高位端口），目标端口 443（HTTPS）。端口就是<a href="m3c5-tcp-udp.html">第 5 章</a>讲的“程序的门牌号”，<a href="m3c10-ports.html">第 10 章</a>有速查表。</p>
+      <p><strong>序号（32 位）：</strong>这个段里第一个字节的编号。例子里是 1000，表示“我发的数据从第 1000 个字节开始”。序号让接收方能把乱序到达的段排回原位，也能认出重复的段。</p>
+      <p><strong>确认号（32 位）：</strong>“我希望收到的下一个字节的编号”，也就是“我已经收到了这个编号之前的所有字节”。只有 ACK 标志置位时它才有效——SYN 包里它一般是 0。</p>
+      <p><strong>数据偏移（4 位）+ 保留（3 位）+ 标志位（9 位，常用 6 位）：</strong>数据偏移以 4 字节为单位，告诉接收方头部有多长、数据从哪里开始；标志位是 TCP 的“控制开关”，六个最常用的：URG（紧急指针有效）、ACK（确认号有效）、PSH（尽快交给应用）、RST（复位、拒绝连接）、SYN（建连请求）、FIN（数据发完了）。例子里的 SYN 包只置了 SYN 位；三次握手的第二个包置 SYN+ACK；断连的包置 FIN。</p>
+      <p><strong>窗口（16 位）：</strong>接收方还能收多少字节，是流量控制的依据——<a href="m3c6-congestion.html">第 6 章</a>讲的窗口就是这个字段。例子里的 64240 表示“我现在还能收 64240 字节”。</p>
+      <p><strong>校验和（16 位）+ 紧急指针（16 位）：</strong>TCP 的校验和覆盖头部、数据和一个“伪首部”（源 IP、目标 IP、协议号、TCP 长度），所以它能发现 IP 层没发现的错误；紧急指针只在 URG 置位时有效，现在很少用。</p>
+      <p><strong>选项（长度可变）：</strong>最常见的是 MSS（最大段大小，告诉对方“我一次最多收这么大的段”）、窗口扩大因子、时间戳。例子里的 TCP 段是 40 字节，就是因为带了 20 字节的选项——这也解释了为什么 IPv4 总长度是 60：20 字节 IP 头 + 40 字节 TCP 段。</p>
+      <h2>UDP 头部：只有 8 个字节</h2>
+      <p>UDP 头部只有 4 个字段、8 个字节：源端口、目标端口、长度、校验和。没有序号、没有确认号、没有窗口、没有标志位——这正是<a href="m3c5-tcp-udp.html">第 5 章</a>说的“UDP 不握手、不确认、不重传”的报文级证据。长度字段是整个 UDP 数据报的长度（头部 + 数据），最小 8。校验和在 IPv4 里是可选的（可以填 0 表示不算），在 IPv6 里是强制的。</p>
+      <p>对比一下就明白了：TCP 用 20 个字节的头部买“可靠”，UDP 用 8 个字节的头部买“快”。DNS 查询用 UDP，一个查询包头部只有 8 字节，丢了再问一次就是了；网页用 TCP，头部大一点，但丢一个字节都不行。选哪个协议，就是在“可靠”和“开销”之间做取舍，没有免费的午餐。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TCP 段头部与 UDP 头部对比图">
+          <rect x="20" y="10" width="520" height="150" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="32" text-anchor="middle" font-size="14" fill="#1a1a2e">TCP 段头部（最少 20 字节）—— 例子：SYN 包</text>
+          <g font-size="12" fill="#1a1a2e">
+            <rect x="40" y="45" width="240" height="28" fill="#eff6ff" stroke="#1a1a2e"/><text x="160" y="63" text-anchor="middle">源端口 49152</text>
+            <rect x="280" y="45" width="240" height="28" fill="#eff6ff" stroke="#1a1a2e"/><text x="400" y="63" text-anchor="middle">目标端口 443</text>
+            <rect x="40" y="73" width="480" height="28" fill="#fff" stroke="#1a1a2e"/><text x="280" y="91" text-anchor="middle">序号 1000</text>
+            <rect x="40" y="101" width="480" height="28" fill="#fff" stroke="#1a1a2e"/><text x="280" y="119" text-anchor="middle">确认号 0（SYN 包中 ACK 未置位）</text>
+            <rect x="40" y="129" width="480" height="28" fill="#fefce8" stroke="#1a1a2e"/><text x="280" y="147" text-anchor="middle">数据偏移 10 · 标志位：SYN ✓ · 窗口 64240 · 校验和 · 选项 20 字节</text>
+          </g>
+          <rect x="20" y="175" width="520" height="50" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="196" text-anchor="middle" font-size="13" fill="#1a1a2e">UDP 头部（只有 8 字节）：源端口 · 目标端口 · 长度 · 校验和</text>
+          <text x="280" y="216" text-anchor="middle" font-size="12" fill="#666">TCP 用 20 字节买可靠，UDP 用 8 字节买快</text>
+        </svg>
+        <figcaption>图：TCP 头部最少 20 字节，带序号、确认号、标志位和窗口；UDP 头部只有 8 字节</figcaption>
+      </figure>
+      <h2>怎么读一个真实报文：从外到内一层层剥</h2>
+      <p>读包的顺序是固定的：先看以太网帧头（源 MAC、目标 MAC），再看 IP 头（源 IP、目标 IP、协议字段），协议字段是 6 就按 TCP 的格子读，是 17 就按 UDP 的格子读，是 1 就按 ICMP 的格子读。每一层只读自己的头部，读完就把剩下的交给下一层——这就是<a href="m3c1-layers.html">第 1 章</a>分层的实际样子：分层不是纸上的图，是每个包身上真实的嵌套结构。</p>
+      <p>排错时，头部字段是最直接的证据。TTL 异常小（比如只剩 1），说明包绕了太多跳；协议字段是 6 但目标端口没人监听，对方会回 RST；校验和对不上，说明包在路上被改坏了（或抓包工具本身在网卡卸载校验和时看到的“假错”——这个坑下面会讲）；分片的包 MF 位置位，说明链路的 MTU 比包小。会读头部，排错就从“猜”变成了“看”。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>现场排错，我先看三个字段：TTL、协议、目标端口。TTL 剩 1 就到不了，说明路由绕远了；协议是 6、目标端口 443 却收到 RST，说明服务没起来，不是网不通；还有一个坑：Wireshark 里看到 TCP 校验和错误先别慌——很多网卡把校验和计算“卸载”给了硬件，抓包工具在网卡算出来之前就把包拷走了，看到的校验和是错的、实际发出去的是对的。先确认是不是网卡卸载，再下结论。最后一条：读包先认“协议字段”，再决定后面按哪张图读——不认协议就直接读数据，是新手最常见的读包错误。</div>
+      <h2>动手做</h2>
+      <p>1. 在自己的虚拟机里抓一次真实报文。打开 Wireshark，只抓自己的虚拟机流量（比如只抓虚拟机访问自己搭的本地服务、或虚拟机之间 ping 的流量），点开一个包，从以太网头、IP 头到 TCP 头一层层展开，对照本章的两张图，认出每一个字段的值：TTL 是多少、协议是几、源端口和目标端口是什么、SYN 位置位了没有。<br>2. 对照验证。找一个 TCP 连接的第一个包：确认它的标志位只有 SYN，确认号是 0；再找握手的第二个包：确认它同时置了 SYN 和 ACK，确认号等于第一个包的序号加 1。亲手验证一次，比背十遍三次握手都牢。<br>3. 看一次 UDP。抓一个 DNS 查询包（只在自己的虚拟机里查自己的本地服务或 example.org 这类公开域名，不要对别人的域名做批量查询），看它的 UDP 头部是不是只有 8 个字节，长度字段写的是多少。<br>4. 看一次分片（可选）。在虚拟机里发一个很大的 ping（Linux：<code>ping -s 2000 另一台虚拟机</code>），抓包看 IP 头部的标识、MF 标志和片偏移是怎么配合把一个大包切成几片的。只抓自己的虚拟机流量，不要抓真实网络里别人的流量。</p>
+      <h2>避坑</h2>
+      <p>别把 IHL 和总长度弄混：IHL 是头部长度（单位 4 字节），总长度是整个包的长度（单位字节）；别以为 TTL 是“时间”：它是跳数，每过一个路由器减 1，减到 0 就丢；别看到 Wireshark 报校验和错误就认定包坏了：先确认是不是网卡校验和卸载造成的假错；别把 TCP 的序号当成“第几个包”：序号是字节编号，确认号是“希望收到的下一个字节编号”，不是包的个数；别在真实网络里抓别人的包：只抓自己的虚拟机流量，抓包的对象永远是自己的设备和自己的实验网络。</p>
+      <p>头部读懂了，协议就不再是黑盒子：<a href="m3c5-tcp-udp.html">第 5 章</a>的握手和挥手、<a href="m3c6-congestion.html">第 6 章</a>的窗口，都是这些字段在动。下一章回到更大的问题：路由器之间是怎么算出“哪条路最短”的，OSPF 和 BGP 到底在算什么：<a href="m3c21-routing-algorithms.html">第 21 章：路由算法深入：链路状态与距离向量</a>。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>IPv4 头部最少 20 字节：版本、首部长度、总长度、标识/标志/片偏移、TTL、协议、校验和、源和目标地址，各有固定位置和长度。</li>
+          <li>TTL 每过一个路由器减 1、到 0 丢弃；协议字段 6 是 TCP、17 是 UDP、1 是 ICMP，决定后面按哪张图读。</li>
+          <li>TCP 头部最少 20 字节：源/目标端口、序号、确认号、数据偏移、标志位（SYN/ACK/FIN/RST 等）、窗口、校验和、选项。</li>
+          <li>UDP 头部只有 8 字节：源端口、目标端口、长度、校验和；没有序号和确认号，可靠要由应用自己负责。</li>
+          <li>读包从外到内一层层剥：以太网头 → IP 头 → 按协议字段读 TCP 或 UDP 头；TTL、协议、目标端口是排错时先看的三个字段。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m3c19-switching-vlan.html">← 上一章：第 19 章：交换、VLAN 与生成树</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m3c21-routing-algorithms.html">下一章：第 21 章：路由算法深入：链路状态与距离向量 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

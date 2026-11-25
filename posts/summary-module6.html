@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块六小结：先守住自己，再看懂攻击者 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块六小结：先守住自己，再看懂攻击者</h1>
+      <div class="meta"><span class="tag">小结</span>2026-11-25 · 模块六第 1–23 章</div>
+      <p>二十三章讲的其实是两件事，顺序不能反：先守住自己，再看懂攻击者。守住自己，是把自己的账号、电脑、邮箱、网络收拾干净；看懂攻击者，是知道他从哪来、走哪条路、会在哪一步被拦住。这一模块的前半部分在讲“守”，后半部分在讲“看”，最后一章把两件事合起来，变成一份能交出去的评估报告。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="模块六二十三章知识串联图">
+          <defs>
+            <marker id="arrm6" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <rect x="130" y="10" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="35" text-anchor="middle" font-size="14" fill="#1a1a2e">先守住自己：框架、账号、终端、邮件</text>
+          <rect x="130" y="70" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="95" text-anchor="middle" font-size="14" fill="#1a1a2e">看懂漏洞：CVE、漏洞类型、安全模型</text>
+          <rect x="130" y="130" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="155" text-anchor="middle" font-size="14" fill="#1a1a2e">看懂攻击者：威胁建模、ATT&amp;CK、情报框架</text>
+          <rect x="130" y="190" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="215" text-anchor="middle" font-size="14" fill="#1a1a2e">管住变化：风险、物理、基线、变更与资产</text>
+          <rect x="130" y="250" width="300" height="40" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="275" text-anchor="middle" font-size="14" fill="#1a1a2e">动手验证：两次动手检查、一次情报跟进</text>
+          <rect x="130" y="310" width="300" height="40" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="335" text-anchor="middle" font-size="14" fill="#1a1a2e">合起来：给一台电脑做完整安全评估</text>
+          <line x1="280" y1="50" x2="280" y2="68" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm6)"/>
+          <line x1="280" y1="110" x2="280" y2="128" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm6)"/>
+          <line x1="280" y1="170" x2="280" y2="188" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm6)"/>
+          <line x1="280" y1="230" x2="280" y2="248" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm6)"/>
+          <line x1="280" y1="290" x2="280" y2="308" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrm6)"/>
+        </svg>
+        <figcaption>图：二十三章讲的其实是两件事——先守住自己，再看懂攻击者</figcaption>
+      </figure>
+      <h2>这二十三章是怎么连起来的</h2>
+      <p>先守住自己。<a href="m6c1-security-framework.html">第 1 章</a>给了安全的第一套共同语言：CIA、AAA 与控制分类，从此“安全”不再是一个感觉，而是有定义、有分类的东西。<a href="m6c2-threat-modeling.html">第 2 章</a>的威胁建模教会你站在攻击者的角度想一想他会怎么来；<a href="m6c3-threat-actors-attack.html">第 3 章</a>把攻击者分了类，再用 MITRE ATT&CK 入门搭起一张手法词典。<a href="m6c4-phishing-deep.html">第 4 章</a>讲钓鱼与社会工程学——骗人的技术，预备课第 12 课是入门，这里讲深；<a href="m6c5-malware.html">第 5 章</a>是恶意软件全家福：病毒、木马、勒索软件各长什么样；<a href="m6c6-firewall-ids.html">第 6 章</a>讲防火墙与入侵检测，下一代防火墙与 EDR/XDR 是怎么分工的；<a href="m6c7-endpoint-email.html">第 7 章</a>把防线收到端点和邮箱：EDR、XDR 与 DLP。</p>
+      <p>然后是看懂漏洞。<a href="m6c8-cve-cvss.html">第 8 章</a>讲漏洞、CVE 与 CVSS：漏洞是怎么编号和打分的，读到一份漏洞公告先看什么。<a href="m6c9-identity-sso-mfa.html">第 9 章</a>讲身份认证体系：SSO、联合身份与 MFA，单点登录、SAML/OAuth、通行密钥是怎么让“证明你是谁”既方便又安全的；<a href="m6c10-access-control-pam.html">第 10 章</a>讲访问控制与特权管理：RBAC、ABAC 与 PAM，谁能干什么，谁是特权账号。<a href="m6c11-risk-management.html">第 11 章</a>讲风险管理：从评估到处置，接受、缓解、转移还是规避；<a href="m6c12-physical-asset-privacy.html">第 12 章</a>讲物理安全、资产分类与隐私：门锁、摄像头、数据分级，安全不只是网上的事；<a href="m6c13-hardening-baseline.html">第 13 章</a>讲安全基线与加固：一台机器上线前要检查什么。</p>
+      <p>中间是两次动手。<a href="m6c14-security-check-lab.html">第 14 章</a>动手给电脑做一次安全检查，从头到尾查一遍；<a href="m6c15-read-cve-report.html">第 15 章</a>动手读一份漏洞报告，看懂 CVE 报告在说什么。<a href="m6c16-security-news.html">第 16 章</a>讲安全新闻与漏洞情报怎么跟：跟上新漏洞的方法，情报不是刷新闻，是有方法的跟踪。</p>
+      <p>后半部分把前面讲过的东西再往深处挖一层。<a href="m6c17-security-models.html">第 17 章</a>讲安全模型与架构：Bell-LaPadula 的“不上读、下不写”保保密，Biba 的“不上写、下不读”保完整，Clark-Wilson 管商业世界的账不能错，再加上纵深防御、DMZ 与堡垒机——这是安全设计的第一性原理，前面所有访问控制规则背后的“为什么”都在这里。<a href="m6c18-vuln-types.html">第 18 章</a>把漏洞按类型拆开：缓冲区溢出、竞态条件、注入、配置错误、供应链、零日，每类讲机理和一个公开案例——从此读到任何 CVE，先问它属于哪一类。<a href="m6c19-email-security.html">第 19 章</a>讲邮件安全深入：SPF 验证发信服务器、DKIM 验证内容没被改过、DMARC 决定验证失败怎么办，再加上商务邮件诈骗的套路和怎么看邮件头——邮箱是怎么被攻破的，这里讲全了。<a href="m6c20-wireless-enterprise.html">第 20 章</a>讲无线企业安全：802.1X 先认证后联网，EAP 是认证方法的框架，RADIUS 是后台说了算的服务器，访客网络要隔离，流氓 AP 要会认——公司的 Wi-Fi 是怎么管的，这里讲全了。<a href="m6c21-change-asset.html">第 21 章</a>讲变更管理与资产清单：改动要有流程（申请、评审、测试、回滚），资产要有账本（有什么、在哪、谁负责），再加上配置管理数据库的思想——安全工作的地基在这里。<a href="m6c22-threat-intel-frameworks.html">第 22 章</a>讲威胁情报框架：网络杀伤链七步、钻石模型四个角、ATT&CK 回顾，学会用框架把一次攻击从头还原出来——从此看安全事件不再是看热闹。</p>
+      <p>最后是实战。<a href="m6c23-capstone.html">第 23 章</a>是模块六的结课实战：给一台虚拟机做完整安全评估——账号、补丁、服务、防火墙、日志、备份、物理（虚拟机层面的等价项），按模块六的框架出一份评估报告，附上检查清单和报告模板。二十二章的本事，在这里合起来变成一份能交出去的东西。</p>
+      <h2>现在你能做什么</h2>
+      <ul>
+        <li>用 CIA、AAA 和控制分类说清“安全”是什么意思，给任何一个安全措施找到它在框架里的位置。</li>
+        <li>做一次威胁建模：画出攻击者可能的路径，再用 ATT&CK 查到每一步的手法叫什么。</li>
+        <li>认出钓鱼邮件和社会工程的套路，读懂一封邮件的邮件头，说出它的 SPF、DKIM、DMARC 验证结果。</li>
+        <li>读懂一份 CVE 报告：说出漏洞属于哪一类、机理是什么、CVSS 分数意味着什么、先补哪一个。</li>
+        <li>用 Bell-LaPadula 和 Biba 的两句口诀判断一条访问规则有没有漏：读往下、写往上，还是写往下、读往上。</li>
+        <li>给自己的虚拟机做一次完整安全评估，按检查清单逐项打勾，写出一份带证据、带定级、带整改步骤的评估报告。</li>
+        <li>看到一篇公开的安全事件报道，能列时间线、套杀伤链、画钻石模型，找出最容易拦住攻击者的那一步。</li>
+      </ul>
+      <h2>下一步</h2>
+      <p>模块七，Web 安全与渗透测试。评估的对象从一台电脑变成一个网站：请求、响应、会话、Cookie 是怎么工作的，网站是怎么被攻破的，以及怎么合法地去找漏洞。模块六的框架会一直跟着你——CIA 还是那三样，杀伤链还是那七步，纵深防御还是那几层，风险定级还是影响乘以可能性。变的只是战场：从一台电脑，变成整个 Web。去之前，先把第 23 章的评估报告收好——那是你第一份真正的安全工作成果。</p>
+      <div class="lesson-nav">
+        <a href="m6c23-capstone.html">← 模块六第 23 章：动手：综合实战——给一台电脑做完整安全评估</a>
+        <a href="../course.html">课程目录</a>
+        <a href="../course.html#m7">下一站：模块七：Web 安全与渗透测试 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

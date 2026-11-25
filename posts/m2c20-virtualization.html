@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块二第 20 章：虚拟化与容器基础：虚拟机、命名空间与 cgroup · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块二第 20 章：虚拟化与容器基础：虚拟机、命名空间与 cgroup</h1>
+      <div class="meta"><span class="tag">操作系统</span>2026-11-25 · 模块二</div>
+      <p>一台电脑只能装一个操作系统吗？只能跑一套服务吗？虚拟化和容器回答了这两个问题：虚拟机让一台物理机器变出很多台“假电脑”，每台都有自己的操作系统；容器让一个操作系统变出很多个互相隔离的“小房间”，每个房间里跑一个应用。本章把这两样东西讲清楚——它们是云计算的底座，也是你做实验的底座：这门课里反复说的“在虚拟机里练”，靠的就是虚拟化。</p>
+      <p>先说为什么需要虚拟化。物理服务器的利用率通常很低：一台服务器只跑一个网站，CPU 大部分时间在闲着。虚拟化让一台物理机同时跑很多台虚拟机，每台虚拟机跑不同的服务，利用率上去了，成本下来了。另一个原因是隔离和方便：一台虚拟机出问题，不影响别的虚拟机；要测试一个新软件，先在虚拟机里试，试坏了删掉重建就行，物理机毫发无损。</p>
+
+      <h2>虚拟机监视器与两类虚拟化</h2>
+      <p>虚拟机（VM）是一台用软件模拟出来的电脑：有虚拟的 CPU、虚拟的内存、虚拟的硬盘、虚拟的网卡。负责模拟的软件叫虚拟机监视器（hypervisor，也叫 VMM）。虚拟机里跑的操作系统叫客户机操作系统（guest OS），它以为自己在真硬件上跑，其实它看到的硬件都是 hypervisor 虚拟出来的。</p>
+      <p>hypervisor 分两类。裸金属型（Type 1）：直接装在硬件上，自己就是一层很薄的操作系统，虚拟机跑在它上面——VMware ESXi、微软 Hyper-V、开源的 KVM（严格说是装在 Linux 内核里的一层）属于这一类，数据中心和云厂商用的基本都是它，性能好、隔离强。宿主型（Type 2）：装在已有的操作系统上面，像一个普通应用软件——VirtualBox、VMware Workstation 属于这一类，你在 Windows 上装 VirtualBox、再在里面装 Ubuntu，用的就是宿主型；优点是安装方便，适合学习和实验，性能比裸金属型略差一点。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="两类虚拟化与容器对比图">
+          <text x="140" y="24" text-anchor="middle" font-size="13" fill="#1a1a2e">裸金属型（Type 1）</text>
+          <rect x="30" y="36" width="220" height="34" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="58" text-anchor="middle" font-size="12" fill="#1a1a2e">虚拟机 A：Ubuntu</text>
+          <rect x="30" y="76" width="220" height="34" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="98" text-anchor="middle" font-size="12" fill="#1a1a2e">虚拟机 B：Windows</text>
+          <rect x="30" y="116" width="220" height="34" rx="6" fill="#1a1a2e"/>
+          <text x="140" y="139" text-anchor="middle" font-size="12" fill="#fff">Hypervisor（直接跑在硬件上）</text>
+          <rect x="30" y="156" width="220" height="30" rx="6" fill="#f1f5f9" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="176" text-anchor="middle" font-size="12" fill="#1a1a2e">物理硬件</text>
+          <text x="420" y="24" text-anchor="middle" font-size="13" fill="#1a1a2e">容器：共用一个内核</text>
+          <rect x="310" y="36" width="220" height="34" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="58" text-anchor="middle" font-size="12" fill="#1a1a2e">容器 A：网站应用</text>
+          <rect x="310" y="76" width="220" height="34" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="98" text-anchor="middle" font-size="12" fill="#1a1a2e">容器 B：数据库</text>
+          <rect x="310" y="116" width="220" height="34" rx="6" fill="#1a1a2e"/>
+          <text x="420" y="139" text-anchor="middle" font-size="12" fill="#fff">容器引擎 + 一个 Linux 内核</text>
+          <rect x="310" y="156" width="220" height="30" rx="6" fill="#f1f5f9" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="176" text-anchor="middle" font-size="12" fill="#1a1a2e">物理硬件 / 宿主操作系统</text>
+          <text x="280" y="215" text-anchor="middle" font-size="12" fill="#1a1a2e">虚拟机：每台有自己的内核，隔离强、启动慢；容器：共用一个内核，隔离弱一些、启动快</text>
+          <text x="280" y="237" text-anchor="middle" font-size="12" fill="#666">宿主型（Type 2）是把 Hypervisor 装在已有操作系统上，像 VirtualBox 这样</text>
+        </svg>
+        <figcaption>图：虚拟机每台有自己的内核，容器共用一个内核——隔离强度和启动速度的取舍就在这里</figcaption>
+      </figure>
+      <p>虚拟机是怎么做到“假装自己是真硬件”的？现代 CPU 有硬件虚拟化支持（Intel 的 VT-x、AMD 的 AMD-V），hypervisor 靠它让客户机的大多数指令直接在真 CPU 上跑，只有涉及硬件访问的敏感指令才拦截下来模拟——这叫硬件辅助虚拟化，性能接近真机。没有硬件辅助的年代，hypervisor 要靠纯软件模拟每条指令，慢得多。今天的电脑基本都支持硬件虚拟化，但它可能在 BIOS 里默认是关着的——虚拟机软件打不开、报“VT-x 不可用”时，先去 BIOS 里把 Intel VT-x / AMD-V 打开。</p>
+
+      <h2>容器和虚拟机的区别</h2>
+      <p>容器（container）是另一种隔离：它不虚拟硬件，只隔离进程。容器里的应用跑在宿主机的 Linux 内核上，但它“看”到的世界是被隔离过的：它以为自己是 1 号进程，以为自己有一整套文件系统，以为自己独占一张网卡——其实这些都是操作系统用命名空间和 cgroup 造出来的假象。Docker 是最有名的容器工具，Kubernetes（K8s）是管一大群容器的编排工具。</p>
+      <p>容器和虚拟机的核心区别就一句话：虚拟机每台有自己的内核，容器共用一个内核。由此带来三个差别。第一，启动速度：虚拟机要启动一整个操作系统，一般要几十秒到几分钟；容器只要启动一个进程，一般不到一秒。第二，资源占用：虚拟机每台都要分内存、硬盘装一个完整的系统；容器只多占应用本身的那点资源，一台机器能跑几十上百个容器。第三，隔离强度：虚拟机之间隔着一整个内核和 hypervisor，一个虚拟机被攻破，想逃到宿主机或别的虚拟机上很难；容器之间只隔着命名空间和 cgroup，共用一个内核——内核一旦有漏洞，容器逃逸（container escape）就可能发生，一个容器里的攻击者可能逃到宿主机上。</p>
+      <p>所以选哪个看场景：要跑不同的操作系统、要强隔离（比如多租户的云主机），用虚拟机；要快速部署、快速扩缩容、跑大量同样的微服务，用容器。很多云厂商是两层都用：虚拟机里面再跑容器，虚拟机管强隔离，容器管快速部署。</p>
+
+      <h2>命名空间：隔离“看什么”</h2>
+      <p>命名空间（namespace）是 Linux 内核提供的隔离机制：给一组进程造一个“只能看到一部分世界”的假象。常用的有六种。PID 命名空间：容器里的进程看到自己的 PID 是 1，看不到宿主机上的其他进程——<a href="m2c2-process.html">第 2 章</a>讲的“进程之间默认隔离”，在这里被做到了极致。Mount 命名空间：容器有自己的文件系统挂载视图，宿主机的文件它看不到（除非显式挂载进去）。Network 命名空间：容器有自己的网卡、IP 地址、路由表，和宿主机的网络是分开的。UTS 命名空间：容器有自己的主机名。IPC 命名空间：容器里的进程间通信（<a href="m2c4-ipc.html">第 4 章</a>）和宿主机隔开。User 命名空间：容器里的 root（UID 0）映射到宿主机上的一个普通用户——容器里以为自己是 root，宿主机上它只是个普通用户，干不了 root 的事。</p>
+      <p>命名空间管的是“看什么”：你能看到哪些进程、哪些文件、哪张网卡。光隔离“看什么”还不够，还要隔离“用什么”——这就是 cgroup 的事。</p>
+
+      <h2>cgroup：限制“用什么”</h2>
+      <p>cgroup（control group，控制组）是 Linux 内核提供的资源限制机制：给一组进程划一个资源上限——最多用多少 CPU、最多用多少内存、最多写多少磁盘。容器里一个失控的程序想把内存吃光，cgroup 会在它到达上限时把它杀掉（OOM killer），保护宿主机和其他容器不受牵连。云厂商给每个租户的容器定 CPU 和内存配额，靠的就是 cgroup；<a href="m2c21-capstone.html">第 21 章</a>的结课实战里，人为制造卡顿的程序也会被 cgroup 这样的机制管住——只不过在虚拟机里练的时候，我们是主动去看它怎么吃资源的。</p>
+      <p>命名空间和 cgroup 是分工明确的一对：命名空间管隔离（你看不到别人的东西），cgroup 管限制（你用不走别人的资源）。两个加起来，再配上一个打包好的文件系统镜像（容器镜像，里面装着应用和它依赖的库），就是一个容器。容器镜像是分层的：底层是操作系统基础镜像，上面一层一层加应用和依赖，改一层不用重建全部——这也是容器部署快的原因之一。</p>
+
+      <h2>为什么容器启动快</h2>
+      <p>把前面的内容串起来，答案就清楚了：容器启动时不用启动内核、不用模拟硬件、不用装操作系统——内核已经在跑了，容器要做的只是建几个命名空间、划一个 cgroup、挂载一个镜像、启动一个进程。几件事都是内核现成的操作，毫秒级就能完成。虚拟机启动时要做的事多得多：hypervisor 分配虚拟硬件、加载客户机内核、客户机内核初始化、启动客户机的 systemd、再启动服务——一整套操作系统的启动流程，一步都省不了。</p>
+      <p>安全上，容器启动快也意味着攻击面变化快：一个容器镜像里如果带了有漏洞的库，所有用这个镜像起的容器都有同样的漏洞；镜像要定期更新、扫描漏洞，旧镜像不要一直用。另外，容器默认以 root 跑的情况很常见——容器里的 root 经过 user 命名空间映射之后，在宿主机上可能只是普通用户，但如果容器是以特权模式（--privileged）跑的，它几乎等于宿主机的 root，这类配置在生产环境里是大忌。学安全的口诀是：容器不是虚拟机，别拿虚拟机的隔离强度去要求它，也别拿它当沙箱随便跑不可信的东西——跑不可信代码的沙箱，虚拟机更合适。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我做实验的规矩是“虚拟机里套虚拟机，容器里不跑不可信的东西”。有一次想快速试一个来路不明的工具，我图省事直接在主机上用容器跑了它——容器启动快是快，但它挂载了宿主机的一个目录，工具顺手就把那个目录里的文件翻了一遍。幸好只是读，没写。从那以后我的规矩是：不可信的东西一律进虚拟机，虚拟机快照拍好再跑，跑坏了恢复快照；容器只跑我自己打包的、来源清楚的镜像。还有一个常见坑：有人把数据库密码写进容器镜像里，镜像一传到公开仓库，密码就公开了——镜像是会流传的，秘密要放在运行时注入，不要写进镜像层里。</div>
+
+      <h2>动手做</h2>
+      <p>全部在虚拟机里做，只读查看，不跑不可信的镜像。1. 在虚拟机里的 Linux 上跑 <code>grep -E "vmx|svm" /proc/cpuinfo | head -3</code>，看 CPU 支不支持硬件虚拟化（vmx 是 Intel，svm 是 AMD）；再跑 <code>systemd-detect-virt</code>，看你现在是不是已经跑在虚拟机里——如果输出是 oracle（VirtualBox）或 vmware，说明你正在用的就是虚拟机。2. 跑 <code>lsns</code> 看当前系统的命名空间列表，再跑 <code>lsns -t pid</code> 只看 PID 命名空间；跑 <code>cat /proc/self/cgroup</code> 看当前进程属于哪个 cgroup。3. 如果虚拟机里装了 Docker，跑 <code>docker ps</code> 看正在跑的容器，<code>docker images</code> 看本地镜像；没有 Docker 就不装，改做第 4 步。4. 打开 VirtualBox（或你用的虚拟机软件），看一台虚拟机的设置：分了几个 CPU、多少内存、多大硬盘——对照本章的图，想一想 hypervisor 是怎么把物理资源切给虚拟机的。</p>
+      <h2>避坑</h2>
+      <p>容器不是虚拟机：共用一个内核，隔离强度比虚拟机弱，内核漏洞可能导致容器逃逸；不要以特权模式跑容器，不要把宿主机目录随便挂进容器；秘密不要写进镜像里，镜像会流传；虚拟机软件报“VT-x 不可用”时，先去 BIOS 里打开硬件虚拟化；不可信的代码进虚拟机跑，跑之前先拍快照，容器只跑来源清楚的镜像。</p>
+      <p>模块二的概念部分到这里就讲完了。最后一章是结课实战：<a href="m2c21-capstone.html">第 21 章：动手：综合实战——在一台机器上复现并解释一次卡顿</a>——把前面 20 章串成一条线，亲手复现一次卡顿，再写一份复盘报告。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>虚拟机是软件模拟出来的电脑，hypervisor 负责模拟：裸金属型直接跑在硬件上，宿主型装在已有操作系统上；现代虚拟化靠 CPU 的硬件辅助（VT-x/AMD-V）。</li>
+          <li>容器和虚拟机的区别：虚拟机每台有自己的内核，容器共用一个内核——容器启动快、占用少，但隔离比虚拟机弱。</li>
+          <li>命名空间管“看什么”：PID、挂载、网络、主机名、进程间通信、用户，六种隔离让容器以为自己独占一台机器。</li>
+          <li>cgroup 管“用什么”：给一组进程划 CPU、内存、磁盘的上限，失控的程序会被限制或杀掉，保护其他容器和宿主机。</li>
+          <li>容器启动快是因为不用启动内核和模拟硬件，只需建命名空间、划 cgroup、挂载镜像、启动进程；秘密不要写进镜像里。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m2c19-io-drivers.html">← 上一章：第 19 章：I/O 子系统与驱动模型</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m2c21-capstone.html">下一章：第 21 章：动手：综合实战——在一台机器上复现并解释一次卡顿 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

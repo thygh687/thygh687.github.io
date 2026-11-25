@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块六第 17 章：安全模型与架构：Bell-LaPadula、Biba 与纵深防御 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块六第 17 章：安全模型与架构：Bell-LaPadula、Biba 与纵深防御</h1>
+      <div class="meta"><span class="tag">网络安全基础</span>2026-11-25 · 模块六</div>
+      <p>前面十六章，我们学了不少“招式”：防火墙怎么拦、EDR 怎么盯、钓鱼怎么防、漏洞怎么打分。但招式背后需要一套“心法”——安全设计的第一性原理：到底什么叫“安全”？一个系统做到什么程度才算守住了？这一章讲三套经典安全模型和一套架构思想。它们诞生于上世纪七十年代的军事和商业系统，至今仍是所有访问控制产品、安全架构评审的理论底色。<a href="m6c10-access-control-pam.html">第 10 章</a>讲 RBAC、ABAC 时说的是“谁能干什么”的规则怎么写；这一章讲的是这些规则背后的“为什么”——规则要满足什么样的数学性质，才不会在不知不觉中漏掉秘密、改坏数据。</p>
+      <p>先把<a href="m6c1-security-framework.html">第 1 章</a>的 CIA 三要素请回来：保密性（Confidentiality，秘密不泄露）、完整性（Integrity，数据不被乱改）、可用性（Availability，需要时能用）。Bell-LaPadula 模型管的是保密性，Biba 模型管的是完整性，Clark-Wilson 模型管的是商业场景里的完整性。三个模型各管一头，合起来才是一套完整的“安全是什么”的回答。</p>
+
+      <h2>Bell-LaPadula：保密性的两条铁律</h2>
+      <p>Bell-LaPadula 模型（简称 BLP）是 1973 年为美国军方设计的多级安全模型。它的世界很简单：所有人和所有文件都被贴上一个密级，从低到高一般是：公开 → 内部 → 机密 → 绝密。每个人的密级叫“许可级别”，每个文件的密级叫“分类级别”。模型只定两条规则：</p>
+      <p><strong>第一条：不上读（No Read Up）。</strong>低级别的人不能读高级别的文件。一个只有“内部”许可的员工，打不开“机密”文件。这条好理解，就是“不该看的看不到”。</p>
+      <p><strong>第二条：下不写（No Write Down）。</strong>高级别的人不能往低级别的文件里写东西。一个能看“绝密”文件的人，不能把内容复制、粘贴到一份“公开”文档里。为什么？因为一旦写下去，秘密就从高级别流到了低级别，等于变相泄露。现实中泄密常常不是“偷看”，而是“不小心写出去”：把机密内容贴进公开群聊、把内部数据拷进个人 U 盘，都是“下写”。</p>
+      <p>两条合起来，信息只能在同一级别内流动，或者从低级别流向高级别（低级别的人可以把公开资料交给高级别的人参考，这不泄露什么），绝不能从高级别流向低级别。记住口诀：<strong>读只能往下读，写只能往上写</strong>——读自己级别及以下的文件，写自己级别及以上的去处。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bell-LaPadula 与 Biba 模型的信息流向图">
+          <defs>
+            <marker id="m17a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+            <marker id="m17x" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"><path d="M1,1 L9,9 M9,1 L1,9" stroke="#dc2626" stroke-width="2"/></marker>
+          </defs>
+          <text x="140" y="25" text-anchor="middle" font-size="14" fill="#1a1a2e">Bell-LaPadula：保保密</text>
+          <text x="420" y="25" text-anchor="middle" font-size="14" fill="#1a1a2e">Biba：保完整</text>
+          <rect x="40" y="40" width="200" height="36" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="63" text-anchor="middle" font-size="14" fill="#1a1a2e">绝密</text>
+          <rect x="40" y="90" width="200" height="36" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="113" text-anchor="middle" font-size="14" fill="#1a1a2e">机密</text>
+          <rect x="40" y="140" width="200" height="36" rx="8" fill="#dbeafe" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="163" text-anchor="middle" font-size="14" fill="#1a1a2e">内部</text>
+          <rect x="40" y="190" width="200" height="36" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="140" y="213" text-anchor="middle" font-size="14" fill="#1a1a2e">公开</text>
+          <line x1="250" y1="108" x2="250" y2="158" stroke="#16a34a" stroke-width="2" marker-end="url(#m17a)"/>
+          <text x="262" y="140" font-size="12" fill="#16a34a">读：往下 ✓</text>
+          <line x1="250" y1="208" x2="250" y2="58" stroke="#dc2626" stroke-width="2" marker-end="url(#m17x)"/>
+          <text x="262" y="180" font-size="12" fill="#dc2626">写：往下 ✗</text>
+          <rect x="320" y="40" width="200" height="36" rx="8" fill="#fee2e2" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="63" text-anchor="middle" font-size="14" fill="#1a1a2e">高可信数据</text>
+          <rect x="320" y="90" width="200" height="36" rx="8" fill="#fef3c7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="113" text-anchor="middle" font-size="14" fill="#1a1a2e">中可信数据</text>
+          <rect x="320" y="140" width="200" height="36" rx="8" fill="#dbeafe" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="163" text-anchor="middle" font-size="14" fill="#1a1a2e">低可信数据</text>
+          <rect x="320" y="190" width="200" height="36" rx="8" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="420" y="213" text-anchor="middle" font-size="14" fill="#1a1a2e">不可信输入</text>
+          <line x1="310" y1="108" x2="310" y2="58" stroke="#16a34a" stroke-width="2" marker-end="url(#m17a)"/>
+          <text x="298" y="140" text-anchor="end" font-size="12" fill="#16a34a">写：往上 ✓</text>
+          <line x1="310" y1="158" x2="310" y2="208" stroke="#dc2626" stroke-width="2" marker-end="url(#m17x)"/>
+          <text x="298" y="185" text-anchor="end" font-size="12" fill="#dc2626">读：往下 ✗</text>
+          <text x="280" y="255" text-anchor="middle" font-size="13" fill="#1a1a2e">BLP 防“秘密往下漏”；Biba 防“脏数据往上污染”</text>
+          <text x="280" y="278" text-anchor="middle" font-size="12" fill="#666">两条规则正好镜像：一个管读，一个管写</text>
+        </svg>
+        <figcaption>图：BLP 与 Biba 的规则正好镜像——一个防泄密，一个防污染</figcaption>
+      </figure>
+      <p><strong>例子：</strong>一家公司的财务系统里，普通员工只能看自己的工资单（不上读：看不到别人的和高管的薪酬文件），财务经理能看全公司的薪酬表，但他不能把薪酬表的内容写进公司对外发布的公开报告里（下不写）。现实中的数据防泄漏（DLP）产品——<a href="m6c7-endpoint-email.html">第 7 章</a>讲过的——做的就是这条规则的自动化：检测到有人把标着“机密”的内容往外发，就拦下来。</p>
+      <p>BLP 有个明显的短板：它只关心保密，不管数据对不对。一个人完全可以往自己级别的文件里乱写，把数据改得面目全非，BLP 一点意见都没有。所以它从来不是单独用的，需要 Biba 来补另一半。</p>
+
+      <h2>Biba：完整性的两条铁律</h2>
+      <p>Biba 模型（1977 年）和 BLP 正好镜像，它管的是完整性：数据不能被不可信的来源污染。它的级别不是“密级”，而是“可信度”：高可信（比如经过校验的系统数据）→ 低可信（比如用户随便输入的东西）。规则也是两条：</p>
+      <p><strong>第一条：不上写（No Write Up）。</strong>低可信的主体不能改高可信的数据。普通用户输入的东西，不能直接改写系统的核心配置；网页表单里用户填的内容，不能不经检查就写进数据库——否则一次恶意输入就能污染整个系统。</p>
+      <p><strong>第二条：下不读（No Read Down）。</strong>高可信的主体不能读低可信的数据——更准确地说，不能“信任”低可信的数据来做关键决策。一个高权限的系统进程，不能直接拿用户输入的命令当真去执行，必须先校验、清洗。</p>
+      <p>口诀和 BLP 正好反过来：<strong>写只能往下写，读只能往上读</strong>。信息可以从高可信流向低可信（系统可以把核对过的数据展示给用户），绝不能从低可信流向高可信。</p>
+      <p><strong>例子：</strong>网站的登录框就是 Biba 思想的日常体现。用户在登录框里输入的任何东西，系统都先当成“不可信输入”，要经过校验（是不是合法格式、有没有注入代码）才能用；数据库里的密码哈希是高可信数据，用户输入的密码只能拿去比对，绝不能直接覆盖它。<a href="m6c18-vuln-types.html">下一章</a>讲的 SQL 注入，本质上就是 Biba 被打破：不可信的输入一路“写上去”，改掉了高可信的数据库查询。</p>
+
+      <h2>Clark-Wilson：商业世界的完整性模型</h2>
+      <p>BLP 和 Biba 都是军方背景，讲的是“级别”。商业公司不怎么分“绝密/公开”，但非常在意另一件事：账不能错、钱不能被一个人悄悄挪走。Clark-Wilson 模型（1987 年）就是为商业完整性设计的，它的语言完全不一样：</p>
+      <p><strong>数据的两种状态：</strong>受约束数据（CDI，Constrained Data Item）——比如银行账本、库存数量，是系统要重点保护的数据；不受约束数据（UDI）——比如用户刚填的一张申请表，还没经过核对，不算数。</p>
+      <p><strong>两条核心机制：</strong>第一，<strong>良构事务（Well-formed Transaction）</strong>：数据只能通过规定的正规程序来改，不能随手改。银行转账必须走“转账程序”（同时扣一方的账、加另一方的账），不允许任何人直接打开账本改数字。第二，<strong>职责分离（Separation of Duties）</strong>：关键操作必须两个人分开做——一个人发起付款，另一个人审批，同一笔钱不能由同一个人既发起又批准。</p>
+      <p><strong>例子：</strong>公司报销系统里，员工提交报销单（UDI），财务审核通过后，系统通过正规流程把钱打出去并更新账本（CDI）；提交人和审批人不能是同一个人；所有操作留审计记录。这就是 Clark-Wilson 在日常工作里的样子。它和<a href="m6c10-access-control-pam.html">第 10 章</a>的特权管理（PAM）是直接接上的：特权账号之所以要管住、要审批、要留痕，就是因为一个不受约束的特权操作能直接改掉受约束的数据。</p>
+
+      <h2>纵深防御：不要只修一堵墙</h2>
+      <p>模型告诉我们“规则应该长什么样”，纵深防御（Defense in Depth）告诉我们“防线应该怎么摆”。它的思想一句话：<strong>不要把安全押在任何单一的一道防线上，而是摆好几层，每层都能独立起作用，攻破一层还有下一层。</strong>这就像一座城堡：护城河、城墙、内城、守卫、宝库的锁——攻破城墙的人，还要过内城和守卫；哪一层失守了，损失都有限。</p>
+      <p>一个典型的企业纵深防御分层：<strong>外围</strong>（防火墙、入侵防御，挡住明显的坏流量——<a href="m6c6-firewall-ids.html">第 6 章</a>）；<strong>网络</strong>（分段隔离，办公网、服务器网、访客网互不直通）；<strong>终端</strong>（EDR、防病毒，机器中毒了能发现能隔离——<a href="m6c7-endpoint-email.html">第 7 章</a>）；<strong>应用</strong>（输入校验、认证授权）；<strong>数据</strong>（加密、分级、备份）；<strong>人</strong>（培训、钓鱼演练——<a href="m6c4-phishing-deep.html">第 4 章</a>）。每一层防的东西不一样，失效的方式也不一样，攻击者要同时打穿所有层才算成功。</p>
+      <p>纵深防御还有一个容易被忽略的要点：<strong>层与层之间不能共用同一个弱点。</strong>如果所有层的管理员密码都是同一个，一旦泄露，全线崩溃；如果防火墙和 EDR 都依赖同一个没打补丁的组件，一次漏洞就能连穿两层。设计防线时，要让各层的失效模式尽量不一样。</p>
+
+      <h2>DMZ 与堡垒机：把危险的东西放在门口</h2>
+      <p>纵深防御在网络结构上最经典的两个落地点，就是 DMZ 和堡垒机。</p>
+      <p><strong>DMZ（非军事区）</strong>是夹在外网和内网之间的一段“缓冲区”：对外提供服务的服务器（网站、邮件服务器）放在 DMZ 里，内网的数据库、办公电脑放在内网。防火墙定两条规矩：外网只能访问 DMZ，不能直通内网；DMZ 只能访问内网里指定的少数服务，不能随意进内网。这样就算网站服务器被攻破了，攻击者也只是站在门口的院子里，进不了屋子。<a href="m3c9-dhcp-nat.html">模块三第 9 章</a>讲 NAT 时提到的“把服务暴露出去”，在真实企业里几乎都是通过 DMZ 做的，而不是直接把内网机器暴露在公网上。</p>
+      <p><strong>堡垒机（跳板机 / Bastion Host）</strong>是唯一一台允许从外网登录、再由此跳进内网的机器。它是内网的“唯一大门”：所有远程管理流量都必须经过它，而且它被重点加固（只开必要的端口、强认证、多因素、所有操作录像审计）。管理员想管内网服务器，先登录堡垒机，再从堡垒机跳过去。好处是：攻击面从“每台服务器都暴露管理口”缩小到“只有一台堡垒机暴露”，而且所有管理行为都有据可查。代价是：堡垒机本身成了单点，一旦它被攻破，等于大门钥匙丢了——所以堡垒机要按<a href="m6c13-hardening-baseline.html">第 13 章</a>的基线做最严格的加固，并用<a href="m6c9-identity-sso-mfa.html">第 9 章</a>的多因素认证守住。</p>
+
+      <div class="teacher-note"><strong>老师经验：</strong>做安全架构评审，我先看的从来不是买了什么设备，而是问三个问题：第一，秘密数据能不能“往下流”——有没有一条路能让机密内容不经审批跑到公开渠道？很多泄密事件查到最后，都是某个同步脚本、某个共享文件夹把 BLP 的“下不写”悄悄绕过去了。第二，防线是不是只有一层——我见过不少小公司，防火墙一台、杀毒一套，就觉得“安全了”，结果钓鱼邮件一封就直达内网，连个分段都没有。第三，堡垒机是不是真在用——有的公司买了堡垒机，工程师嫌麻烦，还是直接连服务器，等于大门装了锁、窗户全开着。模型和架构的价值不在纸上，在于它们能帮你把“哪里会漏”问出来。</div>
+
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里打开你自己的文件，挑三个文件，分别标上“公开 / 内部 / 机密”三个级别，写一张表：每个文件谁能读、谁能写；然后对照 BLP 的两条规则，检查这张表有没有“低级别能读高级别”或“高级别能往低级别写”的口子。<br>2. 在虚拟机里打开一个你常用的程序（比如记事本、浏览器），列出它能读、能写的三个位置；想一想：如果这个程序被恶意利用，Biba 的“不上写”会被怎么打破——它能改掉哪些高可信的数据？把答案写下来。<br>3. 在纸上画一张你家（或你虚拟机实验网络）的纵深防御图：外围、网络、终端、应用、数据、人，六层各写一件已经在做的事和一件还没做的事；再画一个 DMZ：哪些服务该放 DMZ、哪些必须留在内网。<br>4. 只在虚拟机里：新建两个本地用户，一个“普通用户”、一个“管理员”，用普通用户登录后，试着打开管理员用户主目录里的文件，记录系统报什么错——这就是“不上读”在 Windows 权限里的真实样子。</p>
+      <h2>避坑</h2>
+      <p>别把 BLP 和 Biba 的方向记反：BLP 是“读往下、写往上”（防泄密），Biba 是“写往下、读往上”（防污染），两句口诀只差一个字，考试和面试最爱考这个；别以为 BLP 能保证数据正确：它只管保密，数据被改坏了它不管，那是 Biba 和 Clark-Wilson 的事；别把纵深防御理解成“买一堆设备堆起来”：层与层之间共用同一个弱点（同一个密码、同一个未打补丁的组件），等于只有一层；别把 DMZ 当成“放外面就安全了”：DMZ 里的服务器被攻破是常态，关键是它和内网之间的那道墙够不够严；别拿真实公司的网络练手：所有实验都在自己的虚拟机和实验网络里做。</p>
+      <p>模型讲的是“应该”，漏洞讲的是“现实怎么破”：<a href="m6c18-vuln-types.html">下一章</a>把漏洞按类型拆开——缓冲区溢出、竞态、注入、供应链——看每一种是怎么把这些模型规则撕开一个口子的。回头看<a href="m6c1-security-framework.html">第 1 章</a>的 CIA：这一章的三个模型，就是 CIA 里保密性和完整性的“数学版定义”。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>Bell-LaPadula 管保密性：不上读（低级别不能读高级别）、下不写（高级别不能往低级别写），防秘密往下漏。</li>
+          <li>Biba 管完整性：不上写（低可信不能改高可信）、下不读（高可信不信任低可信），防脏数据往上污染。</li>
+          <li>Clark-Wilson 管商业完整性：数据只能通过良构事务改，关键操作必须职责分离。</li>
+          <li>纵深防御是摆多层防线，每层独立起作用，层与层之间不共用同一个弱点。</li>
+          <li>DMZ 是外网与内网之间的缓冲区，对外服务放 DMZ；堡垒机是进内网的唯一大门，要最严加固和多因素认证。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m6c16-security-news.html">← 上一章：第 16 章：安全新闻与漏洞情报怎么跟</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m6c18-vuln-types.html">下一章：第 18 章：漏洞类型深入：溢出、竞态、注入与供应链 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

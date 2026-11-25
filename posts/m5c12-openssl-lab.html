@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块五第 12 章：动手：用 OpenSSL 玩一遍 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块五第 12 章：动手：用 OpenSSL 玩一遍</h1>
+      <div class="meta"><span class="tag">数据库与密码学</span>2026-11-25 · 模块五</div>
+      <p>前面几章讲了不少概念：对称加密、非对称加密、哈希、签名、证书、TLS 握手。概念听懂了，不等于真会了——密码学这东西，一定要亲手跑几条命令，看着密钥生成、看着文件变密文、看着证书被验过，才算进脑子。这一章就是动手课：用 <strong>OpenSSL</strong> 这个命令行工具，把前面讲过的东西全练一遍。OpenSSL 是全世界最常用的密码学工具库，装在几乎每一台 Linux 服务器上，Windows 上也能装。这一章的所有实验都在你自己的虚拟机里做，只操作你自己生成的文件。</p>
+      <p>先确认工具在不在：虚拟机里打开终端，跑 <code>openssl version</code>，能看到版本号（比如 OpenSSL 3.x）就说明装好了。Windows 的虚拟机里如果没有，可以去 OpenSSL 官网下载安装包，或者在 WSL / Linux 虚拟机里练——<a href="lesson-07-linux-vm.html">第 7 课</a>搭虚拟机的方法还记得吧。实验之前先建一个专门的文件夹，比如 <code>~/openssl-lab/</code>，所有实验文件都放里面，做完统一删掉，别和别的文件混在一起。</p>
+      <h2>第一步：生成密钥对——公钥公开，私钥藏好</h2>
+      <p>非对称加密的起点是一对密钥：<strong>私钥自己留着，公钥可以公开</strong>。用私钥加密（签名）过的东西只能用公钥解（验），用公钥加密过的东西只能用私钥解——<a href="lesson-14-encryption.html">第 14 课</a>和模块五第 6 章讲的就是这个道理。生成一对 RSA 密钥（2048 位起步，推荐 3072 位）：</p>
+      <p><code>openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out mykey.pem</code><br>这条命令生成私钥，存进 <code>mykey.pem</code>。立刻做两件事：第一，收紧权限，Linux 上跑 <code>chmod 600 mykey.pem</code>，只有你自己能读——<a href="m5c10-pki-deep.html">第 10 章</a>讲密钥管理时说的“私钥权限 600”，就是这条命令；第二，从私钥里导出公钥：<code>openssl pkey -in mykey.pem -pubout -out mypub.pem</code>。公钥文件 <code>mypub.pem</code> 可以随便给人看，私钥文件 <code>mykey.pem</code> 绝不能发给别人、不能提交进代码仓库。</p>
+      <p>想练椭圆曲线密钥也可以：<code>openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out eckey.pem</code>，生成的密钥更短、速度更快，安全性相当。对比一下两个私钥文件的大小，你会直观感受到 ECC“短小精悍”的意思。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 620 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OpenSSL 实验流程图">
+          <rect x="30" y="20" width="230" height="48" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="38" text-anchor="middle" font-size="14" fill="#1a1a2e">1. 生成密钥对</text>
+          <text x="145" y="58" text-anchor="middle" font-size="12" fill="#666">genpkey → mykey.pem（私钥）+ mypub.pem（公钥）</text>
+          <line x1="145" y1="68" x2="145" y2="96" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="30" y="96" width="230" height="48" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="114" text-anchor="middle" font-size="14" fill="#1a1a2e">2. 自签名证书</text>
+          <text x="145" y="134" text-anchor="middle" font-size="12" fill="#666">req -x509 → mycert.pem（自己给自己签名）</text>
+          <line x1="145" y1="144" x2="145" y2="172" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="30" y="172" width="230" height="48" rx="8" fill="#f0fdf4" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="190" text-anchor="middle" font-size="14" fill="#1a1a2e">3. 对称加密文件</text>
+          <text x="145" y="210" text-anchor="middle" font-size="12" fill="#666">enc -aes-256-cbc → secret.txt.enc</text>
+          <line x1="145" y1="220" x2="145" y2="248" stroke="#1a1a2e" stroke-width="1.5"/>
+          <rect x="30" y="248" width="230" height="48" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="145" y="266" text-anchor="middle" font-size="14" fill="#1a1a2e">4. 解密验证</text>
+          <text x="145" y="286" text-anchor="middle" font-size="12" fill="#666">enc -d → 和原文逐字比对</text>
+          <rect x="330" y="96" width="260" height="124" rx="8" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="460" y="122" text-anchor="middle" font-size="14" fill="#1a1a2e">看证书详情：x509 -text</text>
+          <text x="460" y="146" text-anchor="middle" font-size="13" fill="#666">颁发者、有效期、签名算法、</text>
+          <text x="460" y="166" text-anchor="middle" font-size="13" fill="#666">公钥、扩展（SAN）都在里面</text>
+          <text x="460" y="190" text-anchor="middle" font-size="13" fill="#666">自签名证书：颁发者 = 自己</text>
+          <text x="460" y="210" text-anchor="middle" font-size="13" fill="#dc2626">浏览器不会信任它，仅供实验</text>
+          <line x1="260" y1="120" x2="328" y2="140" stroke="#1a1a2e" stroke-width="1.5"/>
+        </svg>
+        <figcaption>图：本章实验的四步流程——密钥对 → 自签名证书 → 加密文件 → 解密验证</figcaption>
+      </figure>
+      <h2>第二步：自签名证书——自己给自己发一张“身份证”</h2>
+      <p>有了密钥对，就可以生成一张证书。真实世界的证书是 CA 签发的（<a href="m5c7-hash-signature-cert.html">第 7 章</a>、<a href="m5c10-pki-deep.html">第 10 章</a>），实验时我们自己给自己签名，叫<strong>自签名证书</strong>。一句话生成：</p>
+      <p><code>openssl req -x509 -new -key mykey.pem -out mycert.pem -days 365 -subj "/CN=localhost"</code><br>这条命令用你的私钥给“CN=localhost”这个身份签发一张有效期 365 天的证书。注意 <code>-subj</code> 里的 CN（Common Name）写的是 localhost——实验用的证书，域名就写 localhost，别写真实网站的域名。自签名证书的颁发者和使用者是同一个人，浏览器不会信任它，访问时会弹警告——这是正常的，也是对的：没人能证明这张证书上的身份是真的。实验用它搭本地 HTTPS 服务正好，生产环境绝不能用自签名证书。</p>
+      <p>生成之后，用下面这条命令看证书详情，信息量很大，值得逐行读：<code>openssl x509 -in mycert.pem -noout -text</code>。你会看到：颁发者（Issuer）和使用者（Subject）是同一个名字，有效期（Not Before / Not After），签名算法（比如 sha256WithRSAEncryption），公钥内容，以及扩展字段。如果只想快速看关键信息，用 <code>openssl x509 -in mycert.pem -noout -dates -subject -issuer</code>。把有效期、颁发者、签名算法这三项找出来，对照<a href="m5c10-pki-deep.html">第 10 章</a>讲的证书选型想一想：这张实验证书和真实网站的证书，差在哪里？答案主要是两点：签发者不是受信任的 CA，有效期和域名也都是实验值。</p>
+      <h2>第三步：加密和解密一个文件——对称加密实战</h2>
+      <p>先写一个测试文件：<code>echo "这是我的秘密笔记，只给自己看。" &gt; secret.txt</code>。然后用 AES-256 加密它：</p>
+      <p><code>openssl enc -aes-256-cbc -salt -pbkdf2 -in secret.txt -out secret.txt.enc</code><br>命令会让你输一个密码（实验用的临时密码，不要用真实密码）。加密完成后，用 <code>cat secret.txt.enc</code> 看一眼：原文已经变成了看不懂的乱码。注意三个参数的含义：<code>-aes-256-cbc</code> 是算法和模式（AES、256 位密钥、CBC 模式）；<code>-salt</code> 是加盐，让同样的密码每次加密结果都不一样——和<a href="m5c9-password-storage.html">第 9 章</a>讲密码加盐是同一个道理；<code>-pbkdf2</code> 是用 PBKDF2 从密码派生密钥，比老式的直接派生安全得多。缺了 <code>-pbkdf2</code>，OpenSSL 会用老派生方式并警告你，这也是新手常踩的坑。</p>
+      <p>解密是反向操作：<code>openssl enc -d -aes-256-cbc -pbkdf2 -in secret.txt.enc -out secret-decrypted.txt</code>，输同样的密码，然后用 <code>diff secret.txt secret-decrypted.txt</code> 比对：没输出就说明解密出来的文件和原文一字不差。再试一次故意输错密码：解密会报错或解出一堆乱码——这就是对称加密“密码错了就打不开”的直观演示。也可以练非对称加密：用公钥加密一个小文件（<code>openssl pkeyutl -encrypt -pubin -inkey mypub.pem -in secret.txt -out secret.rsa.enc</code>），再用私钥解密回来，对照着体会“公钥加密、私钥解密”和上面“同一个密码加密解密”的区别。</p>
+      <h2>第四步：用自签名证书搭一个本地 HTTPS 服务</h2>
+      <p>把前面生成的证书和私钥用起来，搭一个只能在本地访问的 HTTPS 服务，亲眼看一次 <a href="m5c8-tls-handshake.html">第 8 章</a>讲的 TLS 握手。Python 几行就能起：<code>python3 -c "import http.server, ssl; ctx=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER); ctx.load_cert_chain('mycert.pem','mykey.pem'); s=http.server.HTTPServer(('127.0.0.1', 8443), http.server.SimpleHTTPRequestHandler); s.socket=ctx.wrap_socket(s.socket, server_side=True); s.serve_forever()"</code>（旧教程里常见的 <code>ssl.wrap_socket</code> 一行写法在新版 Python 里已经删了，用 <code>SSLContext</code> 才是现在的做法）。然后在虚拟机浏览器里打开 <code>https://127.0.0.1:8443/</code>，浏览器会警告证书不受信任——点“高级 → 继续前往”（只对自己的本地服务这么做），页面就能打开了。再用 <code>openssl s_client -connect 127.0.0.1:8443 -servername localhost</code> 看握手详情：TLS 版本、加密套件、证书链，对照第 8 章的时序图认一认每一步。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>OpenSSL 的命令行看着吓人，其实常用命令就十来条，我的办法是：每条命令先在实验目录里跑通，再去碰真实配置。现场最常见的 OpenSSL 翻车有三种：第一，私钥权限没收紧，服务启动时报错“key file is world-readable”——<code>chmod 600</code> 就能解决；第二，证书链不全，只配了自己的证书没配中间证书，浏览器报链不完整——<code>s_client -showcerts</code> 一看就知道少了哪张；第三，加密文件时忘了 <code>-pbkdf2</code>，换台新版 OpenSSL 就解不开。还有一条铁律：实验用的密码、实验用的证书，永远不要带到生产环境去——实验密码我都是现编现忘，用完就删文件。</div>
+      <h2>动手做</h2>
+      <p>本章本身就是动手课，按顺序把四步都跑一遍，再加两个挑战：1. 生成 RSA 3072 位和 EC P-256 两对密钥，对比私钥文件大小和生成耗时。2. 生成自签名证书，用 <code>x509 -text</code> 读出有效期、签名算法、颁发者，写下来。3. 用 AES-256 加密一个自己写的测试文件，再解密比对，确认一字不差；故意输错一次密码，看报错长什么样。4. 用公钥加密、私钥解密走一遍，对比对称加密有什么不同。5. （挑战）用自签名证书起一个本地 HTTPS 服务，在虚拟机浏览器里打开它，点小锁看证书详情；再用 <code>s_client</code> 看握手协商到的 TLS 版本和加密套件。6. （挑战）给私钥加口令保护：生成时用 <code>-aes256</code> 参数加密私钥文件，再试一次导出公钥——没有口令会发生什么？实验结束后，把实验目录整个删掉，私钥、证书、加密文件都不要留下来。</p>
+      <h2>避坑</h2>
+      <p>别在真实系统、真实网站上练 OpenSSL——所有命令只在虚拟机、只对自己生成的文件跑；别把私钥文件权限放开——生成完立刻 <code>chmod 600</code>，绝不提交进代码仓库、不发聊天记录；别用自签名证书冒充真实证书——浏览器警告是正确的，不要教别人点掉警告去访问真实网站；加密别忘了 <code>-salt</code> 和 <code>-pbkdf2</code>，否则同样的密码每次结果一样、派生方式也不安全；别用实验密码当真实密码——实验密码现编现忘；别拿 <code>enc</code> 命令去加密大文件或重要数据当备份——它是教学工具，重要数据用专业备份方案（见<a href="m5c11-db-hardening.html">第 11 章</a>）。</p>
+      <p>工具练熟了，就该看看别人是怎么翻车的：<a href="m5c13-crypto-mistakes.html">下一章</a>收集了最常见的密码学错误，每个错误都配一个真实翻车案例——自创算法、ECB 模式、硬编码密钥、弱随机数，你在这一章里亲手跑过的命令，会帮你一眼看懂那些案例错在哪里。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>OpenSSL 生成密钥对：私钥自己留着、权限收紧到 600，公钥可以公开；RSA 推荐 3072 位，EC 推荐 P-256。</li>
+          <li>自签名证书是自己给自己签名：实验够用，浏览器不会信任，生产环境必须用受信任 CA 签发的证书。</li>
+          <li>看证书用 <code>x509 -text</code>：有效期、颁发者、签名算法、公钥、扩展字段都在里面；验链用 <code>s_client -showcerts</code>。</li>
+          <li>对称加密文件用 <code>enc -aes-256-cbc -salt -pbkdf2</code>：加盐让每次结果不同，PBKDF2 安全派生密钥；解密输错密码就打不开。</li>
+          <li>本地 HTTPS 服务能亲眼验证 TLS 握手：证书、密钥、握手版本和加密套件，用 <code>s_client</code> 一次看全。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m5c11-db-hardening.html">← 上一章：第 11 章：数据库加固：最小权限、备份与预编译语句</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m5c13-crypto-mistakes.html">下一章：第 13 章：常见密码学错误 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块六第 3 章：威胁行为者与 MITRE ATT&CK 入门 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>模块六第 3 章：威胁行为者与 MITRE ATT&CK 入门</h1>
+      <div class="meta"><span class="tag">网络安全基础</span>2026-11-25 · 模块六</div>
+      <p><a href="m6c2-threat-modeling.html">上一章</a>我们学会了站在攻击者的角度想问题。但“攻击者”不是一种人：一个中学生出于好奇乱试密码，和一个有组织的团伙盯着银行系统打几个月，完全是两种对手。防谁、用什么强度防、该优先防什么，全看对手是谁。这一章先把常见的攻击者分分类，再学一套全世界安全团队都在用的“攻击手法词典”——MITRE ATT&CK，学会了它，你看安全新闻、看厂商报告、看招聘要求，都会顺畅得多。</p>
+      <h2>攻击者是谁：四类常见威胁行为者</h2>
+      <p><strong>脚本小子（Script Kiddie）：技术不高，工具现成。</strong>他们自己写不出攻击工具，但网上现成的扫描器、漏洞利用脚本一抓一大把，拿来就能用。目标通常是随机的：扫一扫全网，哪个网站有已知漏洞就打哪个。动机多是好奇、炫耀、练手。别小看他们：一个没打补丁的漏洞，一个弱密码，就够他们得手了。对个人和小网站来说，脚本小子是最常见的对手——做好补丁和密码这两件基本功，就能挡住他们中的绝大多数。</p>
+      <p><strong>有组织犯罪：为了钱，讲究投入产出。</strong>这是勒索软件团伙、盗号销赃团伙的主力。他们像公司一样分工：有人写木马，有人发钓鱼邮件，有人负责收赎金、洗钱。他们挑目标是算账的：打你能赚多少、成本多高、被抓的风险多大。医院、学校、中小企业常是目标，因为这些地方数据重要、防护相对弱、被打瘫了又不得不付钱。<a href="m6c5-malware.html">第 5 章</a>讲的勒索软件双重勒索，就是这类团伙的典型生意模式。</p>
+      <p><strong>国家背景行为者（APT）：有钱、有时间、有耐心。</strong>APT 是“高级持续性威胁”的缩写，指那些受国家支持、针对特定目标长期潜伏的攻击者。他们不图快钱，图的是情报、技术、政治利益：潜伏几个月甚至几年，慢慢摸清目标，偷走最核心的东西再走。他们用的手法往往是定制的、最新的，普通的安全产品很难发现。好消息是：普通人和小公司基本不是他们的目标；坏消息是：一旦成为目标，常规防护是不够的。对初学者来说，知道有这么一类对手存在、知道“潜伏”和“定向”是他们的特征，就够了。</p>
+      <p><strong>内部人员：最难防的对手。</strong>员工、离职员工、外包人员、合作伙伴——他们本来就有权限，知道系统长什么样、数据放哪儿、流程有什么空子。内部威胁分两种：恶意的（离职前偷走客户名单、删数据库报复）和无意的（点错了钓鱼链接、把文件发错了人、配置改错了）。统计上看，无意的内部失误造成的损失，一点不比外部攻击少。<a href="m6c1-security-framework.html">第 1 章</a>讲的最小权限和审计，很大程度上就是为了管住内部风险：权限给得越少，内部人员能造成的伤害越小；审计记得越全，出了事越能查清是谁干的。</p>
+      <p>分清对手有什么用？一句话：<strong>防谁决定了防多严。</strong>防脚本小子，打补丁、设强密码、开双因素就够了；防有组织犯罪，还得加上备份、邮件网关、员工培训；防 APT，那是国家级对抗的范畴，需要专门的团队和预算。威胁建模时，先想清楚“我的对手可能是谁”，防护的力度才不会跑偏——既不低估，也不过度紧张。</p>
+      <h2>MITRE ATT&CK：攻击手法的通用词典</h2>
+      <p>不同公司、不同国家的安全团队，过去各说各的话：你说的“横向移动”，他说的“内网扩散”，说的是同一件事却对不上号。美国 MITRE 公司整理了一套公开的知识库，叫 <strong>ATT&CK</strong>（Adversarial Tactics, Techniques, and Common Knowledge），把攻击者的手法按“目的 → 手段”两层整理出来，成了全行业的通用词典。看安全报告时看到一串编号，比如 T1566、T1059，那就是 ATT&CK 的编号。</p>
+      <p>ATT&CK 是两层结构。<strong>战术（Tactic）</strong>是攻击者的“目的”：他这一步想干什么。企业版 ATT&CK 有 14 个战术，按攻击的先后顺序排开：侦察、资源开发、初始访问、执行、持久化、权限提升、防御规避、凭据访问、发现、横向移动、收集、命令与控制、数据外泄、影响。一次完整的攻击，往往是沿着这条链一步步走的。<strong>技术（Technique）</strong>是实现某个目的的“具体手法”：比如在“初始访问”这个战术下面，有钓鱼（T1566）、利用公开漏洞（T1190）、用偷来的账号登录（T1078）等具体技术。每个技术下面还有更细的子技术，以及真实攻击案例、检测方法和缓解措施。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ATT&amp;CK 攻击链示意图">
+          <defs>
+            <marker id="c3ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a1a2e"/></marker>
+          </defs>
+          <text x="280" y="25" text-anchor="middle" font-size="14" fill="#1a1a2e">一次攻击常常沿着这条链一步步走</text>
+          <rect x="15" y="50" width="76" height="64" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="53" y="76" text-anchor="middle" font-size="12" fill="#1a1a2e">侦察</text>
+          <text x="53" y="96" text-anchor="middle" font-size="10" fill="#666">踩点、搜集</text>
+          <rect x="103" y="50" width="76" height="64" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="141" y="76" text-anchor="middle" font-size="12" fill="#1a1a2e">初始访问</text>
+          <text x="141" y="96" text-anchor="middle" font-size="10" fill="#666">钓鱼、漏洞</text>
+          <rect x="191" y="50" width="76" height="64" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="229" y="76" text-anchor="middle" font-size="12" fill="#1a1a2e">执行</text>
+          <text x="229" y="96" text-anchor="middle" font-size="10" fill="#666">运行恶意代码</text>
+          <rect x="279" y="50" width="76" height="64" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="317" y="76" text-anchor="middle" font-size="12" fill="#1a1a2e">持久化</text>
+          <text x="317" y="96" text-anchor="middle" font-size="10" fill="#666">留后门、站住脚</text>
+          <rect x="367" y="50" width="76" height="64" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="405" y="76" text-anchor="middle" font-size="12" fill="#1a1a2e">凭据访问</text>
+          <text x="405" y="96" text-anchor="middle" font-size="10" fill="#666">偷密码、令牌</text>
+          <rect x="455" y="50" width="76" height="64" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="493" y="76" text-anchor="middle" font-size="12" fill="#1a1a2e">横向移动</text>
+          <text x="493" y="96" text-anchor="middle" font-size="10" fill="#666">扩散到别的机器</text>
+          <line x1="91" y1="82" x2="103" y2="82" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c3ar)"/>
+          <line x1="179" y1="82" x2="191" y2="82" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c3ar)"/>
+          <line x1="267" y1="82" x2="279" y2="82" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c3ar)"/>
+          <line x1="355" y1="82" x2="367" y2="82" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c3ar)"/>
+          <line x1="443" y1="82" x2="455" y2="82" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#c3ar)"/>
+          <rect x="15" y="160" width="160" height="58" rx="8" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+          <text x="95" y="183" text-anchor="middle" font-size="12" fill="#1a1a2e">举例：T1566 钓鱼</text>
+          <text x="95" y="203" text-anchor="middle" font-size="11" fill="#666">战术：初始访问</text>
+          <rect x="200" y="160" width="160" height="58" rx="8" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+          <text x="280" y="183" text-anchor="middle" font-size="12" fill="#1a1a2e">举例：T1059 命令行</text>
+          <text x="280" y="203" text-anchor="middle" font-size="11" fill="#666">战术：执行</text>
+          <rect x="385" y="160" width="160" height="58" rx="8" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+          <text x="465" y="183" text-anchor="middle" font-size="12" fill="#1a1a2e">举例：T1486 加密数据</text>
+          <text x="465" y="203" text-anchor="middle" font-size="11" fill="#666">战术：影响（勒索）</text>
+          <text x="280" y="255" text-anchor="middle" font-size="13" fill="#1a1a2e">关键：攻击链越早切断，损失越小</text>
+          <text x="280" y="280" text-anchor="middle" font-size="12" fill="#666">在“初始访问”拦住钓鱼邮件，</text>
+          <text x="280" y="300" text-anchor="middle" font-size="12" fill="#666">就不用等到“影响”那一步再抢救数据</text>
+        </svg>
+        <figcaption>图：ATT&CK 攻击链（节选）——战术是目的，技术是手段；越早切断链条，损失越小</figcaption>
+      </figure>
+      <p>ATT&CK 最大的价值，是把“攻击”变成了一张可以按图索骥的地图。防守方可以拿着这张地图问自己：攻击链上的每一步，我有没有检测、有没有防护？钓鱼邮件有没有邮件网关拦？恶意代码运行有没有 EDR 盯？横向移动有没有网络分段挡？哪一步是空白，哪一步就是优先补的地方。这正是<a href="m6c2-threat-modeling.html">上一章</a>威胁建模的下一步：模型里的每条威胁，都能对应到 ATT&CK 的具体技术上，防护措施也就有了出处。</p>
+      <h2>用 ATT&CK 查一个技术：以钓鱼 T1566 为例</h2>
+      <p>ATT&CK 的每个技术页面，结构都差不多：先讲这个技术是什么、攻击者怎么用、真实案例里谁用过；再讲怎么检测（看什么日志、盯什么行为）；最后讲怎么缓解（用什么措施防）。以钓鱼 T1566 为例：它是“初始访问”战术下最常用的技术，子技术包括带附件的钓鱼、带链接的钓鱼、针对特定人的鱼叉钓鱼。页面上给的缓解措施包括：邮件网关过滤、用户培训、双因素认证——就算账号密码被骗走，没有第二因素，攻击者也登不进去。<a href="m6c4-phishing-deep.html">下一章</a>会把钓鱼讲深，读的时候可以对照着 T1566 的页面看。</p>
+      <p>再举一个例子：T1059 是“命令与脚本解释器”，意思是攻击者用系统自带的命令行、PowerShell 这些合法工具干坏事。为什么值得注意？因为这些工具是系统自带的，杀毒软件不会一看到 PowerShell 就报警，攻击者用合法工具干非法事，隐蔽性很强。缓解措施包括：限制普通用户用 PowerShell、开日志记录命令行、监控异常的命令行为。这也解释了为什么<a href="m6c7-endpoint-email.html">第 7 章</a>讲的 EDR 那么重视“行为”而不是只看“文件是不是病毒”——文件可以是合法的，行为却出卖了攻击者。</p>
+      <div class="teacher-note"><strong>老师经验：</strong>我第一次给客户做汇报，把 ATT&CK 矩阵往墙上一贴，客户老板看了一眼就说：“这么多红格子，我们是不是已经千疮百孔了？”我告诉他：矩阵上全是红，意思不是“你已经全被打穿了”，而是“攻击者有这么多条路可以试”。防守不需要把每一格都涂绿——那既不可能也没必要。你要做的是：先搞清楚你的对手是谁（这章的前半部分），再看他最可能走哪几条路，把那几条路上的检测和防护做到位。还有一个现场经验：看安全新闻时，养成查 ATT&CK 编号的习惯。新闻说“某团伙用钓鱼拿下初始访问后横向移动”，你脑子里立刻能对上 T1566 → T1078 → T1021 这条链，新闻就不再是热闹，而是能落到你自家防护上的线索。</div>
+      <h2>动手做</h2>
+      <p>只在虚拟机或自己的实验环境里做，不要碰真实网站、真实网络；ATT&CK 官网是公开知识库，只读页面、不下载不明文件。<br>1. 打开 MITRE ATT&CK 官网（attack.mitre.org），找到企业版矩阵（Enterprise Matrix），认一认 14 个战术的名字和顺序，看看每个战术下面大概有哪些技术。不用全记住，认熟“初始访问、执行、持久化、横向移动、影响”这几个最常见的就行。<br>2. 在网站搜索框里查 T1566（钓鱼），打开它的页面，读一读“缓解措施”（Mitigations）那一节，写下三条你能用在自己身上的措施（比如：开双因素、检查发件人、不用邮件里的链接直接登录）。<br>3. 再查一个技术：T1059（命令与脚本解释器）。读它的检测建议，想一想：为什么攻击者爱用系统自带的合法工具？把你的答案写下来。<br>4. 回到<a href="m6c2-threat-modeling.html">第 2 章</a>你画的博客威胁模型，挑一条威胁，试着给它贴一个 ATT&CK 编号：比如“钓鱼冒充管理员”就是 T1566。贴上编号后，你的模型就和全行业的语言接上轨了。</p>
+      <h2>避坑</h2>
+      <p>别把 ATT&CK 当成“攻击教程”：它是防守用的词典和地图，学它是为了知道怎么防、怎么查，不是为了照着它去打别人；别以为背下编号就等于懂了：编号只是索引，真正有用的是每个技术背后的检测和缓解方法；别拿矩阵的格子数吓唬自己或吓唬别人：没有人能把所有格子涂绿，防守讲的是优先级；别把“对手是 APT”挂在嘴边：绝大多数个人和小组织的对手是脚本小子和有组织犯罪，按 APT 的标准做防护是浪费钱，按脚本小子的标准防 APT 是自欺欺人——先想清楚对手是谁；别在真实网络上“复现”ATT&CK 技术：所有实验都在虚拟机和靶场里做。</p>
+      <p>知道了攻击者是谁、用什么手法，下一章我们把最常见的手法讲深：<a href="m6c4-phishing-deep.html">第 4 章：钓鱼与社会工程学</a>——骗人的技术，<a href="lesson-12-phishing.html">预备课第 12 课</a>是入门，这里讲深。回头看<a href="m6c2-threat-modeling.html">第 2 章</a>的 STRIDE：钓鱼就是“假冒”类威胁里最常见、最便宜、成功率最高的一种。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>四类常见威胁行为者：脚本小子（随手扫、打已知漏洞）、有组织犯罪（为钱算账）、国家背景 APT（长期潜伏、定向窃密）、内部人员（有权限，最难防）。</li>
+          <li>防谁决定了防多严：先认清对手，再定防护的力度，既不低估，也不过度紧张。</li>
+          <li>MITRE ATT&CK 是攻击手法的通用词典：战术是目的（14 个），技术是手段（带编号，如 T1566 钓鱼）。</li>
+          <li>每个 ATT&CK 技术页面都有检测方法和缓解措施，防守方按图索骥，找出攻击链上没人守的环节。</li>
+          <li>攻击链越早切断损失越小：在“初始访问”拦住钓鱼，胜过在“影响”那一步抢救被加密的数据。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="m6c2-threat-modeling.html">← 上一章：第 2 章：威胁建模</a>
+        <a href="../course.html">课程目录</a>
+        <a href="m6c4-phishing-deep.html">下一章：第 4 章：钓鱼与社会工程学 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>
