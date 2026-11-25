@@ -47,6 +47,49 @@
         </svg>
         <figcaption>图：Linux 把服务都放在一个大内核里，Windows NT 把一部分服务挪到用户态；但驱动两边都在内核态</figcaption>
       </figure>
+      <h2>NT 内核一瞥：Executive、内核、HAL</h2>
+      <p>上一节说 Windows NT 是混合内核，这一节把它的内核态拆成三层看一眼，够入门就行——完整的讲法在<a href="m2c13-windows-internals.html">第 13 章</a>和<a href="windows-c1-architecture.html">Windows 专项第 1 章</a>，那里会一层一层细讲。</p>
+      <ul>
+        <li><strong>Executive（执行体）</strong>：内核态里的管理层，管对象、进程、内存和 I/O，程序要建进程、申请内存、读写文件，都要经过它记账和把关。</li>
+        <li><strong>内核（Kernel）</strong>：最底层、最精简的核心，只管线程调度、中断处理和同步——也就是决定哪个线程先跑、硬件有事时先响应谁、多个线程别互相踩到。</li>
+        <li><strong>HAL（硬件抽象层）</strong>：夹在内核和硬件之间的一层翻译，把不同主板、中断控制器和定时器的差异藏起来，让同一套 Windows 能跑在不同的电脑上。</li>
+      </ul>
+      <p>记住这三层的分工就够了：Executive 管“事”，内核管“跑”，HAL 管“硬件差异”。排错时先问“问题在哪一层”，比上来就重装系统快得多。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Windows 内核分层图：用户态应用、子系统、Executive、内核、HAL、硬件自上而下排列">
+          <rect x="130" y="10" width="300" height="38" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="34" text-anchor="middle" font-size="13" fill="#1a1a2e">用户态应用：记事本、浏览器</text>
+          <rect x="130" y="58" width="300" height="38" rx="6" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="82" text-anchor="middle" font-size="13" fill="#1a1a2e">子系统：Win32 子系统、API</text>
+          <rect x="130" y="106" width="300" height="38" rx="6" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="130" text-anchor="middle" font-size="13" fill="#1a1a2e">Executive：对象、进程、内存、I/O</text>
+          <rect x="130" y="154" width="300" height="38" rx="6" fill="#1a1a2e"/>
+          <text x="280" y="178" text-anchor="middle" font-size="13" fill="#fff">内核：调度、中断、同步</text>
+          <rect x="130" y="202" width="300" height="38" rx="6" fill="#dcfce7" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="226" text-anchor="middle" font-size="13" fill="#1a1a2e">HAL：隔开硬件差异</text>
+          <rect x="130" y="250" width="300" height="38" rx="6" fill="#f3f4f6" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="274" text-anchor="middle" font-size="13" fill="#1a1a2e">硬件：CPU、内存、磁盘</text>
+          <text x="280" y="312" text-anchor="middle" font-size="12" fill="#666">从上到下，就是一次请求从应用落到硬件要走的路</text>
+        </svg>
+        <figcaption>图：Windows 内核分层——应用在最上，硬件在最下，中间是子系统、Executive、内核与 HAL</figcaption>
+      </figure>
+      <h2>一开机就在跑的几个系统进程</h2>
+      <p>打开任务管理器，会看到几个名字古怪、却一个都不能随便结束的系统进程，先认住三个：</p>
+      <ul>
+        <li><strong>SMSS（会话管理器子系统）</strong>：开机时负责创建用户会话、启动 CSRSS 和登录进程，是会话的“开场人”。</li>
+        <li><strong>CSRSS（客户端/服务器运行时子系统）</strong>：Win32 子系统的一部分，负责控制台窗口、进程和线程管理等基础服务，Windows 程序离不开它。</li>
+        <li><strong>LSASS（本地安全认证子系统服务）</strong>：管本地登录验证和安全策略，输密码对不对、发什么令牌，都由它把关。</li>
+      </ul>
+      <p>提醒一句：这三个进程名常被恶意软件冒充——同名不等于就是真的，看到可疑的同名进程先别急着下结论，要看它在哪个目录、是谁启动的，详细的辨认方法在<a href="windows-c2-system-processes.html">Windows 专项第 2 章</a>里讲。</p>
+      <p>调查进程时还会常遇到两个名字，先记一句话：<strong>EPROCESS</strong> 是内核里代表一个进程的数据结构，<strong>PEB（进程环境块）</strong>是用户态里进程自己的信息块——一个在内核态记账，一个在用户态自带，取证和分析报告里提到它们时，指的就是“这个进程在系统里的那份档案”。</p>
+      <h2>排错工具箱入门：Sysinternals 套件</h2>
+      <p><strong>Sysinternals</strong> 是微软官方出的免费排错工具集，做 Windows 安全和排错的人几乎人手一套。它不是杀毒软件，不拦截、不查杀，只帮你把系统里正在发生的事看清楚。</p>
+      <ul>
+        <li><strong>Process Explorer（进程浏览器）</strong>：看进程的加强版任务管理器，能看清谁是谁的子进程、进程加载了哪些 DLL、打开了哪些文件。</li>
+        <li><strong>Process Monitor（进程监视器）</strong>：实时记录进程的文件和注册表活动，程序读了哪个文件、改了哪个注册表键，都能抓到。</li>
+        <li><strong>Autoruns（自启动查看器）</strong>：一次性列出电脑上所有的自启动项，注册表 Run 键、计划任务、服务里的自启都在一张表里。</li>
+      </ul>
+      <p>同一套件里的 Sysmon 是给 Windows 装“行车记录仪”的记录工具，详细的事件编号和用法在<a href="m2c13-windows-internals.html">第 13 章</a>里讲，这里先不用背。上面这三个工具，只在自己的电脑或虚拟机里练，别往别人的电脑上装、别拿它们去动别人的系统。</p>
       <h2>文件组织</h2>
       <p>Linux 是一棵树：所有东西从根目录 / 开始，硬件设备也是文件（/dev 下面）。配置文件是纯文本，改个文件就是改配置。Windows 是盘符：C:、D: 各是一棵树，配置很多存在注册表这个数据库里。Linux 讲究“一切皆文件”，Windows 讲究图形化和注册表。</p>
       <h2>安全机制对比</h2>
@@ -63,6 +106,7 @@
       <div class="teacher-note">老师经验：做安全要两边都懂，但分工要清楚。服务器端基本是 Linux 的天下：Web 服务、数据库、云平台，出了问题先看日志、看进程、看权限。终端和办公环境是 Windows 的天下：钓鱼邮件、宏病毒、勒索软件，主战场在 Windows 上。面试的时候，人家问“你会 Linux 吗”，其实是在问“你能不能在服务器上干活”；问“你会 Windows 吗”，是在问“你能不能处理终端安全”。两边都要能上手。</div>
       <h2>动手做</h2>
       <p>1. 在 Windows 上按 Win+R 输入 <code>msinfo32</code>，看系统摘要；在虚拟机的 Linux 里输入 <code>uname -a</code> 和 <code>cat /etc/os-release</code>，对比两个系统的基本信息。<br>2. 在 Linux 里输入 <code>ls /</code>，看根目录下的一级目录；在 Windows 上打开 C 盘，对比两边的组织方式。<br>3. 想一想：为什么服务器爱用 Linux，而办公电脑爱用 Windows？</p>
+      <p>4. 只在虚拟机或自己的实验环境里：打开 Process Explorer，对照本课的系统进程一节，找到 SMSS、CSRSS、LSASS 各一个，再打开 Autoruns 看一眼有哪些自启动项——只看、不改、不删。</p>
       <h2>避坑</h2>
       <p>别争“哪个系统更好”，它们分工不同；Linux 的“一切皆文件”要记住，这是理解 Linux 的钥匙；驱动能进内核，所以装驱动要格外小心，只装可信来源的。</p>
       <div class="summary-box"><strong>本课小结</strong>
@@ -70,6 +114,8 @@
           <li>Linux 是单内核、Windows NT 是混合内核，但驱动两边都在内核态——有漏洞的驱动就是内核级漏洞，装驱动只认可信来源。</li>
           <li>Linux 讲“一切皆文件”，配置是纯文本；Windows 讲盘符和注册表；日志一边是事件查看器，一边是 journald 和 /var/log。</li>
           <li>权限思路一致、实现不同：Linux 是 DAC + SELinux/AppArmor 的 MAC + 能力拆分，Windows 是令牌 + 完整性级别 + UAC。</li>
+          <li>NT 内核分三层：Executive 管对象、进程、内存和 I/O，内核只管调度、中断和同步，HAL 隔开硬件差异；SMSS 管会话、CSRSS 管 Win32 子系统、LSASS 管本地安全认证，这三个进程名常被恶意软件冒充。</li>
+          <li>Sysinternals 是微软官方的免费排错工具集：Process Explorer 看进程、Process Monitor 看文件和注册表活动、Autoruns 看自启动，只在自己的电脑或虚拟机里练；完整的 Windows 内部讲法在<a href="m2c13-windows-internals.html">第 13 章</a>和<a href="../course.html#windows">Windows 专项</a>。</li>
           <li>模块二还没完，下一章钻进 Windows 内部，<a href="m2c13-windows-internals.html">继续第 13 章 →</a></li>
         </ul>
       </div>

@@ -60,6 +60,58 @@
       <p>长期保存文件的地方，断电也不丢。东西不用的时候都存在仓库里，用的时候才搬到工作台上。现在的仓库分两种：机械硬盘（HDD，便宜、容量大、慢）和固态硬盘（SSD，贵一点、快得多）。安全上要知道：删掉的文件不是真没了，只是仓库把位置腾出来标记为空，数据还在——这就是取证能恢复“已删除”文件的原因。</p>
       <h2>操作系统：大管家</h2>
       <p>Windows 就是大管家，负责管理硬件、分配资源，还给你窗口和鼠标，让你不用直接跟硬件打交道。更重要的是，它定规矩：哪个程序能读哪个文件、谁能装软件、谁能改系统设置，都是它说了算。学安全有一半是在学大管家的规矩——权限设错了，病毒就长驱直入。</p>
+      <h2>整机全貌：四个角色之外的零件</h2>
+      <p>上面四个角色能讲清电脑“怎么算、怎么存、谁管事”，但一台真电脑不只有这四样。CPU 总得插在什么地方，电总得从哪里来，画面总得有人专门去算，网线总得有个口子接进来——下面这六样，就是把四个角色连成一台整机的零件。这一节只讲“它是干什么的、跟四个角色是什么关系”，每个零件的详细版都在<a href="lesson-19-hardware-tour.html">第 19 课</a>。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="整机组成示意图：主板居中，CPU、内存、显卡、硬盘、电源、网卡和接口围绕连接">
+          <rect x="190" y="120" width="180" height="100" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="152" text-anchor="middle" font-size="16" fill="#1a1a2e">主板</text>
+          <text x="280" y="174" text-anchor="middle" font-size="12" fill="#666">连接所有部件的底板</text>
+          <text x="280" y="194" text-anchor="middle" font-size="12" fill="#666">芯片组在板上调度数据</text>
+          <rect x="225" y="35" width="110" height="44" rx="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="53" text-anchor="middle" font-size="14" fill="#1a1a2e">CPU：大脑</text>
+          <text x="280" y="70" text-anchor="middle" font-size="12" fill="#666">插在主板上</text>
+          <rect x="395" y="35" width="120" height="44" rx="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="455" y="53" text-anchor="middle" font-size="14" fill="#1a1a2e">内存：工作台</text>
+          <text x="455" y="70" text-anchor="middle" font-size="12" fill="#666">插在 CPU 旁边</text>
+          <rect x="415" y="135" width="115" height="44" rx="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="472" y="153" text-anchor="middle" font-size="14" fill="#1a1a2e">显卡</text>
+          <text x="472" y="170" text-anchor="middle" font-size="12" fill="#666">专门算图形</text>
+          <rect x="395" y="240" width="120" height="44" rx="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="455" y="258" text-anchor="middle" font-size="14" fill="#1a1a2e">硬盘：仓库</text>
+          <text x="455" y="275" text-anchor="middle" font-size="12" fill="#666">连在主板边缘</text>
+          <rect x="225" y="255" width="110" height="44" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="273" text-anchor="middle" font-size="14" fill="#1a1a2e">电源</text>
+          <text x="280" y="290" text-anchor="middle" font-size="12" fill="#666">给全机供电</text>
+          <rect x="30" y="135" width="115" height="44" rx="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="87" y="153" text-anchor="middle" font-size="14" fill="#1a1a2e">网卡</text>
+          <text x="87" y="170" text-anchor="middle" font-size="12" fill="#666">连网的出入口</text>
+          <rect x="30" y="240" width="115" height="44" rx="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="87" y="258" text-anchor="middle" font-size="14" fill="#1a1a2e">接口 / 插槽</text>
+          <text x="87" y="275" text-anchor="middle" font-size="12" fill="#666">接外界设备</text>
+          <line x1="280" y1="79" x2="280" y2="118" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="430" y1="79" x2="372" y2="118" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="415" y1="157" x2="372" y2="157" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="430" y1="240" x2="372" y2="220" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="280" y1="255" x2="280" y2="222" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="145" y1="157" x2="188" y2="157" stroke="#1a1a2e" stroke-width="1.5"/>
+          <line x1="145" y1="240" x2="188" y2="220" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="316" text-anchor="middle" font-size="12" fill="#666">操作系统（大管家）不在图里：它住在硬盘里，运行时管着全场</text>
+        </svg>
+        <figcaption>图：主板居中连着所有零件，电源给全机供电，网卡和接口是电脑和外界说话的口子</figcaption>
+      </figure>
+      <h3>主板：连接所有部件的底板</h3>
+      <p>主板是一块最大的电路板，CPU、内存、显卡、硬盘都要直接或间接连到它上面，电源的线也要插到它上面。它自己不算数、也不存数据，作用就是“接线”：把电和信号送到每个零件，让四个角色能互相说话。没有主板，四个角色就是一堆散件，连不成一台电脑。</p>
+      <h3>芯片组：主板上的交通指挥</h3>
+      <p>芯片组是主板上的一组芯片，相当于主板上的交通指挥：CPU 和内存、显卡、硬盘、接口之间的数据，都要经过它来调度。它还决定了这块主板支持什么样的 CPU 和内存、有多少个接口——所以看一台电脑的配置，不能只看 CPU，主板芯片组决定了这台电脑能装什么、以后能不能升级。</p>
+      <h3>电源：给全机供电</h3>
+      <p>电源把家里的交流电变成电脑里各零件要用的直流电，再分给主板、CPU、显卡、硬盘这些零件。电源功率不够，平时办公可能没事，一让显卡满载就可能黑屏重启——这在排错时很常见。安全上也要记住：电源是整机的供电总源头，断电、拔电源线之前，先确认电脑已经正常关机。</p>
+      <h3>显卡：专门算图形的处理器</h3>
+      <p>显卡是专门负责算图形的处理器，画游戏画面、播视频、剪片子都是它的活；CPU 也能算图，但它是“什么都算一点”的通才，显卡是“一次算成千上万个像素”的专才。显示器接在哪块显卡上，画面就是哪块显卡算的——装了独立显卡却把显示器插在主板接口上，独立显卡就会全程闲着。</p>
+      <h3>网卡：连网的出入口</h3>
+      <p>网卡是电脑连网的出入口：有线网卡接网线，无线网卡连 Wi-Fi，数据进出电脑都要经过它。对学安全的人来说，网卡就是“边界”：电脑里的数据要出去、网上的数据要进来，都得过这一关，后面讲网络的课，几乎每一课都要回到它身上。</p>
+      <h3>接口和插槽：零件的座位和对外口子</h3>
+      <p>插槽是主板上固定零件的座位：CPU 有自己的插槽，内存条插在内存插槽里，显卡插在最长的扩展插槽里，插槽不对就装不上。接口是电脑和外界说话的口子：USB 接鼠标、键盘和 U 盘，显示接口接显示器，网口接网线——排错时先看“线插对没有”，能省下很多弯路。</p>
       <h2>程序是怎么跑起来的</h2>
       <p>你双击一个程序，背后是四步：</p>
       <ol>
@@ -74,11 +126,14 @@
       <h2>动手做</h2>
       <p>按 <code>Ctrl + Shift + Esc</code> 打开任务管理器，看一眼 CPU 和内存的占用，再打开一个程序，看内存的数字往上涨。然后打开“此电脑”，看一眼 C 盘用了多少、还剩多少。把四个数字记下来：CPU 占用、内存占用、硬盘已用、硬盘剩余——下次电脑卡，先看这四个数字，哪个不对劲就是哪个角色的问题。</p>
       <p>这四个角色，模块一会一个一个讲透（<a href="m1c2-cpu.html">CPU 怎么执行指令</a>、<a href="m1c3-memory.html">内存怎么分层</a>、<a href="m1c12-hardware-lab.html">给电脑做一次硬件体检</a>），模块二再讲<a href="m2c1-os-intro.html">大管家是怎么管理这一切的</a>。下一课，先看大管家手里的两样东西：文件和进程。</p>
+      <p>想把本课“整机全貌”里每个零件认得更细——主板怎么分大小、芯片组怎么决定配置上限、电源怎么选功率、显卡和硬盘的接口怎么分清——看详细版：<a href="lesson-19-hardware-tour.html">第 19 课：电脑的全部零件：主板、芯片组、电源、显卡、接口</a>。</p>
       <div class="summary-box"><strong>本课小结</strong>
         <ul>
           <li>电脑就四个角色：大脑 CPU、工作台内存、仓库硬盘、大管家操作系统。</li>
           <li>程序跑起来是四步：硬盘读到内存，CPU 一条条执行，结果回内存，保存再写回硬盘。</li>
           <li>学安全就是在这四个角色上找弱点：CPU 漏洞、内存里的密码、删掉的文件、定错的权限。</li>
+          <li>整机全貌：主板是连接所有部件的底板，芯片组在板上调度数据，电源给全机供电，显卡专门算图形，网卡是连网的出入口，接口和插槽是零件的座位和对外口子。</li>
+          <li>每个零件的详细版在第 19 课，本课只讲够用的简短版。</li>
           <li>下一课看大管家手里的两样东西：文件和进程。</li>
         </ul>
       </div>

@@ -72,7 +72,7 @@
       <p><strong>避坑：</strong>一是装系统时如果提示“虚拟化未开启”，要去电脑的 BIOS/UEFI 里打开 VT-x/AMD-V——虚拟机跑不起来，十有八九是它没开；二是别在虚拟机里用 root 账号日常操作，权限越大、误操作代价越大，<a href="lesson-09-linux-permissions.html">第 9 课</a>会讲为什么平时要用普通用户加 <code>sudo</code>；三是快照别拍太多，拍多了占硬盘，关键节点（刚装好系统、装好一套工具）各拍一个就够了。</p>
       <h2>动手做</h2>
       <p>去官网下载 VirtualBox 和 Ubuntu 桌面版镜像，打开 VirtualBox，新建一台虚拟机：内存 8GB、CPU 4 核、硬盘 50GB 动态分配、网络保持默认 NAT，按向导装好系统，第一次开机进到桌面。装好就先别急着学命令，熟悉一下桌面环境，再拍第一个快照——名字就叫“刚装好”。然后打开终端（下一课要用），确认它能打开、能打字，就收工。</p>
-      <p>装好了，<a href="lesson-08-linux-commands.html">下一课</a>就开始在终端里敲第一批命令。虚拟机和 Linux 的关系，模块二的<a href="m2c1-os-intro.html">操作系统入门</a>还会从“大管家怎么管资源”的角度再讲一遍，到时候对照着看，理解会更深。</p>
+      <p>装好了，<a href="lesson-08-linux-commands.html">下一课</a>就开始在终端里敲第一批命令。虚拟机和 Linux 的关系，模块二的<a href="m2c1-os-intro.html">操作系统入门</a>还会从“大管家怎么管资源”的角度再讲一遍，到时候对照着看，理解会更深。除了 VirtualBox，Windows 自带的两条路是 Hyper-V 和 WSL2：Hyper-V 是 Windows 自带的虚拟化平台，WSL2 是直接在 Windows 里跑一个真正的 Linux 内核——这两条路和虚拟化的底层原理，是<a href="m2c20-virtualization.html">模块二第 20 章：虚拟化与容器基础</a>的事。</p>
       <div class="summary-box"><strong>本课小结</strong>
         <ul>
           <li>学 Linux 是因为工具和服务器大多在 Linux 上，而且它的规矩摆在明面上，最适合练安全。</li>

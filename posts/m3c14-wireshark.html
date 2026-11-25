@@ -75,7 +75,7 @@
         </svg>
         <figcaption>图：一次 TCP 三次握手的包序列——三个包，三面旗，连接才算建好</figcaption>
       </figure>
-      <p>点开第一个包的 TCP 层，看 Flags：只有 SYN 是 1，这就是“我要建连”。第二个包 SYN 和 ACK 都是 1，第三个包只有 ACK 是 1。三个包的序号（Sequence Number）是连起来的：第二个包的确认号（Acknowledgment Number）等于第一个包的序号加一——这就是 TCP“可靠”的底子：每个字节都有编号，丢了能发现，乱了能排好。</p>
+      <p>点开第一个包的 TCP 层，看 Flags：只有 SYN 是 1，这就是“我要建连”。第二个包 SYN 和 ACK 都是 1，第三个包只有 ACK 是 1。三个包的序号（Sequence Number）是连起来的：第二个包的确认号（Acknowledgment Number）等于第一个包的序号加一——这就是 TCP“可靠”的底子：每个字节都有编号，丢了能发现，乱了能排好。想把 TCP 头和 IP 头的每个字段一次看全（序号、窗口、校验和、选项各是什么意思），去<a href="m3c20-headers.html">第 20 章：报文头部详解</a>，那一章就是对着真实报文一个字段一个字段讲的。</p>
       <p><strong>握手出问题意味着什么？</strong>只看到 SYN、没看到 SYN, ACK 回来：对方没在监听这个端口，或者防火墙把包挡了，或者对方根本不在线。看到 SYN, ACK 之后没有第三个 ACK：发起方有问题，或者中间有设备把包丢了。看到一堆 RST（复位）：对方明确拒绝连接，端口没开是最常见的原因。</p>
       <h2>读懂一次 DNS 查询</h2>
       <p>过滤 <code>dns</code>，在虚拟机里 <code>nslookup example.org</code>，抓到的一般是两个包：一去一回。去的包是查询（Standard query），问“example.org 的地址是多少”；回的包是响应（Standard query response），带着答案回来。点开 DNS 层看：查询里有个 Transaction ID，响应里同一个 ID——靠这个把一问一答配成对。答案在 Answers 段里，A 记录就是那个 IP 地址。</p>
