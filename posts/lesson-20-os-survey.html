@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 20 课：操作系统有哪些：Windows、Linux、macOS、Unix、手机与实时系统 · 网络安全手记</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="name"><a href="../index.html">网络安全手记</a></div>
+    <div class="desc">记录一个初学者成为网络安全工程师的日常。</div>
+    <nav>
+      <a href="../index.html">首页</a>
+      <a href="../course.html">课程</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h1>第 20 课：操作系统有哪些：Windows、Linux、macOS、Unix、手机与实时系统</h1>
+      <div class="meta"><span class="tag">预备课</span>2026-11-25 · 预备课第 20 课</div>
+      <p><a href="lesson-19-hardware-tour.html">上一课</a>认全了电脑的零件，这一课讲让这些零件动起来的东西：操作系统。同一台电脑，装 Windows 是办公娱乐的机器，装 Linux 可能就变成一台服务器，装个实时系统可能就变成一台控制设备的机器。操作系统是干什么的？<a href="lesson-01-computer.html">第 1 课</a>已经讲过：它负责管硬件、管进程、给程序提供服务。这一课把市面上的操作系统全家福摆出来：每种系统是干什么的、长什么样、学安全的人为什么都要认识它们。</p>
+      <h2>Windows：最常见的桌面系统</h2>
+      <p>Windows 是微软出的操作系统，桌面电脑上最常见。个人电脑上现在主流的是 Windows 10 和 Windows 11：Windows 10 成熟、兼容性好，老电脑也能跑；Windows 11 界面更新、对硬件要求更高（要求 TPM 2.0 和较新的 CPU），安全性上默认开了更多保护。服务器上有 Windows Server，专门给企业跑服务用，和桌面版长得像，但默认不开花哨的功能，侧重稳定和远程管理。</p>
+      <p>Windows 的特点是“什么软件都有”：办公、游戏、专业软件，绝大多数都先出 Windows 版。代价是：它是闭源的商业软件，系统内部怎么工作看不到源码；也是攻击者最爱盯着的目标——用户最多，盯着它写恶意软件“性价比”最高。<a href="lesson-13-malware.html">第 13 课</a>讲过的勒索软件，大多数就是冲着 Windows 来的。学安全的人离不开 Windows：它是客户最多的系统，也是蓝队每天要守的系统。</p>
+      <h2>Linux：一个内核，许多发行版</h2>
+      <p>Linux 严格说只是一个内核（Kernel）——操作系统的核心，管 CPU、内存、设备的那部分。围绕这个内核，加上各种工具、桌面、软件仓库，就拼成了一个个“发行版”（Distribution），每个发行版都是一个完整的操作系统。常见的有三个：Ubuntu 最适合新手，装好就能用，文档和教程最多；Debian 以稳定著称，很多服务器用它，Ubuntu 本身就是从 Debian 发展出来的；Arch Linux 讲究“自己动手配”，装好只有一个最小系统，其他全自己装，适合想把 Linux 学透的人。</p>
+      <p>Linux 分桌面和服务器两种用法：桌面版有图形界面，可以当日常电脑用；服务器版通常没有图形界面，只有一个黑窗口，靠命令管理——全世界大多数网站、云服务器跑的都是 Linux。Linux 是开源的，源码谁都能看、谁都能改，这也是它在安全圈地位特殊的原因：想学系统底层、想做渗透测试、想搭靶机练手，Linux 是绕不开的。<a href="lesson-07-linux-vm.html">第 7 课</a>装的 Ubuntu 虚拟机，就是你的第一台 Linux。</p>
+      <h2>macOS 与 Unix/BSD：苹果的系统和它们的老祖宗</h2>
+      <p>macOS 是苹果电脑（Mac）上的系统，只能在苹果硬件上运行。它底层源自 Unix，界面是苹果自己设计的，特点是“软硬件一体”：苹果同时做硬件和系统，兼容性问题少，续航和做工口碑好。开发、设计、视频剪辑行业里 Mac 很常见，安全圈里也有不少人用它当主力机。</p>
+      <p>Unix 是 20 世纪 70 年代在贝尔实验室诞生的操作系统，是现代操作系统的老祖宗：Linux、macOS 的底层思想都从它来。BSD（Berkeley Software Distribution）是 Unix 的一个分支，现在还在用的有 FreeBSD、OpenBSD 等——OpenBSD 以“默认安全”著称，代码里安全审查最严，防火墙软件常用它。初学者不用装 Unix 或 BSD，知道它们的地位就够了：很多系统命令、文件结构和安全概念，都是从 Unix 家族传下来的。</p>
+      <h2>手机系统与实时系统：电脑之外的操作系统</h2>
+      <p>Android 和 iOS 是手机上的操作系统。Android 是谷歌主导的开源系统，跑在绝大多数非苹果手机上，底层是 Linux 内核；每家手机厂商会在上面加自己的界面和功能。iOS 是苹果手机和平板上的系统，封闭得多：只能装 App Store 里的应用，系统权限管得很严。手机安全是安全的一个大方向（模块九有专门的移动安全章节），但原理和电脑是相通的：权限、应用沙箱、更新，都是同一套思路。</p>
+      <p>还有一类容易被忽略的操作系统：实时系统（RTOS）。它不跑在电脑或手机上，跑在汽车、医疗设备、工业控制器、路由器这些设备里。实时系统的要求不是“快”，而是“准时”：刹车指令必须在几毫秒内执行，晚一毫秒都不行。所以它体积很小、功能很少，专门为确定的任务设计。物联网和工控安全（模块九第 10 章）打交道的，很多就是这类系统。</p>
+      <h2>内核分几种：单内核、微内核、混合内核</h2>
+      <p>操作系统最核心的部分叫内核，内核的设计分三种。单内核（Monolithic Kernel）把文件系统、设备驱动、网络协议栈这些功能都放在内核里，跑得快，但一个驱动出问题可能拖垮整个系统——Linux 就是单内核。微内核（Microkernel）只把最基本的功能（进程通信、内存管理）留在内核里，其他功能都放到内核外的服务里跑，一个服务崩了不影响内核——更稳，但进程间通信多了，速度会打折扣。混合内核（Hybrid Kernel）取中间路线：核心功能在内核里，部分驱动和服务放外面——Windows 和 macOS 都是混合内核。</p>
+      <p>内核长什么样，决定了系统怎么崩、怎么被攻击、怎么加固。这三种设计没有绝对的好坏，只有取舍。模块二<a href="m2c1-os-intro.html">第 1 章</a>会从“操作系统是干什么的”讲起，<a href="m2c12-kernels.html">第 12 章</a>会把 Windows 和 Linux 内核的差异讲透——到那时，再回头看这一课的三种内核，理解会深得多。</p>
+      <figure class="diagram">
+        <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="操作系统全家福分类图">
+          <rect x="30" y="15" width="500" height="50" rx="8" fill="#eff6ff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="45" text-anchor="middle" font-size="14" fill="#1a1a2e">操作系统全家福：按用在哪分</text>
+          <rect x="30" y="90" width="155" height="80" rx="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="107" y="118" text-anchor="middle" font-size="13" fill="#1a1a2e">桌面 / 服务器</text>
+          <text x="107" y="140" text-anchor="middle" font-size="12" fill="#666">Windows</text>
+          <text x="107" y="158" text-anchor="middle" font-size="12" fill="#666">Linux / macOS</text>
+          <rect x="202" y="90" width="155" height="80" rx="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="118" text-anchor="middle" font-size="13" fill="#1a1a2e">手机</text>
+          <text x="280" y="140" text-anchor="middle" font-size="12" fill="#666">Android（Linux 内核）</text>
+          <text x="280" y="158" text-anchor="middle" font-size="12" fill="#666">iOS</text>
+          <rect x="375" y="90" width="155" height="80" rx="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="452" y="118" text-anchor="middle" font-size="13" fill="#1a1a2e">实时 / 嵌入式</text>
+          <text x="452" y="140" text-anchor="middle" font-size="12" fill="#666">RTOS</text>
+          <text x="452" y="158" text-anchor="middle" font-size="12" fill="#666">路由器、汽车、工控</text>
+          <rect x="30" y="195" width="500" height="70" rx="8" fill="#fefce8" stroke="#1a1a2e" stroke-width="1.5"/>
+          <text x="280" y="222" text-anchor="middle" font-size="13" fill="#1a1a2e">内核三种设计：单内核（Linux）· 微内核 · 混合内核（Windows、macOS）</text>
+          <text x="280" y="246" text-anchor="middle" font-size="12" fill="#666">老祖宗 Unix → BSD → macOS；Linux 是重新写的类 Unix 内核</text>
+        </svg>
+        <figcaption>图：操作系统按用在哪分三类，内核按设计分三种——先记住分类，细节模块二再展开</figcaption>
+      </figure>
+      <div class="teacher-note"><strong>老师经验：</strong>我刚入行时只会 Windows，觉得 Linux 是“黑客才用的东西”，结果第一次去客户现场排错就栽了：客户的网站跑在 Linux 服务器上，我连看日志的命令都不会，只能站在旁边看同事操作。从那以后我养成一个习惯：每到一个新环境，先问三句话——这是什么系统？什么版本？谁在管它？这三句话能立刻定位你的工具箱：Windows 就用事件查看器和 PowerShell，Linux 就用 journalctl 和 grep，Mac 就先看系统报告。系统认错了，后面的每一步都是错的。别怕 Linux 的黑窗口——<a href="lesson-07-linux-vm.html">第 7 课</a>的虚拟机就是给你练这个的，练熟了，黑窗口比图形界面还快。</div>
+      <h2>动手做</h2>
+      <p>1. 在虚拟机里打开终端，跑 <code>uname -a</code>，记下内核版本和机器架构；再跑 <code>lsb_release -a</code>（如果没有这个命令，先跑 <code>cat /etc/os-release</code>），记下发行版名字和版本号。2. 回到自己的 Windows 上，按 Win+R，输入 <code>winver</code> 回车，记下 Windows 的版本和内部版本号（比如 Windows 11 23H2）。3. 把两边的结果并排放进一张表：系统名字、版本号、内核、用途（桌面还是服务器）。4. 再多做一步：在虚拟机里跑 <code>ls /</code> 看一眼 Linux 的根目录，和 Windows 的 C 盘对比一下——没有盘符、所有东西都挂在一个根目录下，这是 Linux 和 Windows 文件组织最大的不同，模块二<a href="m2c9-filesystem.html">第 9 章</a>会讲文件系统是怎么实现的。</p>
+      <h2>避坑</h2>
+      <p>别把“Linux”和“Ubuntu”当成同一个词——Linux 是内核，Ubuntu 是发行版，就像“发动机”和“整辆车”；别在主力机上直接装双系统练手——<a href="lesson-07-linux-vm.html">第 7 课</a>的虚拟机才是练手的地方，装坏了恢复快照就行，主力机装坏了是真麻烦；别以为 macOS 不会中招——用户少不等于没漏洞，只是攻击者盯得少，钓鱼和恶意软件一样能骗到 Mac 用户；别在网上随便下载“精简版”“优化版”系统镜像——只从官方来源下载系统，来源不明的镜像可能已经被植入了后门；别拿真实服务器练命令——所有命令只在自己的虚拟机里跑。</p>
+      <p>系统认全了，接下来该想想：不管什么系统，里面的东西丢了怎么办？<a href="lesson-21-backup-restore.html">第 21 课：备份与恢复</a>讲的就是这件事。而操作系统内部到底怎么管进程、怎么分内存、怎么调度 CPU，是<a href="m2c1-os-intro.html">模块二第 1 章</a>到<a href="m2c12-kernels.html">第 12 章</a>的整条主线。</p>
+      <div class="summary-box"><strong>本课小结</strong>
+        <ul>
+          <li>Windows 是桌面最常见的系统（Windows 10/11、Windows Server），软件最多，也是攻击者盯得最紧的目标。</li>
+          <li>Linux 只是内核，Ubuntu、Debian、Arch 是发行版；服务器大多跑 Linux，桌面版和服务器版用法不同。</li>
+          <li>macOS 只能跑在苹果硬件上，底层源自 Unix；Unix 是老祖宗，BSD 是它的分支，OpenBSD 以默认安全著称。</li>
+          <li>Android 底层是 Linux 内核，iOS 是封闭的苹果手机系统；实时系统跑在汽车、医疗、工控设备里，要求“准时”而不是“快”。</li>
+          <li>内核分单内核（Linux）、微内核、混合内核（Windows、macOS）三种，设计不同，崩法和加固方法也不同。</li>
+        </ul>
+      </div>
+      <div class="lesson-nav">
+        <a href="lesson-19-hardware-tour.html">← 上一课：第 19 课：电脑的全部零件：主板、芯片组、电源、显卡、接口</a>
+        <a href="../course.html">课程目录</a>
+        <a href="lesson-21-backup-restore.html">下一课：第 21 课：备份与恢复：动手做一次备份和还原 →</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site">网络安全手记 · 2026</footer>
+</div>
+</body>
+</html>
